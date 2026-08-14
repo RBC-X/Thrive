@@ -161,25 +161,34 @@ class KrogerLiveSource {
       const json = await res.json();
       for (const it of json.data || []) {
         if (!it.productId || seen.has(it.productId)) continue; // same product via another term
-        const price = it.items && it.items[0] && it.items[0].price;
-        const regular = price && Number(price.regularPrice) > 0 ? Number(price.regularPrice) : 0;
-        const promo = price && Number(price.promoPrice) > 0 ? Number(price.promoPrice) : 0;
+        const item0 = it.items && it.items[0];
+        const price = item0 && item0.price;
+        // Kroger's Products API exposes `price.regular` / `price.promo`;
+        // accept the older `regularPrice`/`promoPrice` shape defensively too.
+        const regular = price && Number(price.regular ?? price.regularPrice) > 0
+          ? Number(price.regular ?? price.regularPrice) : 0;
+        const promo = price && Number(price.promo ?? price.promoPrice) > 0
+          ? Number(price.promo ?? price.promoPrice) : 0;
         const best = promo || regular;
         if (!best) continue;
         seen.add(it.productId);
+        const size = (item0 && item0.size) || null;
+        // productPageURI is the canonical page path (may carry a cid tracking
+        // query) — prefer it over guessing /p/{id}.
+        const pagePath = String(it.productPageURI || "/p/" + it.productId).split("?")[0];
         out.push({
           id: `kroger-${it.productId}`,
           store: "Kroger",
           productName: it.description || "Kroger product",
           category: mapKrogerCategory((it.categories && it.categories[0]) || ""),
           price: Math.round(best * 100) / 100,
-          unitPrice: it.size ? `$${(best / unitQty(it.size)).toFixed(2)}/${unitName(it.size)}` : "",
+          unitPrice: size ? `$${(best / unitQty(size)).toFixed(2)}/${unitName(size)}` : "",
           savingsPercent: promo && regular ? Math.round((1 - promo / regular) * 100) : 0,
           keywords: term.toLowerCase().split(/\s+/),
           endsInDays: 7,
-          url: `https://www.kroger.com/p/${it.productId}`,
-          urlVerified: true, // the /p/{id} URL resolves to this exact product page
-          size: it.size || null,
+          url: `https://www.kroger.com${pagePath}`,
+          urlVerified: true, // productPageURI from the API resolves to this exact product
+          size: size,
           brand: it.brand || null,
           imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,
           estimated: false, // live price from the Kroger API for the resolved store

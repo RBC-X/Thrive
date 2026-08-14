@@ -32,7 +32,7 @@ const { KrogerLiveSource } = require("./src/sources");
 
   console.log(`Kroger source enabled (zip ${src.zip}). Fetching live deals...`);
   const started = Date.now();
-  const deals = await src.fetch();
+  const deals = await src.deals();
   const ms = Date.now() - started;
   console.log(`\nFetched ${deals.length} deals in ${ms}ms.`);
 
@@ -41,18 +41,18 @@ const { KrogerLiveSource } = require("./src/sources");
     process.exit(1);
   }
 
-  let live = 0;
+  const totalLive = deals.filter((d) => !d.estimated).length;
+  const totalPromo = deals.filter((d) => (d.savingsPercent || 0) > 0).length;
   for (const d of deals.slice(0, 8)) {
-    const price = d.priceAfter != null ? `$${d.priceAfter.toFixed(2)}` : "n/a";
-    const was = d.priceBefore != null && d.priceBefore > 0 ? `was $${d.priceBefore.toFixed(2)}` : "";
+    const price = d.price != null ? `$${d.price.toFixed(2)}` : "n/a";
+    const save = d.savingsPercent > 0 ? `save ${d.savingsPercent}%` : "";
     const est = d.estimated ? " [ESTIMATED]" : " [LIVE]";
-    if (!d.estimated) live++;
-    console.log(`  - ${d.store} | ${d.title.slice(0, 48)} | ${price} ${was}${est}`);
+    console.log(`  - ${d.store} | ${String(d.productName || "").slice(0, 48)} | ${price} ${save}${est}`);
     if (d.url) console.log(`      link: ${d.url}`);
   }
 
   console.log(
-    `\n${live}/${deals.length} deals are LIVE-priced (the rest fall back to regular price or are estimated).`
+    `\n${totalLive}/${deals.length} deals are LIVE-priced (${totalPromo} with promo savings; the rest at regular price).`
   );
   console.log("Kroger live integration OK.");
 })();

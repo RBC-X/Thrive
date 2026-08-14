@@ -51,18 +51,29 @@ global.fetch = async (url, opts) => {
           productId: "0001111046396",
           description: "Milk 1 Gallon",
           brand: "Kroger",
-          size: "1 gal",
+          productPageURI: "/p/kroger-milk-1-gallon/0001111046396?cid=tracking",
           categories: ["Dairy"],
           images: [{ sizes: [{ url: "https://img.kroger.com/milk.jpg" }] }],
-          items: [{ price: { regularPrice: 3.79, promoPrice: 2.99 } }],
+          items: [{ size: "1 gal", price: { regular: 3.79, promo: 2.99 } }], // current API shape
         },
         {
           productId: "0001111088257",
           description: "Large Eggs 18 ct",
           brand: "Kroger",
-          size: "18 ct",
+          productPageURI: "/p/kroger-eggs-18-ct/0001111088257",
           categories: ["Dairy"],
-          items: [{ price: { regularPrice: 4.29 } }], // no promo
+          images: [{ sizes: [{ url: "https://img.kroger.com/eggs.jpg" }] }],
+          items: [{ size: "18 ct", price: { regular: 4.29 } }], // no promo
+        },
+        {
+          // Defensive: older regularPrice/promoPrice shape must still parse.
+          productId: "0001111066666",
+          description: "Old Shape Bread",
+          brand: "Kroger",
+          productPageURI: "/p/kroger-bread/0001111066666",
+          categories: ["Bakery"],
+          images: [{ sizes: [{ url: "https://img.kroger.com/bread.jpg" }] }],
+          items: [{ size: "20 oz", price: { regularPrice: 3.19, promoPrice: 2.49 } }],
         },
       ],
     });
@@ -85,12 +96,18 @@ async function main() {
 
   const deals = await src.deals();
 
-  check("returns both products", deals.length === 2, `got ${deals.length}`);
+  check("returns all three products", deals.length === 3, `got ${deals.length}`);
   const milk = deals.find((d) => d.productName === "Milk 1 Gallon");
   check("promo price used", milk && milk.price === 2.99, JSON.stringify(milk && milk.price));
   check("savings percent computed", milk && milk.savingsPercent === 21, `got ${milk && milk.savingsPercent}`);
   check("live price flagged", milk && milk.estimated === false);
-  check("exact product link", milk && milk.urlVerified === true && milk.url === "https://www.kroger.com/p/0001111046396");
+  check(
+    "exact product link from productPageURI (tracking query stripped)",
+    milk && milk.urlVerified === true && milk.url === "https://www.kroger.com/p/kroger-milk-1-gallon/0001111046396",
+    milk && milk.url
+  );
+  const bread = deals.find((d) => d.productName === "Old Shape Bread");
+  check("older price shape still parses", bread && bread.price === 2.49, JSON.stringify(bread && bread.price));
   check("unit price derived from size", milk && milk.unitPrice === "$2.99/gal", `got ${milk && milk.unitPrice}`);
   check("category mapped", milk && milk.category === "Dairy");
   check("brand carried through", milk && milk.brand === "Kroger");
