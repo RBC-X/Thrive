@@ -1,33 +1,55 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft, ArrowRight, CalendarDays, Check, ChefHat, ChevronRight,
+  CircleDollarSign, Clock3, Heart, ListPlus, Minus,
+  PackageOpen, Plus, RefreshCw, Refrigerator, Search, Settings, ShoppingCart, Sparkles,
+  Tag, Trash2, WalletCards, X,
+} from "lucide-react";
 import couponsData from "./data/coupons.json";
 import recipesData from "./data/recipes.json";
 import dealsData from "./data/deals.json";
+import catalogData from "./data/catalog.json";
 
 type Tab = "savings" | "recipes" | "pantry" | "budget";
-type PantryItem = { id: string; name: string; location: string; quantity: number; expires?: string };
-type ShopItem = { id: string; name: string; price: number; checked: boolean };
+type Coupon = (typeof couponsData)[number];
 type Recipe = (typeof recipesData)[number];
+type PantryItem = { id: string; name: string; location: string; category: string; quantity: number };
+type ShopItem = { id: string; name: string; category: string; quantity: number; price: number; checked: boolean };
 
-const tabs: { id: Tab; label: string; icon: string }[] = [
-  { id: "savings", label: "Savings", icon: "🏷️" },
-  { id: "recipes", label: "Recipes", icon: "🍲" },
-  { id: "pantry", label: "Pantry", icon: "🧺" },
-  { id: "budget", label: "Budget", icon: "💳" },
+const nav = [
+  { id: "savings" as Tab, label: "Savings", Icon: Tag },
+  { id: "recipes" as Tab, label: "Recipes", Icon: ChefHat },
+  { id: "pantry" as Tab, label: "Pantry", Icon: Refrigerator },
+  { id: "budget" as Tab, label: "Budget", Icon: WalletCards },
 ];
-
-function money(value: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value); }
+const sectionInfo: Record<string, [string, string]> = {
+  under_10: ["Under $10", "Big flavor, tiny total"],
+  under_20: ["Under 20 minutes", "Dinner before the delivery app loads"],
+  five_ingredients: ["5 ingredients", "Less shopping. Less cleanup."],
+  family_favorites: ["Family favorites", "The plates everyone clears"],
+  one_pot: ["One pot", "Easy dinner, easier cleanup"],
+};
+const storageGroups = ["Fridge", "Freezer", "Pantry"];
+const storeColors: Record<string, string> = { Kroger: "#1769aa", Aldi: "#ef6c00", Walmart: "#1976d2", Target: "#d32f2f", CVS: "#c62828", Amazon: "#232f3e" };
+const money = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+const discount = (c: Coupon) => Math.floor((1 - c.priceAfter / c.priceBefore) * 100);
+const initials = (name: string) => name.split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase();
+const foodImg = (seed?: string | null) => `https://picsum.photos/seed/thrive-food-${seed || "meal"}/600/600`;
+const productImg = (seed?: string | null) => `https://picsum.photos/seed/thrive-${seed || "deal"}/600/600`;
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("savings");
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [pantry, setPantry] = useState<PantryItem[]>([]);
   const [shopping, setShopping] = useState<ShopItem[]>([]);
-  const [budget, setBudget] = useState(75);
+  const [budget, setBudget] = useState<number | null>(null);
   const [people, setPeople] = useState(4);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [detail, setDetail] = useState<{ type: "coupon"; item: Coupon } | { type: "recipe"; item: Recipe } | null>(null);
+  const [sheet, setSheet] = useState<"pantry" | "shopping" | "meal" | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -35,59 +57,100 @@ export default function Home() {
       setFavorites(JSON.parse(localStorage.getItem("thrive-favorites") || "[]"));
       setPantry(JSON.parse(localStorage.getItem("thrive-pantry") || "[]"));
       setShopping(JSON.parse(localStorage.getItem("thrive-shopping") || "[]"));
+      const savedBudget = localStorage.getItem("thrive-budget");
+      if (savedBudget) setBudget(Number(savedBudget));
+      const savedPeople = localStorage.getItem("thrive-people");
+      if (savedPeople) setPeople(Number(savedPeople));
     } finally { setReady(true); }
   }, []);
   useEffect(() => { if (ready) localStorage.setItem("thrive-favorites", JSON.stringify(favorites)); }, [favorites, ready]);
   useEffect(() => { if (ready) localStorage.setItem("thrive-pantry", JSON.stringify(pantry)); }, [pantry, ready]);
   useEffect(() => { if (ready) localStorage.setItem("thrive-shopping", JSON.stringify(shopping)); }, [shopping, ready]);
+  useEffect(() => { if (ready && budget !== null) localStorage.setItem("thrive-budget", String(budget)); }, [budget, ready]);
+  useEffect(() => { if (ready) localStorage.setItem("thrive-people", String(people)); }, [people, ready]);
 
-  const filteredCoupons = couponsData.filter(c => `${c.title} ${c.store} ${c.category}`.toLowerCase().includes(query.toLowerCase()));
-  const filteredRecipes = recipesData.filter(r => `${r.name} ${r.description} ${r.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase()));
-  const total = shopping.reduce((sum, item) => sum + item.price, 0);
-  const pantryNames = pantry.map(p => p.name.toLowerCase());
-  const mealMatches = useMemo(() => recipesData.map(recipe => ({ recipe, matches: recipe.ingredients.filter(i => pantryNames.some(p => i.name.toLowerCase().includes(p) || p.includes(i.name.toLowerCase()))).length })).sort((a, b) => b.matches - a.matches).slice(0, 3), [pantryNames.join("|")]);
+  const categories = ["All", ...Array.from(new Set(couponsData.map(c => c.category)))];
+  const filteredCoupons = couponsData.filter(c => (category === "All" || c.category === category) && `${c.title} ${c.store} ${c.description}`.toLowerCase().includes(query.toLowerCase()));
+  const recipeResults = recipesData.filter(r => `${r.name} ${r.tags.join(" ")} ${r.ingredients.map(i => i.name).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
+  const featured = recipesData.filter(r => r.featured);
+  const total = shopping.reduce((s, x) => s + x.price * x.quantity, 0);
+  const mealMatches = useMemo(() => recipesData.map(recipe => ({ recipe, matches: recipe.ingredients.filter(i => pantry.some(p => i.name.toLowerCase().includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(i.name.toLowerCase()))).length })).sort((a, b) => b.matches - a.matches).slice(0, 3), [pantry]);
 
-  function toggleFavorite(id: string) { setFavorites(v => v.includes(id) ? v.filter(x => x !== id) : [...v, id]); }
-  function addIngredients(recipe: Recipe) {
-    setShopping(current => [...current, ...recipe.ingredients.filter(i => !current.some(s => s.name.toLowerCase() === i.name.toLowerCase())).map(i => ({ id: `${recipe.id}-${i.name}`, name: i.name, price: 2.5, checked: false }))]);
-    setSelectedRecipe(null); setTab("budget");
-  }
-  function addPantry(form: FormData) {
-    const name = String(form.get("name") || "").trim(); if (!name) return;
-    setPantry(v => [...v, { id: crypto.randomUUID(), name, location: String(form.get("location")), quantity: Number(form.get("quantity")) || 1, expires: String(form.get("expires") || "") }]);
-  }
-  function addShop(form: FormData) {
-    const name = String(form.get("name") || "").trim(); if (!name) return;
-    setShopping(v => [...v, { id: crypto.randomUUID(), name, price: Number(form.get("price")) || 0, checked: false }]);
-  }
+  const toggleFavorite = (id: string) => setFavorites(v => v.includes(id) ? v.filter(x => x !== id) : [...v, id]);
+  const switchTab = (next: Tab) => { setTab(next); setQuery(""); setCategory("All"); setDetail(null); window.scrollTo({ top: 0, behavior: "instant" }); };
+  const addRecipe = (recipe: Recipe) => {
+    setShopping(list => [...list, ...recipe.ingredients.filter(i => !list.some(x => x.name.toLowerCase() === i.name.toLowerCase())).map(i => ({ id: crypto.randomUUID(), name: i.name, category: "Grocery", quantity: 1, price: 2, checked: false }))]);
+    setDetail(null); switchTab("budget");
+  };
 
-  return <main className="app-shell">
-    <header className="topbar">
-      <div className="brand"><span className="brand-mark">t</span><div><strong>Thrive</strong><small>Save smarter. Eat better.</small></div></div>
-      <div className="local-pill"><span /> Saved on this phone</div>
-    </header>
-
-    <section className="hero">
-      <div><p className="eyebrow">YOUR FAMILY MONEY COMPANION</p><h1>Make every grocery dollar <em>go further.</em></h1><p>Find real savings, plan affordable meals, use what you already have, and stay on budget.</p></div>
-      <div className="hero-card"><span>THIS WEEK</span><strong>{money(24.68)}</strong><p>potential savings found</p><div className="meter"><i /></div><small>That’s about 3 family dinners</small></div>
-    </section>
-
-    <nav className="desktop-nav" aria-label="Main navigation">{tabs.map(t => <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => { setTab(t.id); setQuery(""); }}><span>{t.icon}</span>{t.label}</button>)}</nav>
-
-    <section className="content">
-      {(tab === "savings" || tab === "recipes") && <div className="section-head"><div><p className="eyebrow">{tab === "savings" ? "TODAY’S BEST FINDS" : "AFFORDABLE FAMILY MEALS"}</p><h2>{tab === "savings" ? "Savings made simple" : "What sounds good?"}</h2></div><label className="search"><span>⌕</span><input aria-label={`Search ${tab}`} value={query} onChange={e => setQuery(e.target.value)} placeholder={`Search ${tab}…`} /></label></div>}
-
-      {tab === "savings" && <div className="card-grid">{filteredCoupons.slice(0, 12).map((c, index) => { const discount = Math.round((1 - c.priceAfter / c.priceBefore) * 100); return <article className={`deal-card ${index === 0 ? "featured" : ""}`} key={c.id}><div className="card-top"><span className="store">{c.store}</span><button className="heart" aria-label="Favorite" onClick={() => toggleFavorite(c.id)}>{favorites.includes(c.id) ? "♥" : "♡"}</button></div><div className="deal-art">{c.category === "Dining" ? "🥡" : c.category === "Health" ? "🧴" : c.category === "Home" ? "🏠" : "🛒"}<b>{discount}% OFF</b></div><h3>{c.title}</h3><p>{c.description}</p><div className="price"><s>{money(c.priceBefore)}</s><strong>{money(c.priceAfter)}</strong><span>Ends in {c.endsInDays}d</span></div>{c.code && <button className="code" onClick={() => navigator.clipboard?.writeText(c.code || "")}>Copy code: {c.code}</button>}</article>})}</div>}
-
-      {tab === "recipes" && <><div className="chips"><button>All meals</button><button>Under $10</button><button>20 minutes</button><button>5 ingredients</button><button>One pot</button></div><div className="recipe-grid">{filteredRecipes.map(r => <article className="recipe-card" key={r.id} onClick={() => setSelectedRecipe(r)}><div className="recipe-art">{r.tags.includes("mexican") ? "🌮" : r.tags.includes("asian") ? "🍜" : r.tags.includes("breakfast") ? "🥞" : r.tags.includes("seafood") ? "🐟" : "🍝"}</div><div><span className="tag">{r.section.replaceAll("_", " ")}</span><h3>{r.name}</h3><p>{r.description}</p><div className="recipe-meta"><span>⏱ {r.prepMinutes + r.cookMinutes} min</span><span>{money(r.costDollars / r.servings)}/serving</span></div></div></article>)}</div></>}
-
-      {tab === "pantry" && <><div className="section-head"><div><p className="eyebrow">USE WHAT YOU HAVE</p><h2>Your pantry</h2><p>Add what’s at home and Thrive will find meals that fit.</p></div></div><div className="split"><section className="panel"><h3>Add an item</h3><form action={addPantry} className="form"><input name="name" required placeholder="e.g. black beans" /><div className="row"><select name="location"><option>Pantry</option><option>Fridge</option><option>Freezer</option></select><input name="quantity" type="number" min="1" defaultValue="1" /></div><input name="expires" type="date" aria-label="Expiration date"/><button>Add to pantry</button></form><div className="item-list">{pantry.length === 0 ? <p className="empty">Your pantry is ready for its first item.</p> : pantry.map(item => <div key={item.id}><span><b>{item.name}</b><small>{item.location} · Qty {item.quantity}</small></span><button onClick={() => setPantry(v => v.filter(x => x.id !== item.id))}>×</button></div>)}</div></section><section className="panel meal-panel"><span className="spark">✦ MAKE ME A MEAL</span><h3>Best matches from your kitchen</h3>{pantry.length === 0 ? <p className="empty">Add a few ingredients to see personalized meal ideas.</p> : mealMatches.map(({recipe, matches}) => <button className="meal-match" key={recipe.id} onClick={() => setSelectedRecipe(recipe)}><span>🍲</span><div><b>{recipe.name}</b><small>{matches} pantry ingredients · {money(recipe.costDollars)}</small></div><i>›</i></button>)}</section></div></>}
-
-      {tab === "budget" && <><div className="section-head"><div><p className="eyebrow">SHOP WITH A PLAN</p><h2>Stay on budget</h2><p>Build your list and we’ll match it to the lowest available prices.</p></div></div><div className="budget-strip"><label>Weekly budget<input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))}/></label><label>People<input type="number" min="1" value={people} onChange={e => setPeople(Number(e.target.value))}/></label><div><span>Estimated total</span><strong className={total > budget ? "over" : ""}>{money(total)}</strong><small>{money(Math.max(0, budget - total))} left</small></div></div><div className="split"><section className="panel"><h3>Shopping list</h3><form action={addShop} className="form inline"><input name="name" required placeholder="Add an item"/><input name="price" type="number" step=".01" placeholder="$"/><button>Add</button></form><div className="item-list">{shopping.length === 0 ? <p className="empty">Add groceries or send ingredients here from a recipe.</p> : shopping.map(item => <div key={item.id}><label><input type="checkbox" checked={item.checked} onChange={() => setShopping(v => v.map(x => x.id === item.id ? {...x, checked: !x.checked} : x))}/><span><b>{item.name}</b><small>Estimated {money(item.price)}</small></span></label><button onClick={() => setShopping(v => v.filter(x => x.id !== item.id))}>×</button></div>)}</div></section><section className="panel"><span className="spark">✦ BEST DEALS</span><h3>Lowest prices today</h3>{dealsData.slice(0, 5).map(d => <div className="deal-row" key={d.id}><span><b>{d.productName}</b><small>{d.store} · {d.unitPrice || d.size}</small></span><strong>{money(d.price)}</strong></div>)}</section></div></>}
-    </section>
-
-    <nav className="mobile-nav" aria-label="Main navigation">{tabs.map(t => <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => { setTab(t.id); setQuery(""); }}><span>{t.icon}</span>{t.label}</button>)}</nav>
-
-    {selectedRecipe && <div className="modal-backdrop" onClick={() => setSelectedRecipe(null)}><article className="modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedRecipe(null)}>×</button><span className="tag">{selectedRecipe.difficulty} · {selectedRecipe.prepMinutes + selectedRecipe.cookMinutes} minutes</span><h2>{selectedRecipe.name}</h2><p>{selectedRecipe.description}</p><div className="modal-grid"><div><h3>Ingredients</h3><ul>{selectedRecipe.ingredients.map(i => <li key={i.name}><b>{i.amount}</b> {i.name}</li>)}</ul></div><div><h3>Steps</h3><ol>{selectedRecipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></div></div><button className="primary" onClick={() => addIngredients(selectedRecipe)}>Add ingredients to my list</button></article></div>}
-  </main>;
+  return <div className="site-stage">
+    <div className="desktop-note"><b>Thrive is made for your phone.</b><span>Open this page on iPhone or Android for the app experience.</span></div>
+    <main className="phone-app">
+      <div className="status-spacer" />
+      <div className="screen">
+        {tab === "savings" && <SavingsScreen query={query} setQuery={setQuery} category={category} setCategory={setCategory} categories={categories} coupons={filteredCoupons} favorites={favorites} toggleFavorite={toggleFavorite} open={item => setDetail({ type: "coupon", item })} />}
+        {tab === "recipes" && <RecipesScreen query={query} setQuery={setQuery} results={recipeResults} featured={featured} favorites={favorites} toggleFavorite={toggleFavorite} open={item => setDetail({ type: "recipe", item })} />}
+        {tab === "pantry" && <PantryScreen pantry={pantry} setPantry={setPantry} openAdd={() => setSheet("pantry")} openMeal={() => setSheet("meal")} openRecipe={item => setDetail({ type: "recipe", item })} mealMatches={mealMatches} />}
+        {tab === "budget" && <BudgetScreen budget={budget} setBudget={setBudget} people={people} setPeople={setPeople} shopping={shopping} setShopping={setShopping} total={total} openAdd={() => setSheet("shopping")} />}
+      </div>
+      {!detail && <nav className="bottom-bar" aria-label="Main navigation">{nav.map(({ id, label, Icon }) => <button key={id} className={tab === id ? "selected" : ""} onClick={() => switchTab(id)}><span><Icon size={23} strokeWidth={tab === id ? 2.6 : 2} /></span><b>{label}</b></button>)}</nav>}
+      {detail?.type === "coupon" && <CouponDetail coupon={detail.item} favorite={favorites.includes(detail.item.id)} back={() => setDetail(null)} toggle={() => toggleFavorite(detail.item.id)} />}
+      {detail?.type === "recipe" && <RecipeDetail recipe={detail.item} favorite={favorites.includes(detail.item.id)} back={() => setDetail(null)} toggle={() => toggleFavorite(detail.item.id)} add={() => addRecipe(detail.item)} />}
+      {sheet && <BottomSheet type={sheet} close={() => setSheet(null)} pantry={pantry} setPantry={setPantry} shopping={shopping} setShopping={setShopping} mealMatches={mealMatches} openRecipe={item => { setSheet(null); setDetail({ type: "recipe", item }); }} />}
+    </main>
+  </div>;
 }
+
+function SavingsScreen({ query, setQuery, category, setCategory, categories, coupons, favorites, toggleFavorite, open }: any) {
+  const pick: Coupon = couponsData[0];
+  const potential = coupons.reduce((sum: number, c: Coupon) => sum + c.priceBefore - c.priceAfter, 0);
+  return <div className="scroll-screen">
+    <header className="app-header savings-header"><div><div className="title-row"><h1 className="brand-title">Thrive</h1><span className="sync-chip">Offline feed</span></div><p>Good morning! Here&apos;s what&apos;s on sale today.</p></div><div className="header-actions"><button aria-label="Refresh"><RefreshCw /></button><button aria-label="Settings"><Settings /></button></div></header>
+    <button className="daily-pick" onClick={() => open(pick)}><i /><div><span>TODAY&apos;S PICK</span><small>{pick.store}</small><h2>{pick.title}</h2></div><footer><div><strong>{money(pick.priceAfter)}</strong><small>was {money(pick.priceBefore)}</small></div><b>Save {discount(pick)}% <ArrowRight size={16}/></b></footer></button>
+    <div className="savings-strip"><CircleDollarSign size={22}/><b>Save up to {money(potential)} this week across {coupons.length} deals</b></div>
+    <SearchBox value={query} onChange={setQuery} placeholder="Search stores or products" />
+    <div className="chip-row">{categories.map((c: string) => <button className={category === c ? "active" : ""} key={c} onClick={() => setCategory(c)}>{c}</button>)}</div>
+    <p className="count-label">{coupons.length ? `${coupons.length} deals` : "No deals match"}</p>
+    <div className="deal-list">{coupons.map((coupon: Coupon) => <DealRow key={coupon.id} coupon={coupon} favorite={favorites.includes(coupon.id)} toggle={() => toggleFavorite(coupon.id)} open={() => open(coupon)} />)}</div>
+  </div>;
+}
+
+function DealRow({ coupon, favorite, toggle, open }: { coupon: Coupon; favorite: boolean; toggle: () => void; open: () => void }) {
+  return <article className="deal-row" onClick={open}><div className="product-photo"><img src={productImg(coupon.imageSeed)} alt=""/><button aria-label="Favorite" onClick={e => { e.stopPropagation(); toggle(); }}><Heart size={17} fill={favorite ? "#ff5a3c" : "none"}/></button></div><div className="deal-copy"><div className="store-line"><span className="store-avatar" style={{ background: storeColors[coupon.store] || "#0d7c5f" }}>{initials(coupon.store)}</span><b>{coupon.store}</b>{coupon.isNew && <em>NEW</em>}{discount(coupon) >= 45 && coupon.endsInDays <= 3 && <em className="popular">POPULAR</em>}</div><h3>{coupon.title}</h3><div className="prices"><s>{money(coupon.priceBefore)}</s><strong>{money(coupon.priceAfter)}</strong><span>-{discount(coupon)}%</span></div><div className="micro-chips"><i>{coupon.endsInDays === 0 ? "Ends today" : `${coupon.endsInDays} days left`}</i><i>{coupon.dealType.replaceAll("_", " ")}</i></div></div></article>;
+}
+
+function RecipesScreen({ query, setQuery, results, featured, favorites, toggleFavorite, open }: any) {
+  const sections = Object.keys(sectionInfo);
+  return <div className="scroll-screen"><header className="app-header"><div><h1>Recipes</h1><p>Family meals that love your budget</p></div></header><SearchBox value={query} onChange={setQuery} placeholder="Search meals, tags, or ingredients" />
+    {query ? <><SectionTitle title={results.length ? `${results.length} matches` : "No matches"}/><div className="recipe-results">{results.map((r: Recipe) => <RecipeSearchRow key={r.id} recipe={r} favorite={favorites.includes(r.id)} toggle={() => toggleFavorite(r.id)} open={() => open(r)}/>)}</div></> : <><div className="featured-scroll">{featured.map((r: Recipe) => <button className="featured-recipe" key={r.id} onClick={() => open(r)}><img src={foodImg(r.imageSeed)} alt=""/><span className="shade"/><div><em>★ Thrive pick</em><h3>{r.name}</h3><p>{r.prepMinutes + r.cookMinutes} min · {money(r.costDollars)} · {r.servings} servings</p></div></button>)}</div>{sections.map(key => { const recipes = recipesData.filter(r => r.section === key); return <section className="recipe-section" key={key}><SectionTitle title={sectionInfo[key][0]} subtitle={sectionInfo[key][1]}/><div className="recipe-scroll">{recipes.map(r => <button className="recipe-card" key={r.id} onClick={() => open(r)}><div><img src={foodImg(r.imageSeed)} alt=""/><span onClick={e => { e.stopPropagation(); toggleFavorite(r.id); }}><Heart size={16} fill={favorites.includes(r.id) ? "#ff5a3c" : "none"}/></span></div><h3>{r.name}</h3><p><span>{r.prepMinutes + r.cookMinutes}m</span><b>{money(r.costDollars)}</b><span>{r.servings} sv</span></p></button>)}</div></section>})}</>}
+  </div>;
+}
+
+function PantryScreen({ pantry, setPantry, openAdd, openMeal, openRecipe, mealMatches }: any) {
+  return <div className="scroll-screen"><header className="app-header"><div><h1>Pantry</h1><p>{pantry.length} item{pantry.length === 1 ? "" : "s"} stocked · all fresh</p></div></header>
+    <button className={`feature-cta meal-cta ${!pantry.length ? "disabled" : ""}`} onClick={pantry.length ? openMeal : undefined}><span><Sparkles/></span><div><b>Make me a meal</b><small>{pantry.length ? "AI turns what you have into dinner" : "Add a few items to get started"}</small></div><ChevronRight/></button>
+    <button className={`feature-cta week-cta ${!pantry.length ? "disabled" : ""}`}><span><CalendarDays/></span><div><b>Plan my week</b><small>{pantry.length ? "7 dinners under a weekly budget, from your pantry" : "Add a few items to get started"}</small></div><ChevronRight/></button>
+    {pantry.length === 0 ? <div className="empty-state"><span><PackageOpen/></span><h2>Your kitchen is ready</h2><p>Add what&apos;s in your fridge, freezer, and pantry. Thrive will help you use it before it goes to waste.</p><button onClick={openAdd}><Plus size={18}/> Add your first item</button></div> : <>{storageGroups.map(group => { const items = pantry.filter((p: PantryItem) => p.location === group); if (!items.length) return null; return <section className="pantry-group" key={group}><SectionTitle title={group} subtitle={`${items.length} item${items.length === 1 ? "" : "s"}`}/>{items.map((item: PantryItem) => <div className="pantry-item" key={item.id}><span><PackageOpen size={19}/></span><div><b>{item.name}</b><small>{item.category}</small></div><div className="stepper"><button onClick={() => item.quantity === 1 ? setPantry((v: PantryItem[]) => v.filter(x => x.id !== item.id)) : setPantry((v: PantryItem[]) => v.map(x => x.id === item.id ? {...x, quantity:x.quantity-1}:x))}><Minus/></button><b>{item.quantity}</b><button onClick={() => setPantry((v: PantryItem[]) => v.map(x => x.id === item.id ? {...x, quantity:x.quantity+1}:x))}><Plus/></button></div></div>)}</section>})}</>}
+    <button className="fab" onClick={openAdd} aria-label="Add pantry item"><Plus/></button>
+  </div>;
+}
+
+function BudgetScreen({ budget, setBudget, people, setPeople, shopping, setShopping, total, openAdd }: any) {
+  const [draft, setDraft] = useState("75");
+  if (budget === null) return <div className="scroll-screen budget-onboarding"><header className="app-header"><div><h1>Budget</h1><p>Plan the trip, beat the store, keep the change.</p></div></header><div className="budget-hero"><h2>Let&apos;s plan your grocery trip</h2><p>Two quick questions, then we&apos;ll hunt down the best deals for your list.</p></div><section className="budget-form"><h2>How much can you spend?</h2><p>For this whole shopping trip</p><label className="money-input"><span>$</span><input inputMode="decimal" value={draft} onChange={e => setDraft(e.target.value.replace(/[^0-9.]/g, ""))}/></label><div className="amounts">{[40,75,100,150].map(n => <button key={n} className={draft === String(n) ? "active" : ""} onClick={() => setDraft(String(n))}>${n}</button>)}</div><h2>How many people?</h2><p>We&apos;ll estimate portions for your household</p><div className="people-stepper"><button onClick={() => setPeople(Math.max(1, people-1))}><Minus/></button><strong>{people}</strong><button onClick={() => setPeople(Math.min(12, people+1))}><Plus/></button></div><button className="primary-button" disabled={!Number(draft)} onClick={() => setBudget(Number(draft))}>Build my shopping list <ArrowRight size={18}/></button></section></div>;
+  return <div className="scroll-screen"><header className="app-header"><div><h1>Budget</h1><p>Shopping for {people} · {money(budget)} budget</p></div><button className="icon-button"><Settings/></button></header><div className="budget-progress"><div><span>Estimated</span><strong>{money(total)}</strong></div><div><span>Budget</span><b>{money(budget)}</b></div><div className="progress-track"><i style={{ width: `${Math.min(100, total/budget*100)}%` }}/></div><p>{total <= budget ? `${money(budget-total)} left to spend` : `${money(total-budget)} over budget`}</p></div>{shopping.length === 0 ? <div className="empty-state"><span><ShoppingCart/></span><h2>Build your shopping list</h2><p>Add what you need — Thrive will find where it&apos;s cheapest.</p><button onClick={openAdd}><Plus size={18}/> Add items</button></div> : <section className="shopping-section"><SectionTitle title="Shopping list" subtitle={`${shopping.length} items`}/>{shopping.map((item: ShopItem) => <div className="shop-item" key={item.id}><button className={`check ${item.checked ? "done" : ""}`} onClick={() => setShopping((v: ShopItem[]) => v.map(x => x.id === item.id ? {...x, checked:!x.checked}:x))}>{item.checked && <Check/>}</button><div><b>{item.name}</b><small>{money(item.price)}</small></div><button className="trash" onClick={() => setShopping((v: ShopItem[]) => v.filter(x => x.id !== item.id))}><Trash2/></button><div className="stepper"><button onClick={() => setShopping((v: ShopItem[]) => v.map(x => x.id === item.id ? {...x, quantity:Math.max(1,x.quantity-1)}:x))}><Minus/></button><b>{item.quantity}</b><button onClick={() => setShopping((v: ShopItem[]) => v.map(x => x.id === item.id ? {...x, quantity:x.quantity+1}:x))}><Plus/></button></div></div>)}<button className="deal-button"><Sparkles/> Find me the best deals</button></section>}<button className="fab" onClick={openAdd}><Plus/></button></div>;
+}
+
+function CouponDetail({ coupon, favorite, back, toggle }: any) { return <section className="detail-screen"><div className="detail-photo"><img src={productImg(coupon.imageSeed)} alt=""/><button onClick={back}><ArrowLeft/></button><button onClick={toggle}><Heart fill={favorite ? "#ff5a3c" : "white"}/></button></div><div className="detail-body"><div className="store-line"><span className="store-avatar" style={{background:storeColors[coupon.store] || "#0d7c5f"}}>{initials(coupon.store)}</span><b>{coupon.store}</b></div><h1>{coupon.title}</h1><p>{coupon.description}</p><div className="detail-price"><div><s>{money(coupon.priceBefore)}</s><strong>{money(coupon.priceAfter)}</strong></div><span>Save {discount(coupon)}%</span></div><div className="info-box"><Clock3/><span><b>{coupon.endsInDays} days left</b><small>{coupon.terms || "Offer terms may apply."}</small></span></div>{coupon.code ? <button className="primary-button" onClick={() => navigator.clipboard?.writeText(coupon.code || "")}>Copy code · {coupon.code}</button> : <button className="primary-button">Get this deal <ArrowRight/></button>}</div></section> }
+
+function RecipeDetail({ recipe, favorite, back, toggle, add }: any) { return <section className="detail-screen recipe-detail"><div className="detail-photo"><img src={foodImg(recipe.imageSeed)} alt=""/><button onClick={back}><ArrowLeft/></button><button onClick={toggle}><Heart fill={favorite ? "#ff5a3c" : "white"}/></button></div><div className="detail-body"><span className="soft-label">{recipe.difficulty}</span><h1>{recipe.name}</h1><p>{recipe.description}</p><div className="recipe-stats"><span><Clock3/> <b>{recipe.prepMinutes + recipe.cookMinutes} min</b></span><span><ChefHat/> <b>{recipe.servings} servings</b></span><span><CircleDollarSign/> <b>{money(recipe.costDollars / recipe.servings)}/serving</b></span></div><SectionTitle title="Ingredients"/><ul className="ingredients">{recipe.ingredients.map((i: any) => <li key={i.name}><span>{i.amount}</span><b>{i.name}</b></li>)}</ul><button className="list-button" onClick={add}><ListPlus/> Add to shopping list</button><SectionTitle title="Let’s cook"/>{recipe.steps.map((s: string, i: number) => <div className="cook-step" key={i}><span>{i+1}</span><p>{s}</p></div>)}</div></section> }
+
+function BottomSheet({ type, close, pantry, setPantry, shopping, setShopping, mealMatches, openRecipe }: any) {
+  const [search, setSearch] = useState("");
+  const options = catalogData.filter(x => x.name.toLowerCase().includes(search.toLowerCase())).slice(0, 18);
+  return <div className="sheet-backdrop" onClick={close}><section className="bottom-sheet" onClick={e => e.stopPropagation()}><i className="handle"/><button className="sheet-close" onClick={close}><X/></button>{type === "meal" ? <><h2>Make me a meal</h2><p>Best matches from what&apos;s already in your kitchen.</p><div className="meal-options">{mealMatches.map(({recipe,matches}: any) => <button key={recipe.id} onClick={() => openRecipe(recipe)}><img src={foodImg(recipe.imageSeed)} alt=""/><div><b>{recipe.name}</b><small>{matches} pantry matches · {money(recipe.costDollars)}</small></div><ChevronRight/></button>)}</div></> : <><h2>{type === "pantry" ? "Add to pantry" : "Add to shopping list"}</h2><SearchBox value={search} onChange={setSearch} placeholder="Search items…"/><div className="catalog-list">{options.map(item => <button key={item.name} onClick={() => { if (type === "pantry") setPantry((v: PantryItem[]) => [...v,{id:crypto.randomUUID(),name:item.name,location:item.location,category:item.category,quantity:1}]); else setShopping((v: ShopItem[]) => [...v,{id:crypto.randomUUID(),name:item.name,category:item.category,quantity:1,price:item.defaultPrice || 2,checked:false}]); close(); }}><span><PackageOpen/></span><div><b>{item.name}</b><small>{item.category}{type === "shopping" ? ` · ${money(item.defaultPrice || 2)}` : ` · ${item.location}`}</small></div><Plus/></button>)}</div></>}</section></div>;
+}
+
+function SearchBox({ value, onChange, placeholder }: any) { return <label className="search-box"><Search/><input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></label> }
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) { return <div className="section-title"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div></div> }
+function RecipeSearchRow({ recipe, favorite, toggle, open }: any) { return <button className="recipe-search-row" onClick={open}><img src={foodImg(recipe.imageSeed)} alt=""/><div><b>{recipe.name}</b><small>{recipe.prepMinutes + recipe.cookMinutes} min · {money(recipe.costDollars)} · {recipe.servings} servings</small></div><span onClick={e => {e.stopPropagation();toggle();}}><Heart fill={favorite ? "#ff5a3c" : "none"}/></span></button> }
