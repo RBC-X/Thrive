@@ -39,6 +39,9 @@ object GithubUpdateChecker {
     /** Max bytes of the GitHub API response we will read. */
     private const val MAX_BODY_BYTES = 1_048_576 // 1 MB
 
+    /** Asset name under which tools/tunnel.sh publishes the live sync URL. */
+    const val SYNC_URL_ASSET = "thrive-sync-url.txt"
+
     private val SEMVER = Regex("""^\d+\.\d+\.\d+$""")
 
     /** Approved hosts for release metadata and APK downloads (incl. redirects). */
@@ -51,6 +54,18 @@ object GithubUpdateChecker {
 
     fun hostApproved(host: String): Boolean = host.lowercase() in approvedHosts ||
         host.lowercase().endsWith(".github.com")
+
+    /**
+     * Normalizes a sync-server URL discovered from the release asset: only
+     * https:// is accepted (backup codes are sent to it), trailing slashes are
+     * stripped. Returns null for anything else (http, garbage, empty).
+     */
+    fun sanitizeSyncUrl(raw: String): String? {
+        val trimmed = raw.trim()
+        if (!trimmed.startsWith("https://")) return null
+        if (trimmed.length > 512) return null
+        return trimmed.removeSuffix("/")
+    }
 
     suspend fun latestRelease(repo: String = REPO): GithubRelease? = withContext(Dispatchers.IO) {
         runCatching {
@@ -87,6 +102,66 @@ object GithubUpdateChecker {
             notes = cleanNotes(release.body),
             apkSizeBytes = release.apkSizeBytes,
         )
+    }
+
+    /**
+     * Discovers the operator's current public backup server by reading the
+     * `thrive-sync-url.txt` asset attached to the latest GitHub release
+     * (published by tools/tunnel.sh). Returns a validated https:// URL, or
+     * null when no release advertises one. This is how ordinary users connect
+     * without typing IPs: Settings shows a one-tap "Connect" card.
+     */
+    suspend fun discoverSyncServer(repo: String = REPO): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = URL("https://api.github.com/repos/$repo/releases/latest")
+                .openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Accept", "application/vnd.github+json")
+                conn.setRequestProperty("User-Agent", "Thrive-Android-Updater")
+                conn.connectTimeout = 8_000
+                conn.readTimeout = 15_000
+                conn.instanceFollowRedirects = true
+                if (!hostApproved(conn.url.host)) return@runCatching null
+                if (conn.responseCode !in 200..299) return@runCatching null
+                val body = conn.inputStream.use { it.readBytesBounded(MAX_BODY_BYTES) }
+                    ?: return@runCatching null
+                val root = runCatching { JSONObject(body.toString(Charsets.UTF_8)) }.getOrNull()
+                    ?: return@runCatching null
+                if (root.optBoolean("draft", false) || root.optBoolean("prerelease", false)) {
+                    return@runCatching null
+                }
+                val assets = root.optJSONArray("assets") ?: return@runCatching null
+                var url: String? = null
+                for (i in 0 until assets.length()) {
+                    val asset = assets.getJSONObject(i)
+                    if (asset.optString("name", "") == SYNC_URL_ASSET) {
+                        url = asset.optString("browser_download_url", "").takeIf { it.isNotBlank() }
+                        break
+                    }
+                }
+                val target = url ?: return@runCatching null
+                val host = runCatching { URL(target).host }.getOrNull() ?: return@runCatching null
+                if (!hostApproved(host)) return@runCatching null
+                val fetch = URL(target).openConnection() as HttpURLConnection
+                try {
+                    fetch.requestMethod = "GET"
+                    fetch.connectTimeout = 8_000
+                    fetch.readTimeout = 15_000
+                    fetch.instanceFollowRedirects = true
+                    if (fetch.responseCode !in 200..299) return@runCatching null
+                    val content = fetch.inputStream.use { it.readBytesBounded(2_048) }
+                        ?: return@runCatching null
+                    val value = sanitizeSyncUrl(content.toString(Charsets.UTF_8))
+                        ?: return@runCatching null
+                    value
+                } finally {
+                    fetch.disconnect()
+                }
+            } finally {
+                conn.disconnect()
+            }
+        }.getOrNull()
     }
 
     /** Turns a GitHub release body into plain bullet lines for the dialog. */

@@ -63,7 +63,7 @@ Unit tests cover the deal-finder honesty rules (no misleading matches, unit-pric
 
 ## Release history
 
-See `backend/release-notes.json` for per-version notes. Latest: **1.2.9** — the repair release: honest backup availability (HTTPS-only, no fake success), atomic concurrent backup writes, strict admin schema validation that can no longer crash the backend, a verified/resumable updater, deferred notification permission, an honest savings header, and clean-clone builds without signing secrets. Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
+See `backend/release-notes.json` for per-version notes. Latest: **1.2.10** — one-tap connect to the public backup server (Settings discovers the live server from the update channel — no URL to type). Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
 
 ## License
 

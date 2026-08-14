@@ -65,6 +65,10 @@
     "1.2.7": [
       "Saved-deal backup — your coupon favorites sync free between your devices with a backup code (no account)",
       "Live Kroger prices — plug in free Kroger developer credentials and deals update with real store prices"
+    ],
+    "1.2.10": [
+      "One-tap connect to the public backup server (no URL or IP to type)",
+      "Settings discovers the live server from the update channel"
     ]
   }
 }

@@ -48,6 +48,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,7 +74,9 @@ import com.thrive.app.ui.theme.ThriveFont
 import com.thrive.app.update.GithubUpdateChecker
 import com.thrive.app.update.UpdateBus
 import com.thrive.app.util.Clipboard
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private fun syncStatusLabel(sync: SyncState, message: String?): String {
     message?.let { return it }
@@ -105,6 +108,9 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
     var checkingUpdates by remember { mutableStateOf(false) }
     var updateCheckMsg by remember { mutableStateOf<String?>(null) }
     var restoreCode by remember { mutableStateOf("") }
+    var publicServer by remember { mutableStateOf<String?>(null) }
+    var discoveringServer by remember { mutableStateOf(false) }
+    var serverMsg by remember { mutableStateOf<String?>(null) }
     val accents = LocalThriveColors.current
 
     // Backup only sends the code over HTTPS (or loopback in debug builds). On a
@@ -126,6 +132,21 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
     }
 
     val scope = rememberCoroutineScope()
+
+    // One-tap connect: read the operator's public backup server from the
+    // latest GitHub release (tools/tunnel.sh publishes it there). Users never
+    // type IPs or URLs.
+    LaunchedEffect(Unit) {
+        if (syncUrl.isBlank()) {
+            discoveringServer = true
+            val found = withContext(Dispatchers.IO) {
+                com.thrive.app.update.GithubUpdateChecker.discoverSyncServer()
+            }
+            publicServer = found
+            discoveringServer = false
+        }
+    }
+
     fun runSync() {
         if (syncing) return
         syncing = true
@@ -142,6 +163,13 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                 else -> "No server configured — bundled feed active."
             }
         }
+    }
+
+    fun connectToPublicServer() {
+        val url = publicServer ?: return
+        syncUrl = url
+        runSync()
+        serverMsg = "Connected to the public backup server."
     }
 
     LazyColumn(
@@ -234,6 +262,40 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                     text = "Offline-first: until a sync succeeds (or if the server is unreachable), Thrive uses its bundled feed with no feature loss.",
                     style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
+            }
+        }
+
+        if (publicServer != null) {
+            item {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text("Public backup server", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Thrive runs a free public backup server you can connect to with one " +
+                            "tap — no account, no URL to type.",
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        enabled = syncUrl != publicServer,
+                        onClick = { connectToPublicServer() },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
+                    ) {
+                        Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (syncUrl == publicServer) "Connected" else "Connect to public backup server")
+                    }
+                    if (serverMsg != null) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = serverMsg!!,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
+                }
             }
         }
 
