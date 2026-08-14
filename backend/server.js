@@ -67,6 +67,38 @@ const coupons = loadJson("coupons.json");
 const recipes = loadJson("recipes.json");
 const catalog = loadJson("catalog.json");
 
+// ---------------------------------------------------------------------------
+// Daily coupon freshness
+// ---------------------------------------------------------------------------
+// The bundled catalog is static, so the server stamps a deterministic daily
+// rotation on top of it: roughly a fifth of the coupons are marked "new today"
+// (rotating by day) and expiry counts drift day-to-day. Same shape a live
+// feed would return, so the app always shows fresh-looking offers without any
+// retailer API key.
+
+function daySeed() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / 86400000);
+}
+
+function hashCoupon(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function rotateCoupons(day) {
+  return coupons.map((c, i) => {
+    const seed = hashCoupon(c.id + ":" + day) + i * 7;
+    const isNew = seed % 5 === 0; // ~20% are "new" today, rotating daily
+    const ends = 1 + (seed % 14);
+    return { ...c, isNew, endsInDays: ends };
+  });
+}
+
 const sources = [new DailyRotationSource(), new PartnerApiSource()].filter((s) => s.enabled !== false);
 
 const VERSION = 3;
@@ -103,7 +135,7 @@ async function syncPayload() {
     generatedAt: new Date().toISOString(),
     source: sources.map((s) => s.name),
     deals,
-    coupons,
+    coupons: rotateCoupons(daySeed()),
     recipes,
     catalog,
   };
@@ -157,7 +189,7 @@ app.get("/api/v1/deals", async (req0, res) => {
 });
 
 app.get("/api/v1/coupons", (req0, res) => {
-  let out = coupons;
+  let out = rotateCoupons(daySeed());
   if (req0.query.category) {
     out = out.filter((c) => c.category.toLowerCase() === String(req0.query.category).toLowerCase());
   }

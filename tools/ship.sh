@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-# Thrive ship script — one command to get a new build onto a connected phone.
+# Thrive ship script — one command to cut a release: bump, build, push, publish.
 #
-#   1. Build + stage the release APK (reuses tools/release.sh)
-#   2. Restart the backend so the update channel advertises the new version
-#   3. Install the APK onto the first connected adb device (phone or emulator)
+#   1. Bump the version + build the signed release APK (reuses tools/release.sh)
+#   2. Commit + push the release to GitHub
+#   3. Create the GitHub release with the APK attached (the app's auto-update channel)
+#   4. Restart the backend so the self-hosted update channel also advertises it
+#   5. Install the APK onto the first connected adb device
 #
 # Usage:
-#   bash tools/ship.sh              # bump patch, build, restart, install
+#   bash tools/ship.sh              # bump patch, build, push, release, install
 #   bash tools/ship.sh 1.3.0        # explicit version
 #   bash tools/ship.sh --same       # rebuild current version without bumping
 #   ADB_SERIAL=XYZ bash tools/ship.sh   # target a specific device
+#
+# Options (via environment variables):
+#   SHIP_NOTES="..."        release notes (default: commits since the last release)
+#   SHIP_MESSAGE="..."      commit message (default: "Thrive <version>")
+#   JDK=...                 override the JDK used for the build
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -20,14 +27,46 @@ export JAVA_HOME="${JDK:-C:\Program Files\Java\jdk-21.0.11}"
 export ANDROID_HOME="${ANDROID_HOME:-C:/Users/bsmit/AppData/Local/Android/Sdk}"
 export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
 
-# --- 1. build + stage ---------------------------------------------------------
-echo "=== 1/3 Building + staging release ==="
+ADB="$ANDROID_HOME/platform-tools/adb.exe"
+REPO="$(git remote get-url origin | sed -E 's#.*github\.com[:/]##; s#\.git$##')"
+
+# --- 1. bump + build + stage ----------------------------------------------------
+echo "=== 1/5 Bumping + building + staging release ==="
 bash tools/release.sh "$@"
 NEW_NAME="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)"
+APK="dist/Thrive-$NEW_NAME-release.apk"
 echo ""
 
-# --- 2. restart backend ---------------------------------------------------------
-echo "=== 2/3 Restarting backend (will advertise $NEW_NAME) ==="
+# --- 2. commit + push -----------------------------------------------------------
+echo "=== 2/5 Committing + pushing to $REPO ==="
+git add -A
+if git diff --cached --quiet; then
+  echo "Nothing to commit — the tree already matches the release."
+else
+  git commit -m "${SHIP_MESSAGE:-Thrive $NEW_NAME}"
+fi
+git push origin main
+echo ""
+
+# --- 3. create GitHub release ----------------------------------------------------
+echo "=== 3/5 Creating GitHub release v$NEW_NAME ==="
+NOTES="${SHIP_NOTES:-}"
+if [[ -z "$NOTES" ]]; then
+  git fetch --tags origin --quiet 2>/dev/null || true
+  LAST_TAG="$(gh release list -R "$REPO" --limit 1 --json tagName --jq '.[0].tagName // empty' 2>/dev/null || true)"
+  NOTES="$(git log --pretty=format:'- %s' "${LAST_TAG}..HEAD" 2>/dev/null || true)"
+fi
+if [[ -z "$NOTES" ]]; then
+  NOTES="Thrive $NEW_NAME"
+fi
+gh release create "v$NEW_NAME" "$APK" \
+  --repo "$REPO" \
+  --title "Thrive $NEW_NAME" \
+  --notes "$NOTES"
+echo ""
+
+# --- 4. restart backend -----------------------------------------------------------
+echo "=== 4/5 Restarting backend (will advertise $NEW_NAME) ==="
 taskkill //F //IM node.exe >/dev/null 2>&1 || true
 sleep 1
 powershell -NoProfile -Command \
@@ -38,20 +77,16 @@ curl -s -m 5 "http://localhost:4000/api/v1/health" >/dev/null \
   || echo "WARNING: backend did not come up — check server.js"
 echo ""
 
-# --- 3. install ------------------------------------------------------------------
-echo "=== 3/3 Installing on device ==="
-APK="dist/Thrive-$NEW_NAME-release.apk"
+# --- 5. install --------------------------------------------------------------------
+echo "=== 5/5 Installing on device ==="
 SERIAL="${ADB_SERIAL:-}"
 if [[ -z "$SERIAL" ]]; then
-  SERIAL="$("$ANDROID_HOME/platform-tools/adb.exe" devices 2>/dev/null | awk 'NR>1 && $2=="device" {print $1; exit}')"
+  SERIAL="$("$ADB" devices 2>/dev/null | awk 'NR>1 && $2=="device" {print $1; exit}')"
 fi
 if [[ -z "$SERIAL" ]]; then
-  echo "ERROR: no adb device connected (USB debugging on + unlocked)." >&2
-  echo "       Connect one, or set ADB_SERIAL=<serial>." >&2
-  exit 1
+  echo "WARNING: no adb device connected — skipping install (the GitHub release is live)." >&2
+else
+  echo "Installing $APK on $SERIAL ..."
+  "$ADB" -s "$SERIAL" install -r "$APK"
+  echo "=== Ship complete: v$NEW_NAME installed on $SERIAL ==="
 fi
-echo "Installing $APK on $SERIAL ..."
-"$ANDROID_HOME/platform-tools/adb.exe" -s "$SERIAL" install -r "$APK"
-echo ""
-echo "=== Ship complete: v$NEW_NAME installed on $SERIAL ==="
-echo "Tunnel (if running): check cloudflared for the current HTTPS URL to use as the sync server."

@@ -58,7 +58,7 @@ import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.data.remote.SyncStatus
 import com.thrive.app.update.GithubUpdateChecker
-import com.thrive.app.update.UpdateNotifier
+import com.thrive.app.update.UpdateBus
 import com.thrive.app.ui.theme.LocalThriveColors
 import com.thrive.app.ui.theme.ThriveFont
 import kotlinx.coroutines.launch
@@ -360,7 +360,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                         updateCheckMsg = "You're on the latest version (${BuildConfig.VERSION_NAME})."
                                     } else {
                                         updateCheckMsg = "Update available: v${found.versionName}"
-                                        UpdateNotifier.notifyAvailable(context, found)
+                                        UpdateBus.publish(found)
                                     }
                                 }
                             }

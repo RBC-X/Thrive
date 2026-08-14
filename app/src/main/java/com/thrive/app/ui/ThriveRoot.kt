@@ -21,6 +21,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import com.thrive.app.update.UpdateBus
+import com.thrive.app.update.UpdateCheckWorker
+import com.thrive.app.update.UpdateDialog
+import com.thrive.app.update.startUpdateDownload
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -75,6 +80,27 @@ fun ThriveRoot() {
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showTabs = tabs.any { it.route == currentRoute }
+
+    // In-app update popup: the GitHub check (launch + every 15 min, no sync
+    // server or API key needed) publishes here. "Later" remembers the version
+    // so the app stops asking until a newer release exists.
+    val update by UpdateBus.updates.collectAsState()
+    val dismissedVersion = app.settings.getString(UpdateCheckWorker.KEY_DISMISSED_VERSION, null)
+    update?.let { pending ->
+        if (pending.versionName != dismissedVersion) {
+            UpdateDialog(
+                update = pending,
+                onDismiss = {
+                    app.settings.putString(UpdateCheckWorker.KEY_DISMISSED_VERSION, pending.versionName)
+                    UpdateBus.clear()
+                },
+                onUpdateNow = {
+                    startUpdateDownload(app, pending)
+                    UpdateBus.clear()
+                },
+            )
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

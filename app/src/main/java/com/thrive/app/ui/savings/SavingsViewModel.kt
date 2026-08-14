@@ -19,7 +19,17 @@ data class SavingsUiState(
     val favorites: Set<String> = emptySet(),
     val sync: SyncState = SyncState(),
 ) {
-    val categories: List<String> get() = listOf("All") + coupons.map { it.category }.distinct()
+    val categories: List<String>
+        get() {
+            // Stable order so Tech and every category always appear as chips,
+            // even when a filter hides all of one category's coupons.
+            val canonical = listOf(
+                "All", "Grocery", "Dining", "Essentials", "Beauty", "Health", "Home", "Travel", "Tech",
+            )
+            val present = coupons.map { it.category }.distinct()
+            return canonical.filter { it == "All" || it in present } +
+                present.filterNot { it in canonical }
+        }
 
     val filtered: List<Coupon>
         get() = coupons.filter { c ->

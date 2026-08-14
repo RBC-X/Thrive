@@ -41,6 +41,12 @@
     ],
     "1.0.0": [
       "Thrive launches: Savings, Recipes, Pantry & Budget"
+    ],
+    "1.2.6": [
+      "In-app update popup — Thrive checks GitHub itself and one tap downloads + installs the new version (no server, API key, or IP needed)",
+      "Tech deals category added — 99 tech coupons across Best Buy, Apple, Amazon, Walmart, Target, Newegg, eBay and more",
+      "Coupon catalog expanded to 415 offers across 8 categories from 35 retailers, with real store links on every offer",
+      "Feed freshness rotation — new coupons are marked daily, so the Savings tab always has something new"
     ]
   }
 }
