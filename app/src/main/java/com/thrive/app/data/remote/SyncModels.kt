@@ -25,6 +25,7 @@ data class UpdateInfo(
     val versionName: String = "",
     val apkUrl: String = "",
     val notes: List<String> = emptyList(),
+    val apkSizeBytes: Long = 0L,
 )
 
 /** Connectivity status of the sync layer. */

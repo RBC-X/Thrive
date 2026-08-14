@@ -20,6 +20,7 @@ object UpdateNotifier {
 
     const val EXTRA_URL = "extra_apk_url"
     const val EXTRA_VERSION = "extra_version"
+    const val EXTRA_SIZE = "extra_apk_size"
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -45,6 +46,7 @@ object UpdateNotifier {
         val tap = Intent(context, DownloadReceiver::class.java).apply {
             putExtra(EXTRA_URL, update.apkUrl)
             putExtra(EXTRA_VERSION, update.versionName)
+            putExtra(EXTRA_SIZE, update.apkSizeBytes)
         }
         val pending = PendingIntent.getBroadcast(
             context,
@@ -63,5 +65,46 @@ object UpdateNotifier {
             .build()
 
         runCatching { NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification) }
+    }
+
+    /**
+     * Surfaces a download/install failure with a Retry action. Silently no-ops
+     * when notifications are denied — the in-app dialog path still shows errors.
+     */
+    fun notifyError(
+        context: Context,
+        title: String,
+        detail: String,
+        url: String?,
+        version: String?,
+    ) {
+        ensureChannel(context)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle(title)
+            .setContentText(detail)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(detail))
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        if (!url.isNullOrBlank() && !version.isNullOrBlank()) {
+            val retry = Intent(context, DownloadReceiver::class.java).apply {
+                putExtra(EXTRA_URL, url)
+                putExtra(EXTRA_VERSION, version)
+            }
+            val pending = PendingIntent.getBroadcast(
+                context,
+                1,
+                retry,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            builder.addAction(0, "Retry", pending)
+        }
+        runCatching { NotificationManagerCompat.from(context).notify(NOTIFICATION_ID + 1, builder.build()) }
     }
 }

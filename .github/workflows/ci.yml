@@ -1,0 +1,66 @@
+name: CI
+
+# Runs from a clean clone with NO signing secrets: debug build, lint, and all
+# unit/integration tests must pass with THRIVE_KEYSTORE_* unset. This is what
+# guarantees issue #1 (debug/test/lint never require the production keystore).
+# Release signing is exercised locally by the maintainer via tools/check_release.sh.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  android:
+    name: App (debug) — unit tests + lint + assembleDebug
+    runs-on: ubuntu-latest
+    env:
+      JAVA_HOME: /usr/lib/jvm/temurin-21
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Verify no signing secrets are present
+        run: |
+          if [ -n "$THRIVE_KEYSTORE_PASSWORD" ] || [ -n "$THRIVE_KEYSTORE_ALIAS_PASSWORD" ]; then
+            echo "CI must never see signing secrets" >&2
+            exit 1
+          fi
+          test -f app/build.gradle.kts
+
+      - name: Unit tests (no secrets)
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Lint (no secrets)
+        run: ./gradlew :app:lintDebug
+
+      - name: Debug APK (no secrets)
+        run: ./gradlew :app:assembleDebug
+
+  backend:
+    name: Backend — npm test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Test suite (routes, validation, concurrency, crash-resistance, Kroger source)
+        run: npm test

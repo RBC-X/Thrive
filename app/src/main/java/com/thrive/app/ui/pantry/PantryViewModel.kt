@@ -12,6 +12,7 @@ import com.thrive.app.ai.WeeklyPlannerEngine
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.remote.BackupMerge
+import com.thrive.app.data.remote.PullResult
 import com.thrive.app.data.remote.StateBackup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -63,14 +64,19 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
         // Non-blocking: pull pantry saved under this device's backup code and
-        // merge add-only, so pantry survives reinstalls. Silent when offline.
+        // merge add-only, so pantry survives reinstalls. Only a confirmed
+        // server answer merges; offline/insecure failures stay silent.
         viewModelScope.launch {
-            val remote = backup.pull(backup.activeCode()).pantry
-            val local = _state.value.items
-            val merged = BackupMerge.pantry(local, remote)
-            if (merged != local) {
-                repo.savePantry(merged)
-                _state.update { it.copy(items = merged) }
+            when (val result = backup.pull(backup.activeCode())) {
+                is PullResult.Found -> {
+                    val local = _state.value.items
+                    val merged = BackupMerge.pantry(local, result.snapshot.pantry)
+                    if (merged != local) {
+                        repo.savePantry(merged)
+                        _state.update { it.copy(items = merged) }
+                    }
+                }
+                else -> { /* keep local pantry */ }
             }
         }
     }

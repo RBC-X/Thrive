@@ -1,5 +1,14 @@
 {
   "notes": {
+    "1.2.9": [
+      "Backup is honest now: no more fake success when the server can't be reached — it only claims a restore when the server really answered",
+      "Concurrent backups can't lose updates anymore (atomic writes + conflict detection)",
+      "The backend can no longer be crashed by a malformed admin upload",
+      "Update downloads are verified (size, package, version, signature) and resume after you grant install permission",
+      "No more surprise notification prompt on first launch — you opt in from Settings",
+      "The savings banner now shows your real savings, not a catalog-wide fantasy number",
+      "Debug builds, lint, and tests no longer require the release keystore"
+    ],
     "1.2.5": [
       "Weekly plan cost now adds up honestly — no more charging you twice for pantry items",
       "Plan a week from an empty pantry (starts from scratch)",

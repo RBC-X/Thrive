@@ -91,6 +91,7 @@ fun startUpdateDownload(context: Context, update: UpdateInfo) {
     val intent = Intent(context, DownloadReceiver::class.java).apply {
         putExtra(UpdateNotifier.EXTRA_URL, update.apkUrl)
         putExtra(UpdateNotifier.EXTRA_VERSION, update.versionName)
+        putExtra(UpdateNotifier.EXTRA_SIZE, update.apkSizeBytes)
     }
     context.sendBroadcast(intent)
 }

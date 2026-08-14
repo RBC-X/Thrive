@@ -11,6 +11,7 @@ import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.BudgetState
 import com.thrive.app.data.model.ShoppingItem
 import com.thrive.app.data.remote.BackupMerge
+import com.thrive.app.data.remote.PullResult
 import com.thrive.app.data.remote.StateBackup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,18 +56,24 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
         // Non-blocking: pull budget saved under this device's backup code and
-        // merge add-only, so the list survives reinstalls. Silent when offline.
+        // merge add-only, so the list survives reinstalls. Only a confirmed
+        // server answer merges; offline/insecure failures stay silent.
         viewModelScope.launch {
-            val remote = backup.pull(backup.activeCode()).budget
-            if (remote != null) {
-                val local = repo.loadBudget()
-                val merged = BackupMerge.budget(local, remote)
-                if (merged != local) {
-                    repo.saveBudget(merged)
-                    _state.update {
-                        it.copy(budget = merged.budget, people = merged.people, items = merged.items)
+            when (val result = backup.pull(backup.activeCode())) {
+                is PullResult.Found -> {
+                    val remote = result.snapshot.budget
+                    if (remote != null) {
+                        val local = repo.loadBudget()
+                        val merged = BackupMerge.budget(local, remote)
+                        if (merged != local) {
+                            repo.saveBudget(merged)
+                            _state.update {
+                                it.copy(budget = merged.budget, people = merged.people, items = merged.items)
+                            }
+                        }
                     }
                 }
+                else -> { /* keep local budget */ }
             }
         }
     }

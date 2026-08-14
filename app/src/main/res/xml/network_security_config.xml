@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cleartext is allowed so the app can reach a local/self-hosted Thrive sync
-     API (e.g. http://10.0.2.2:4000 or a LAN address). For production, point
-     the sync URL at an HTTPS endpoint and flip this back to false. -->
+<!-- Production policy: cleartext HTTP is BLOCKED. Backup codes and sync data
+     must travel over HTTPS. The debug source set overrides this file to allow
+     cleartext so the Android emulator can reach the local dev server
+     (http://10.0.2.2:4000); release builds never allow it. -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true" />
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

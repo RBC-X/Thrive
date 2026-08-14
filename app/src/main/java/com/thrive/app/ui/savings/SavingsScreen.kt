@@ -388,8 +388,16 @@ private fun SavingsSummaryStrip(state: SavingsUiState) {
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(10.dp))
+        // Honest headline: only the user's saved (favorited) deals contribute to
+        // a savings claim. With none saved, we say the feed is fresh and let
+        // each offer speak for itself — never the catalog-wide sum.
+        val favSavings = state.favoritesSavings
+        val headline = if (favSavings != null)
+            "Your saved deals save you up to ${Money.fmt(favSavings.first)} across ${favSavings.second} items"
+        else
+            "${state.filtered.size} fresh deals today — each offer shows its own savings"
         Text(
-            text = "Save up to ${Money.fmt(state.totalPotentialSavings)} this week across ${state.filtered.size} deals",
+            text = headline,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,

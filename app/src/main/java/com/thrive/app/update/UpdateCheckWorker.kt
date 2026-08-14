@@ -19,6 +19,9 @@ class UpdateCheckWorker(context: Context, params: WorkerParameters) : CoroutineW
 
     override suspend fun doWork(): Result {
         val app = applicationContext as? ThriveApp
+        // An install waiting on the "install unknown apps" grant resumes here,
+        // so a stalled first-use flow self-heals on the next periodic check.
+        DownloadReceiver.resumePending(applicationContext)
         val update = GithubUpdateChecker.checkLatest()
         if (update != null && update.apkUrl.isNotBlank()) {
             val dismissed = app?.settings?.getString(KEY_DISMISSED_VERSION, null)

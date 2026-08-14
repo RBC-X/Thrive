@@ -50,7 +50,7 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
     val syncBaseUrl: String
-        get() = settings.getString(KEY_SYNC_URL, DEFAULT_SYNC_URL).orEmpty().trimEnd('/')
+        get() = settings.getString(KEY_SYNC_URL, com.thrive.app.BuildConfig.DEFAULT_SYNC_URL).orEmpty().trimEnd('/')
 
     /**
      * Pulls the latest feed from the configured Thrive sync API. Non-fatal by
@@ -195,9 +195,6 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         private const val KEY_FAV_RECIPES = "fav_recipes"
         private const val KEY_SYNC_URL = "sync_base_url"
         private const val KEY_SYNC_ETAG = "sync_etag"
-
-        /** Emulator loopback to the host machine's Thrive sync API. */
-        const val DEFAULT_SYNC_URL = "http://10.0.2.2:4000"
         const val SYNC_URL_KEY = KEY_SYNC_URL
     }
 }

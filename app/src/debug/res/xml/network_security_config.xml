@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEBUG ONLY: allows cleartext so the emulator can reach the local dev sync
+     server at http://10.0.2.2:4000. Release builds use the main config, which
+     blocks cleartext entirely. Backup is additionally gated in code: StateBackup
+     refuses to send codes over plain HTTP to non-loopback hosts even in debug. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

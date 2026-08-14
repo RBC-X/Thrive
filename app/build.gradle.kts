@@ -4,6 +4,24 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10"
 }
 
+// ---------------------------------------------------------------------------
+// Release signing is configured LAZILY: debug builds, lint, and unit tests must
+// work on a clean clone with no signing material. Credentials are read from
+// gitignored gradle.properties (THRIVE_KEYSTORE_*) or the environment. Tasks
+// that produce or install a release artifact fail closed with a clear message
+// when the keystore or passwords are missing.
+// ---------------------------------------------------------------------------
+val keystoreFile = rootProject.file("thrive-release.keystore")
+val ksStorePassword = providers.gradleProperty("THRIVE_KEYSTORE_PASSWORD").orNull
+    ?: System.getenv("THRIVE_KEYSTORE_PASSWORD")
+val ksKeyPassword = providers.gradleProperty("THRIVE_KEYSTORE_KEY_PASSWORD").orNull
+    ?: System.getenv("THRIVE_KEYSTORE_KEY_PASSWORD")
+val ksKeyAlias = providers.gradleProperty("THRIVE_KEYSTORE_KEY_ALIAS").orNull
+    ?: System.getenv("THRIVE_KEYSTORE_KEY_ALIAS")
+    ?: "thrive"
+
+val hasReleaseSigning = keystoreFile.isFile && !ksStorePassword.isNullOrBlank() && !ksKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.thrive.app"
     compileSdk = 35
@@ -12,34 +30,35 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.2.8"
+        versionCode = 14
+        versionName = "1.2.9"
     }
 
     signingConfigs {
-        create("release") {
-            // Credentials live in gradle.properties (gitignored) or the
-            // THRIVE_KEYSTORE_* env vars — never in source control.
-            val ksPass = providers.gradleProperty("THRIVE_KEYSTORE_PASSWORD").orNull
-                ?: System.getenv("THRIVE_KEYSTORE_PASSWORD")
-            val keyPass = providers.gradleProperty("THRIVE_KEYSTORE_KEY_PASSWORD").orNull
-                ?: System.getenv("THRIVE_KEYSTORE_KEY_PASSWORD")
-            storeFile = rootProject.file("thrive-release.keystore")
-            storePassword = ksPass
-                ?: error("THRIVE_KEYSTORE_PASSWORD missing: set it in local gradle.properties or the environment")
-            keyAlias = providers.gradleProperty("THRIVE_KEYSTORE_KEY_ALIAS").orNull
-                ?: System.getenv("THRIVE_KEYSTORE_KEY_ALIAS")
-                ?: "thrive"
-            keyPassword = keyPass
-                ?: error("THRIVE_KEYSTORE_KEY_PASSWORD missing: set it in local gradle.properties or the environment")
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = ksStorePassword
+                keyAlias = ksKeyAlias
+                keyPassword = ksKeyPassword
+            }
         }
     }
 
     buildTypes {
+        debug {
+            // Emulator-only default: the Android emulator reaches the host at
+            // 10.0.2.2. Release ships NO default server — backup/sync stay
+            // honestly "not configured" until the user sets an HTTPS endpoint.
+            buildConfigField("String", "DEFAULT_SYNC_URL", "\"http://10.0.2.2:4000\"")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            buildConfigField("String", "DEFAULT_SYNC_URL", "\"\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -60,6 +79,23 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+// Fail closed only where signing is actually required.
+tasks.configureEach {
+    if (name.matches(Regex("(assemble|bundle|package|install).*[Rr]elease.*"))) {
+        doFirst {
+            if (!hasReleaseSigning) {
+                throw GradleException(
+                    "Release signing is not configured.\n" +
+                        "Provide THRIVE_KEYSTORE_PASSWORD / THRIVE_KEYSTORE_KEY_PASSWORD in " +
+                        "local gradle.properties (gitignored) or the environment, and place " +
+                        "thrive-release.keystore in the project root.\n" +
+                        "Debug, lint, and unit tests do not need signing material."
+                )
+            }
         }
     }
 }

@@ -34,8 +34,13 @@ object ApiClient {
             }
         }
 
-    /** PUTs a JSON string (used by the anonymous favorites backup). */
-    suspend fun putJson(url: String, jsonBody: String): HttpResult =
+    /**
+     * PUTs a JSON string (used by the state backup). [ifMatch] carries the
+     * backup revision the client last read ("*" creates); the server answers
+     * 409 when the backup changed in the meantime, so concurrent devices never
+     * silently overwrite each other.
+     */
+    suspend fun putJson(url: String, jsonBody: String, ifMatch: String? = null): HttpResult =
         withContext(Dispatchers.IO) {
             val conn = URL(url).openConnection() as HttpURLConnection
             try {
@@ -44,6 +49,9 @@ object ApiClient {
                 conn.readTimeout = 15_000
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
+                if (!ifMatch.isNullOrBlank()) {
+                    conn.setRequestProperty("If-Match", ifMatch)
+                }
                 conn.instanceFollowRedirects = true
                 conn.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode

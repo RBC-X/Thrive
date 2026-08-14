@@ -38,27 +38,32 @@ Thrive works fully offline with its bundled feed. For live sync + the in-app upd
 ```bash
 cd backend
 npm install
+npm test                  # backend unit/integration suite
 node server.js            # http://localhost:4000
 ```
 
 - `GET /api/v1/sync` — full payload (deals, coupons, recipes, catalog) with ETag caching
 - `GET /api/v1/deals|/coupons|/recipes|/catalog` — individual feeds
-- `POST /api/v1/deals` — admin override, guarded by `THRIVE_ADMIN_TOKEN` (disabled by default)
-- The app points at the server in **Settings → Sync server** (emulator default `http://10.0.2.2:4000`, phone uses your LAN IP)
+- `POST /api/v1/deals` — admin override, guarded by `THRIVE_ADMIN_TOKEN` (disabled by default), strict schema validation
+- `GET/PUT /api/v1/backup/:code` — anonymous cross-device state backup with optimistic concurrency (If-Match/ETag) and atomic writes
+
+**Security policy:** the release build ships with **no default sync server** and backup/update traffic is restricted to **HTTPS** (cleartext is a debug-only developer convenience). A phone user must configure a real public HTTPS endpoint (e.g. a cloudflare tunnel) in **Settings → Sync server**; until one is set, the app honestly reports backup as unavailable. The in-app update channel is fully independent — it reads GitHub releases over HTTPS and needs no server at all.
 
 Drop a release APK at `backend/public/Thrive-release.apk` and restart the backend — the app shows an update card with release notes (`backend/release-notes.json`) only when the served version is newer than the installed one.
 
 ## Tests
 
 ```bash
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testDebugUnitTest   # app unit tests (no signing secrets required)
+./gradlew :app:lintDebug           # Android lint
+cd backend && npm test             # backend routes, validation, concurrency, crash-resistance
 ```
 
-45 unit tests covering the deal-finder honesty rules (no misleading matches, unit-price comparison, category gating), weekly planner cost math (no double-counting), pantry meal scoring, sync payload decoding, and data quality (no placeholder images, image/link consistency).
+Unit tests cover the deal-finder honesty rules (no misleading matches, unit-price comparison, category gating), weekly planner cost math (no double-counting), pantry meal scoring, sync payload decoding, data quality (no placeholder images, image/link consistency), the anonymous-backup merge rules, and the GitHub updater (canonical asset selection, clean semver, host allow-list). CI runs all of these from a clean clone with no signing secrets (`THRIVE_KEYSTORE_*` unset) — debug build, lint, and tests never require the production keystore; release signing fails closed when credentials are missing.
 
 ## Release history
 
-See `backend/release-notes.json` for per-version notes. Latest: **1.2.5** — honest weekly-plan totals, week planning from an empty pantry, keystore credentials moved out of the build file, admin POST guard.
+See `backend/release-notes.json` for per-version notes. Latest: **1.2.9** — the repair release: honest backup availability (HTTPS-only, no fake success), atomic concurrent backup writes, strict admin schema validation that can no longer crash the backend, a verified/resumable updater, deferred notification permission, an honest savings header, and clean-clone builds without signing secrets. Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
 
 ## License
 

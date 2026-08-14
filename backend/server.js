@@ -4,14 +4,23 @@ const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
 const fs = require("fs");
+const fsp = require("fs/promises");
 const path = require("path");
 const { DailyRotationSource, PartnerApiSource, KrogerLiveSource } = require("./src/sources");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 const PORT = Number(process.env.PORT || 4000) || 4000;
+
+// ---------------------------------------------------------------------------
+// Error handling — malformed request data must NEVER terminate the process.
+// Express 4 does not catch async rejections, so every async route is wrapped in
+// asyncRoute(); anything that still escapes lands in the central error handler
+// and the process-level guards below (which log and keep serving).
+// ---------------------------------------------------------------------------
+const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // Update channel: advertise the latest release APK served by this backend so the
 // app can show an in-app update card after a successful sync. Drop the APK at
@@ -177,23 +186,53 @@ app.get("/api/v1/health", (req0, res) => {
   });
 });
 
-app.get("/api/v1/deals", async (req0, res) => {
-  const deals = await getDeals();
-  let out = deals;
-  if (req0.query.category) {
-    out = out.filter((d) => d.category.toLowerCase() === String(req0.query.category).toLowerCase());
+// Strict query parsing: bad limit/category input is a 400, never NaN slicing.
+function parseLimit(raw) {
+  if (raw === undefined) return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 500) {
+    const err = new Error("limit must be an integer between 1 and 500");
+    err.status = 400;
+    err.expose = true;
+    throw err;
   }
-  if (req0.query.limit) out = out.slice(0, Number(req0.query.limit));
+  return n;
+}
+
+function parseCategory(raw) {
+  if (raw === undefined) return null;
+  const s = String(raw);
+  if (s.length === 0 || s.length > 40 || /[\u0000-\u001f\u007f]/.test(s)) {
+    const err = new Error("category must be 1-40 visible characters");
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  return s.toLowerCase();
+}
+
+app.get("/api/v1/deals", asyncRoute(async (req0, res) => {
+  const deals = await getDeals();
+  const category = parseCategory(req0.query.category);
+  const limit = parseLimit(req0.query.limit);
+  let out = deals;
+  if (category) {
+    // Defensive: never assume a source/deal has a string category.
+    out = out.filter((d) => d && typeof d.category === "string" && d.category.toLowerCase() === category);
+  }
+  if (limit !== null) out = out.slice(0, limit);
   if (respondWithEtag(req0, res, out)) return;
   res.json({ deals: out, generatedAt: new Date().toISOString() });
-});
+}));
 
 app.get("/api/v1/coupons", (req0, res) => {
+  const category = parseCategory(req0.query.category);
+  const limit = parseLimit(req0.query.limit);
   let out = rotateCoupons(daySeed());
-  if (req0.query.category) {
-    out = out.filter((c) => c.category.toLowerCase() === String(req0.query.category).toLowerCase());
+  if (category) {
+    out = out.filter((c) => c && typeof c.category === "string" && c.category.toLowerCase() === category);
   }
-  if (req0.query.limit) out = out.slice(0, Number(req0.query.limit));
+  if (limit !== null) out = out.slice(0, limit);
   if (respondWithEtag(req0, res, out)) return;
   res.json({ coupons: out, generatedAt: new Date().toISOString() });
 });
@@ -224,7 +263,7 @@ app.get("/api/v1/catalog", (req0, res) => {
   res.json({ catalog: out, generatedAt: new Date().toISOString() });
 });
 
-app.get("/api/v1/sync", async (req0, res) => {
+app.get("/api/v1/sync", asyncRoute(async (req0, res) => {
   const payload = await syncPayload();
   // Built per-request so the APK URL points at whatever host the app used.
   // Only advertise an update when a release APK is actually present to serve.
@@ -245,7 +284,7 @@ app.get("/api/v1/sync", async (req0, res) => {
   const body = { ...payload, update };
   if (respondWithEtag(req0, res, body)) return;
   res.json(body);
-});
+}));
 
 // ---------------------------------------------------------------------------
 // Anonymous state backup (favorites + pantry + budget)
@@ -260,7 +299,7 @@ app.get("/api/v1/sync", async (req0, res) => {
 // stored copy, so an older app version pushing favorites alone never wipes a
 // device's pantry or budget.
 
-const BACKUP_DIR = path.join(__dirname, "data", "backups");
+const BACKUP_DIR = process.env.THRIVE_BACKUP_DIR || path.join(__dirname, "data", "backups");
 const BACKUP_CODE_RE = /^[a-z0-9]{6,12}$/;
 const BACKUP_MAX_ITEMS = 500;
 
@@ -268,18 +307,41 @@ function backupFile(code) {
   return path.join(BACKUP_DIR, `${code}.json`);
 }
 
-function readBackup(code) {
+const EMPTY_BACKUP = { favorites: [], pantry: [], budget: null, updatedAt: null, revision: null };
+
+/** Reads a backup file. Never throws: corrupt/absent files read as an empty backup. */
+async function readBackupFile(code) {
   try {
-    const saved = JSON.parse(fs.readFileSync(backupFile(code), "utf-8"));
+    const saved = JSON.parse(await fsp.readFile(backupFile(code), "utf-8"));
     return {
-      favorites: Array.isArray(saved.favorites) ? saved.favorites : [],
-      pantry: Array.isArray(saved.pantry) ? saved.pantry : [],
-      budget: saved.budget && typeof saved.budget === "object" ? saved.budget : null,
-      updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : null,
+      payload: saved,
+      revision: typeof saved.revision === "string" && saved.revision.length > 0 ? saved.revision : null,
     };
   } catch {
-    return { favorites: [], pantry: [], budget: null, updatedAt: null };
+    return { payload: null, revision: null };
   }
+}
+
+/** Writes a backup atomically: temp file in the same directory, then rename. */
+async function writeBackupAtomic(code, payload) {
+  await fsp.mkdir(BACKUP_DIR, { recursive: true });
+  const tmp = path.join(BACKUP_DIR, `${code}.${process.pid}.${crypto.randomBytes(4).toString("hex")}.tmp`);
+  await fsp.writeFile(tmp, JSON.stringify(payload, null, 2));
+  await fsp.rename(tmp, backupFile(code));
+}
+
+/** Serializes writes per backup code so concurrent PUTs never interleave. */
+const backupQueues = new Map();
+function serializeBackup(code, fn) {
+  const prev = backupQueues.get(code) || Promise.resolve();
+  const tail = prev.catch(() => {});
+  const result = tail.then(fn);
+  const nextTail = result.catch(() => {}); // never rejects — safe queue tail
+  backupQueues.set(code, nextTail);
+  nextTail.finally(() => {
+    if (backupQueues.get(code) === nextTail) backupQueues.delete(code);
+  });
+  return result;
 }
 
 function sanitizeFavorites(raw) {
@@ -328,56 +390,147 @@ function sanitizeBudget(raw) {
   };
 }
 
-app.get("/api/v1/backup/:code", (req0, res) => {
+app.get("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
   const code = String(req0.params.code || "").toLowerCase();
   if (!BACKUP_CODE_RE.test(code)) {
     return res.status(400).json({ error: "invalid backup code" });
   }
-  const saved = readBackup(code);
-  const body = { ...saved, updatedAt: saved.updatedAt || null };
+  const { payload, revision } = await readBackupFile(code);
+  const body = payload
+    ? {
+        favorites: Array.isArray(payload.favorites) ? payload.favorites : [],
+        pantry: Array.isArray(payload.pantry) ? payload.pantry : [],
+        budget: payload.budget && typeof payload.budget === "object" ? payload.budget : null,
+        updatedAt: typeof payload.updatedAt === "string" ? payload.updatedAt : null,
+        revision,
+      }
+    : EMPTY_BACKUP;
   if (respondWithEtag(req0, res, body)) return;
   res.json(body);
-});
+}));
 
-app.put("/api/v1/backup/:code", (req0, res) => {
+// Optimistic concurrency for backups: every PUT must carry If-Match with the
+// revision from the last GET (or "*" to create). On conflict (409) the client
+// re-pulls, re-merges, and retries — two devices can never silently overwrite
+// each other. Writes are serialized per code and landed atomically.
+app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
   const code = String(req0.params.code || "").toLowerCase();
   if (!BACKUP_CODE_RE.test(code)) {
     return res.status(400).json({ error: "invalid backup code" });
   }
-  const body = req0.body && typeof req0.body === "object" ? req0.body : {};
+  const body = req0.body && typeof req0.body === "object" && !Array.isArray(req0.body) ? req0.body : {};
   const hasFavorites = Array.isArray(body.favorites);
   const hasPantry = Array.isArray(body.pantry);
   const hasBudget = body.budget !== undefined;
   if (!hasFavorites && !hasPantry && !hasBudget) {
     return res.status(400).json({ error: "body must include favorites, pantry, or budget" });
   }
-  const saved = readBackup(code);
-  const next = {
-    favorites: hasFavorites ? sanitizeFavorites(body.favorites) : saved.favorites,
-    pantry: hasPantry ? sanitizePantry(body.pantry) : saved.pantry,
-    budget: hasBudget ? sanitizeBudget(body.budget) : saved.budget,
-  };
-  try {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    const payload = { ...next, updatedAt: new Date().toISOString() };
-    fs.writeFileSync(backupFile(code), JSON.stringify(payload, null, 2));
-    res.json({
-      ok: true,
-      favorites: next.favorites.length,
-      pantry: next.pantry.length,
-      budget: next.budget ? next.budget.items.length : 0,
-      updatedAt: payload.updatedAt,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "could not save backup" });
+  const ifMatch = req0.get("if-match");
+  if (ifMatch === undefined) {
+    return res.status(428).json({ error: "If-Match header required (use \"*\" to create)" });
   }
-});
+
+  const payload = await serializeBackup(code, async () => {
+    const current = await readBackupFile(code);
+    if (ifMatch === "*") {
+      if (current.revision !== null) {
+        const err = new Error("backup already exists — re-pull with the current revision");
+        err.status = 409;
+        err.expose = true;
+        err.currentRevision = current.revision;
+        throw err;
+      }
+    } else if (current.revision === null) {
+      const err = new Error("no backup exists for this code — use If-Match: * to create");
+      err.status = 404;
+      err.expose = true;
+      throw err;
+    } else if (current.revision !== ifMatch) {
+      const err = new Error("conflict — the backup changed since you read it");
+      err.status = 409;
+      err.expose = true;
+      err.currentRevision = current.revision;
+      throw err;
+    }
+
+    const saved = current.payload || EMPTY_BACKUP;
+    const next = {
+      favorites: hasFavorites ? sanitizeFavorites(body.favorites) : (Array.isArray(saved.favorites) ? saved.favorites : []),
+      pantry: hasPantry ? sanitizePantry(body.pantry) : (Array.isArray(saved.pantry) ? saved.pantry : []),
+      budget: hasBudget ? sanitizeBudget(body.budget) : (saved.budget && typeof saved.budget === "object" ? saved.budget : null),
+    };
+    const stored = {
+      ...next,
+      updatedAt: new Date().toISOString(),
+      revision: crypto.randomBytes(8).toString("hex"),
+    };
+    await writeBackupAtomic(code, stored);
+    return stored;
+  });
+
+  res.json({
+    ok: true,
+    favorites: payload.favorites.length,
+    pantry: payload.pantry.length,
+    budget: payload.budget ? payload.budget.items.length : 0,
+    updatedAt: payload.updatedAt,
+    revision: payload.revision,
+  });
+}));
 
 // Manual override: POST a deals array to preview a custom feed. The server may
 // be reachable over a public tunnel, so this write route is guarded by a shared
 // admin token (THRIVE_ADMIN_TOKEN). Without a token configured, the route is
 // disabled entirely — the app never POSTs, so nothing legitimately breaks.
+// The payload is validated STRICTLY and atomically: any invalid element rejects
+// the whole payload with 400, so malformed data can never reach the cache or
+// crash a later reader.
 const ADMIN_TOKEN = process.env.THRIVE_ADMIN_TOKEN || null;
+
+const DEAL_TEXT_LIMITS = { id: 64, store: 80, productName: 160, category: 40, unitPrice: 32, url: 2048, imageUrl: 2048, size: 40, brand: 60 };
+const MAX_DEALS_PER_PAYLOAD = 5000;
+
+function validateDeal(d, idx) {
+  const errors = [];
+  const err = (msg) => errors.push(`deal[${idx}]: ${msg}`);
+  if (!d || typeof d !== "object" || Array.isArray(d)) {
+    err("must be an object");
+    return errors;
+  }
+  const str = (v, max) => (typeof v === "string" ? v.trim() : "");
+  if (!str(d.id, DEAL_TEXT_LIMITS.id)) err("missing id");
+  else if (str(d.id).length > DEAL_TEXT_LIMITS.id) err("id too long");
+  if (!str(d.store, DEAL_TEXT_LIMITS.store)) err("missing store");
+  else if (str(d.store).length > DEAL_TEXT_LIMITS.store) err("store too long");
+  if (!str(d.productName, DEAL_TEXT_LIMITS.productName)) err("missing productName");
+  else if (str(d.productName).length > DEAL_TEXT_LIMITS.productName) err("productName too long");
+  const category = str(d.category, DEAL_TEXT_LIMITS.category);
+  if (!category) err("missing category");
+  else if (category.length > DEAL_TEXT_LIMITS.category) err("category too long");
+  else if (/[\u0000-\u001f\u007f]/.test(category)) err("category contains control characters");
+  if (typeof d.price !== "number" || !Number.isFinite(d.price) || d.price < 0 || d.price > 1e6) {
+    err("price must be a finite number in [0, 1000000]");
+  }
+  if (d.savingsPercent !== undefined && (typeof d.savingsPercent !== "number" || !Number.isInteger(d.savingsPercent) || d.savingsPercent < 0 || d.savingsPercent > 100)) {
+    err("savingsPercent must be an integer in [0, 100]");
+  }
+  if (d.endsInDays !== undefined && (typeof d.endsInDays !== "number" || !Number.isInteger(d.endsInDays) || d.endsInDays < 0 || d.endsInDays > 365)) {
+    err("endsInDays must be an integer in [0, 365]");
+  }
+  if (d.keywords !== undefined && (!Array.isArray(d.keywords) || d.keywords.length > 50 || d.keywords.some((k) => typeof k !== "string" || k.length > 60))) {
+    err("keywords must be an array of at most 50 short strings");
+  }
+  if (d.unitPrice !== undefined && typeof d.unitPrice !== "string") err("unitPrice must be a string");
+  for (const field of ["url", "imageUrl"]) {
+    if (d[field] !== undefined && d[field] !== null) {
+      const u = str(d[field], DEAL_TEXT_LIMITS[field]);
+      if (u && u.length > DEAL_TEXT_LIMITS[field]) err(`${field} too long`);
+      else if (u && !/^https?:\/\/[^\s]+$/i.test(u)) err(`${field} must be an http(s) URL`);
+    }
+  }
+  return errors;
+}
+
 app.post("/api/v1/deals", (req0, res) => {
   if (!ADMIN_TOKEN) {
     return res.status(403).json({ error: "admin override disabled (set THRIVE_ADMIN_TOKEN to enable)" });
@@ -386,18 +539,81 @@ app.post("/api/v1/deals", (req0, res) => {
   if (!provided || provided !== ADMIN_TOKEN) {
     return res.status(401).json({ error: "unauthorized" });
   }
-  if (!Array.isArray(req0.body)) {
+  const body = req0.body;
+  if (!Array.isArray(body)) {
     return res.status(400).json({ error: "body must be an array of deals" });
   }
-  dealsCache = req0.body;
+  if (body.length > MAX_DEALS_PER_PAYLOAD) {
+    return res.status(400).json({ error: `too many deals (max ${MAX_DEALS_PER_PAYLOAD})` });
+  }
+  const errors = [];
+  body.forEach((d, i) => errors.push(...validateDeal(d, i)));
+  if (errors.length) {
+    return res.status(400).json({ error: "invalid deals payload", errors: errors.slice(0, 50) });
+  }
+  // Reject duplicate ids so the feed stays keyable.
+  const ids = new Set();
+  for (const d of body) {
+    if (ids.has(d.id)) {
+      return res.status(400).json({ error: `duplicate deal id: ${d.id}` });
+    }
+    ids.add(d.id);
+  }
+  // Normalize to the canonical Deal shape.
+  dealsCache = body.map((d) => ({
+    id: String(d.id).trim(),
+    store: String(d.store).trim(),
+    productName: String(d.productName).trim(),
+    category: String(d.category).trim(),
+    price: d.price,
+    unitPrice: typeof d.unitPrice === "string" ? d.unitPrice : "",
+    savingsPercent: Number.isInteger(d.savingsPercent) ? d.savingsPercent : 0,
+    keywords: Array.isArray(d.keywords) ? d.keywords.map((k) => String(k)) : [],
+    endsInDays: Number.isInteger(d.endsInDays) ? d.endsInDays : 7,
+    url: typeof d.url === "string" && d.url ? d.url : null,
+    urlVerified: !!d.urlVerified,
+    size: typeof d.size === "string" && d.size ? d.size : null,
+    brand: typeof d.brand === "string" && d.brand ? d.brand : null,
+    imageUrl: typeof d.imageUrl === "string" && d.imageUrl ? d.imageUrl : null,
+    estimated: d.estimated !== false,
+  }));
   dealsCacheAt = new Date().toISOString().slice(0, 10);
+  payloadCache = null;
   res.json({ ok: true, deals: dealsCache.length });
 });
 
-app.listen(PORT, () => {
-  console.log(`Thrive sync API listening on http://localhost:${PORT}`);
-  console.log(`Sources: ${sources.map((s) => s.name).join(", ")}`);
-  console.log(`  GET /api/v1/health`);
-  console.log(`  GET /api/v1/sync   (ETag-cached full payload)`);
-  console.log(`  GET /api/v1/deals | /coupons | /recipes | /catalog`);
+// ---------------------------------------------------------------------------
+// Central error handler (registered last so it catches every route).
+// ---------------------------------------------------------------------------
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const isBodyError = err.type === "entity.parse.failed" || err.type === "entity.too.large";
+  const status = err.status || err.statusCode || (isBodyError ? 400 : 500);
+  if (status >= 500) {
+    console.error(`[error] ${req.method} ${req.originalUrl} -> ${status}: ${err.message}`);
+  }
+  const body = {
+    error: status >= 500 ? "internal error" : err.expose || isBodyError ? err.message : "bad request",
+  };
+  if (err.currentRevision) body.currentRevision = err.currentRevision;
+  res.status(status).json(body);
 });
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason && reason.stack ? reason.stack : reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err && err.stack ? err.stack : err);
+});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Thrive sync API listening on http://localhost:${PORT}`);
+    console.log(`Sources: ${sources.map((s) => s.name).join(", ")}`);
+    console.log(`  GET /api/v1/health`);
+    console.log(`  GET /api/v1/sync   (ETag-cached full payload)`);
+    console.log(`  GET /api/v1/deals | /coupons | /recipes | /catalog`);
+  });
+}
+
+module.exports = app;

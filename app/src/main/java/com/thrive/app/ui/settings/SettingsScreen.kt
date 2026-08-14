@@ -1,7 +1,12 @@
 package com.thrive.app.ui.settings
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.thrive.app.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.rememberCoroutineScope
 import com.thrive.app.ai.AiService
 import com.thrive.app.data.local.SettingsStore
+import com.thrive.app.data.remote.BackupPolicy
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.data.remote.SyncStatus
 import com.thrive.app.ui.savings.SavingsViewModel
@@ -100,6 +106,24 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
     var updateCheckMsg by remember { mutableStateOf<String?>(null) }
     var restoreCode by remember { mutableStateOf("") }
     val accents = LocalThriveColors.current
+
+    // Backup only sends the code over HTTPS (or loopback in debug builds). On a
+    // plain HTTP non-loopback URL the card below is honest: backup is off.
+    val backupPermitted = BackupPolicy.isPermitted(syncUrl, BuildConfig.DEBUG)
+
+    val notificationPermission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                Toast.makeText(context, "Update notifications on", Toast.LENGTH_SHORT).show()
+            }
+        }
+    fun requestNotifications() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val scope = rememberCoroutineScope()
     fun runSync() {
@@ -161,8 +185,10 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                 Text("Sync server", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Point Thrive at your running sync API (backend/ → npm start). " +
-                        "Emulator default: http://10.0.2.2:4000. On a phone, use your computer's LAN IP.",
+                    text = "Point Thrive at your sync API (backend/ → npm start). " +
+                        "Emulator default: http://10.0.2.2:4000. For a phone, use a public HTTPS " +
+                        "endpoint (e.g. a cloudflare tunnel) — backup needs HTTPS and never " +
+                        "sends codes over plain HTTP.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }
@@ -217,10 +243,26 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Your saved deals, pantry, and shopping list sync free between your own " +
-                        "devices with a backup code — no account or email. It works whenever your " +
-                        "sync server is reachable.",
+                        "devices with a backup code — no account or email. Backup requires a " +
+                        "secure (HTTPS) sync server.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
+                if (!backupPermitted) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = if (syncUrl.isBlank())
+                            "Backup is unavailable: no sync server is configured. Set an HTTPS " +
+                                "Sync API base URL above to turn it on."
+                        else
+                            "Backup is off: the current server URL isn't a secure HTTPS endpoint " +
+                                "(or isn't the emulator loopback in a debug build). Codes are never " +
+                                "sent over plain HTTP.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFFB33A1F),
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                    )
+                }
             }
         }
 
@@ -241,6 +283,7 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(
+                        enabled = backupPermitted,
                         onClick = {
                             val ok = Clipboard.copy(context, "Thrive backup code", savingsState.backupCode)
                             savingsVm.setBackupMsg(if (ok) "Backup code copied." else "Copy blocked on this device — write the code down.")
@@ -255,6 +298,7 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(10.dp))
                 Button(
+                    enabled = backupPermitted,
                     onClick = { savingsVm.backupNow() },
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
@@ -279,6 +323,7 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.width(10.dp))
                     OutlinedButton(
+                        enabled = backupPermitted,
                         onClick = { savingsVm.restoreBackup(restoreCode) },
                         shape = RoundedCornerShape(16.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp),
@@ -475,6 +520,46 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
                     Text(
                         text = updateCheckMsg ?: "Checks GitHub releases every 15 minutes.",
                         style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { requestNotifications() }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accents.dealSoft),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.Info, contentDescription = null, tint = accents.deal, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "Update notifications",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                        Text(
+                            text = "Get a heads-up when a new Thrive version is ready. You can turn this " +
+                                "on or off any time — the app works fully without it.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = Build.VERSION.SDK_INT < 33 ||
+                            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                            PackageManager.PERMISSION_GRANTED,
+                        onCheckedChange = { requestNotifications() },
+                        colors = SwitchDefaults.colors(checkedTrackColor = accents.deal),
                     )
                 }
             }
