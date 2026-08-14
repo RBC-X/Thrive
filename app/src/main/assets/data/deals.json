@@ -1,0 +1,996 @@
+[
+ {
+  "id": "dl01",
+  "store": "Kroger",
+  "productName": "Milk 1 Gallon",
+  "category": "Dairy",
+  "price": 2.99,
+  "unitPrice": "$2.99/gal",
+  "savingsPercent": 25,
+  "keywords": [
+   "milk",
+   "2% milk",
+   "whole milk"
+  ],
+  "endsInDays": 2,
+  "size": "1 gal"
+ },
+ {
+  "id": "dl02",
+  "store": "Aldi",
+  "productName": "Organic Milk 1 Gallon",
+  "category": "Dairy",
+  "price": 3.49,
+  "unitPrice": "$3.49/gal",
+  "savingsPercent": 12,
+  "keywords": [
+   "milk",
+   "organic milk"
+  ],
+  "endsInDays": 4,
+  "size": "1 gal"
+ },
+ {
+  "id": "dl03",
+  "store": "Walmart",
+  "productName": "Large Eggs 18 ct",
+  "category": "Dairy",
+  "price": 4.79,
+  "unitPrice": "$0.27/egg",
+  "savingsPercent": 10,
+  "keywords": [
+   "eggs",
+   "large eggs"
+  ],
+  "endsInDays": 3,
+  "size": "18 ct",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/500/032/601/0030/front_en.19.400.jpg",
+  "brand": "The Happy Egg co."
+ },
+ {
+  "id": "dl04",
+  "store": "Aldi",
+  "productName": "Large Eggs 12 ct",
+  "category": "Dairy",
+  "price": 2.89,
+  "unitPrice": "$0.24/egg",
+  "savingsPercent": 15,
+  "keywords": [
+   "eggs",
+   "large eggs"
+  ],
+  "endsInDays": 5,
+  "size": "12 ct",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/500/032/601/0030/front_en.19.400.jpg",
+  "brand": "The Happy Egg co."
+ },
+ {
+  "id": "dl05",
+  "store": "Kroger",
+  "productName": "Unsalted Butter 1 lb",
+  "category": "Dairy",
+  "price": 3.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "butter",
+   "unsalted butter"
+  ],
+  "endsInDays": 4,
+  "size": "1 lb",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/505/477/518/8321/front_en.34.400.jpg",
+  "brand": "TESCO"
+ },
+ {
+  "id": "dl06",
+  "store": "Target",
+  "productName": "Shredded Cheddar 8 oz",
+  "category": "Dairy",
+  "price": 2.49,
+  "savingsPercent": 30,
+  "keywords": [
+   "cheddar",
+   "shredded cheese",
+   "cheese"
+  ],
+  "endsInDays": 3,
+  "size": "8 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/009/661/922/1073/front_en.54.400.jpg",
+  "brand": "Kirkland Signature"
+ },
+ {
+  "id": "dl07",
+  "store": "Aldi",
+  "productName": "Mozzarella Shreds 8 oz",
+  "category": "Dairy",
+  "price": 2.19,
+  "savingsPercent": 22,
+  "keywords": [
+   "mozzarella",
+   "shredded cheese"
+  ],
+  "endsInDays": 5,
+  "size": "8 oz",
+  "imageUrl": null,
+  "brand": null
+ },
+ {
+  "id": "dl08",
+  "store": "Kroger",
+  "productName": "Greek Yogurt 32 oz",
+  "category": "Dairy",
+  "price": 3.49,
+  "savingsPercent": 18,
+  "keywords": [
+   "greek yogurt",
+   "yogurt"
+  ],
+  "endsInDays": 4,
+  "size": "32 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/000/002/004/7559/front_en.229.400.jpg",
+  "brand": "Pilos"
+ },
+ {
+  "id": "dl09",
+  "store": "Walmart",
+  "productName": "Boneless Chicken Breast 2 lb",
+  "category": "Meat",
+  "price": 6.98,
+  "unitPrice": "$3.49/lb",
+  "savingsPercent": 22,
+  "keywords": [
+   "chicken breast",
+   "boneless chicken"
+  ],
+  "endsInDays": 2,
+  "size": "2 lb",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/002/370/016/2205/front_en.4.400.jpg",
+  "brand": "Tyson"
+ },
+ {
+  "id": "dl10",
+  "store": "Aldi",
+  "productName": "Chicken Thighs 1.5 lb",
+  "category": "Meat",
+  "price": 4.49,
+  "unitPrice": "$2.99/lb",
+  "savingsPercent": 25,
+  "keywords": [
+   "chicken thighs",
+   "chicken"
+  ],
+  "endsInDays": 4,
+  "size": "1.5 lb"
+ },
+ {
+  "id": "dl11",
+  "store": "Kroger",
+  "productName": "80/20 Ground Beef 1 lb",
+  "category": "Meat",
+  "price": 4.99,
+  "unitPrice": "$4.99/lb",
+  "savingsPercent": 17,
+  "keywords": [
+   "ground beef",
+   "hamburger meat"
+  ],
+  "endsInDays": 3,
+  "size": "1 lb"
+ },
+ {
+  "id": "dl12",
+  "store": "Walmart",
+  "productName": "Ground Turkey 1 lb",
+  "category": "Meat",
+  "price": 3.98,
+  "savingsPercent": 20,
+  "keywords": [
+   "ground turkey",
+   "turkey"
+  ],
+  "endsInDays": 3,
+  "size": "1 lb",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/002/265/571/5610/front_en.59.400.jpg",
+  "brand": "Butterball"
+ },
+ {
+  "id": "dl13",
+  "store": "Aldi",
+  "productName": "Bacon 12 oz",
+  "category": "Meat",
+  "price": 3.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "bacon"
+  ],
+  "endsInDays": 4,
+  "size": "12 oz"
+ },
+ {
+  "id": "dl14",
+  "store": "Kroger",
+  "productName": "Pork Chops 1.5 lb",
+  "category": "Meat",
+  "price": 5.49,
+  "unitPrice": "$3.66/lb",
+  "savingsPercent": 15,
+  "keywords": [
+   "pork chops",
+   "pork"
+  ],
+  "endsInDays": 5,
+  "size": "1.5 lb"
+ },
+ {
+  "id": "dl15",
+  "store": "Trader Joe's",
+  "productName": "Atlantic Salmon 1 lb",
+  "category": "Meat",
+  "price": 11.99,
+  "unitPrice": "$11.99/lb",
+  "savingsPercent": 10,
+  "keywords": [
+   "salmon",
+   "fish",
+   "seafood"
+  ],
+  "endsInDays": 3,
+  "size": "1 lb"
+ },
+ {
+  "id": "dl16",
+  "store": "Aldi",
+  "productName": "Smoked Sausage 14 oz",
+  "category": "Meat",
+  "price": 3.49,
+  "savingsPercent": 22,
+  "keywords": [
+   "sausage",
+   "smoked sausage",
+   "kielbasa"
+  ],
+  "endsInDays": 5,
+  "size": "14 oz"
+ },
+ {
+  "id": "dl17",
+  "store": "Kroger",
+  "productName": "Bananas 1 lb",
+  "category": "Produce",
+  "price": 0.59,
+  "unitPrice": "$0.59/lb",
+  "savingsPercent": 21,
+  "keywords": [
+   "bananas"
+  ],
+  "endsInDays": 4,
+  "size": "1 lb"
+ },
+ {
+  "id": "dl18",
+  "store": "Aldi",
+  "productName": "Organic Bananas 1 lb",
+  "category": "Produce",
+  "price": 0.79,
+  "savingsPercent": 10,
+  "keywords": [
+   "bananas"
+  ],
+  "endsInDays": 5,
+  "size": "1 lb"
+ },
+ {
+  "id": "dl19",
+  "store": "Walmart",
+  "productName": "Gala Apples 3 lb",
+  "category": "Produce",
+  "price": 2.97,
+  "unitPrice": "$0.99/lb",
+  "savingsPercent": 25,
+  "keywords": [
+   "apples",
+   "gala apples"
+  ],
+  "endsInDays": 3,
+  "size": "3 lb"
+ },
+ {
+  "id": "dl20",
+  "store": "Kroger",
+  "productName": "Russet Potatoes 5 lb",
+  "category": "Produce",
+  "price": 2.99,
+  "unitPrice": "$0.60/lb",
+  "savingsPercent": 30,
+  "keywords": [
+   "potatoes",
+   "russet potatoes"
+  ],
+  "endsInDays": 5,
+  "size": "5 lb"
+ },
+ {
+  "id": "dl21",
+  "store": "Aldi",
+  "productName": "Sweet Potatoes 3 lb",
+  "category": "Produce",
+  "price": 2.49,
+  "savingsPercent": 25,
+  "keywords": [
+   "sweet potatoes"
+  ],
+  "endsInDays": 5,
+  "size": "3 lb"
+ },
+ {
+  "id": "dl22",
+  "store": "Kroger",
+  "productName": "Broccoli Crowns 1 lb",
+  "category": "Produce",
+  "price": 1.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "broccoli"
+  ],
+  "endsInDays": 4,
+  "size": "1 lb"
+ },
+ {
+  "id": "dl23",
+  "store": "Walmart",
+  "productName": "Baby Spinach 10 oz",
+  "category": "Produce",
+  "price": 2.98,
+  "savingsPercent": 15,
+  "keywords": [
+   "spinach",
+   "baby spinach",
+   "greens"
+  ],
+  "endsInDays": 3,
+  "size": "10 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/405/648/919/8369/front_en.40.400.jpg",
+  "brand": "Lidl"
+ },
+ {
+  "id": "dl24",
+  "store": "Aldi",
+  "productName": "Vine Tomatoes 2 lb",
+  "category": "Produce",
+  "price": 1.89,
+  "savingsPercent": 24,
+  "keywords": [
+   "tomatoes",
+   "vine tomatoes"
+  ],
+  "endsInDays": 4,
+  "size": "2 lb"
+ },
+ {
+  "id": "dl25",
+  "store": "Kroger",
+  "productName": "Bell Pepper 3-pack",
+  "category": "Produce",
+  "price": 2.99,
+  "savingsPercent": 25,
+  "keywords": [
+   "bell pepper",
+   "peppers"
+  ],
+  "endsInDays": 4,
+  "size": "3 ct"
+ },
+ {
+  "id": "dl26",
+  "store": "Aldi",
+  "productName": "Avocados 4 ct",
+  "category": "Produce",
+  "price": 2.49,
+  "savingsPercent": 38,
+  "keywords": [
+   "avocado",
+   "avocados"
+  ],
+  "endsInDays": 2,
+  "size": "4 ct"
+ },
+ {
+  "id": "dl27",
+  "store": "Kroger",
+  "productName": "Onions 3 lb",
+  "category": "Produce",
+  "price": 1.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "onions",
+   "yellow onions"
+  ],
+  "endsInDays": 5,
+  "size": "3 lb"
+ },
+ {
+  "id": "dl28",
+  "store": "Walmart",
+  "productName": "Carrots 2 lb",
+  "category": "Produce",
+  "price": 1.48,
+  "savingsPercent": 25,
+  "keywords": [
+   "carrots"
+  ],
+  "endsInDays": 4,
+  "size": "2 lb"
+ },
+ {
+  "id": "dl29",
+  "store": "Aldi",
+  "productName": "Cucumbers 2 ct",
+  "category": "Produce",
+  "price": 1.29,
+  "savingsPercent": 20,
+  "keywords": [
+   "cucumber",
+   "cucumbers"
+  ],
+  "endsInDays": 4,
+  "size": "2 ct"
+ },
+ {
+  "id": "dl30",
+  "store": "Kroger",
+  "productName": "Frozen Mixed Vegetables 32 oz",
+  "category": "Frozen",
+  "price": 2.99,
+  "savingsPercent": 25,
+  "keywords": [
+   "frozen vegetables",
+   "mixed vegetables",
+   "frozen peas",
+   "frozen corn"
+  ],
+  "endsInDays": 4,
+  "size": "32 oz"
+ },
+ {
+  "id": "dl31",
+  "store": "Walmart",
+  "productName": "Frozen Chicken Tenders 32 oz",
+  "category": "Frozen",
+  "price": 6.98,
+  "savingsPercent": 18,
+  "keywords": [
+   "chicken tenders",
+   "nuggets",
+   "chicken strips"
+  ],
+  "endsInDays": 3,
+  "size": "32 oz"
+ },
+ {
+  "id": "dl32",
+  "store": "Target",
+  "productName": "Frozen Pizza 16 oz",
+  "category": "Frozen",
+  "price": 3.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "pizza",
+   "frozen pizza"
+  ],
+  "endsInDays": 4,
+  "size": "16 oz"
+ },
+ {
+  "id": "dl33",
+  "store": "Aldi",
+  "productName": "Frozen Berries 16 oz",
+  "category": "Frozen",
+  "price": 2.99,
+  "savingsPercent": 25,
+  "keywords": [
+   "berries",
+   "frozen berries",
+   "blueberries",
+   "strawberries"
+  ],
+  "endsInDays": 5,
+  "size": "16 oz"
+ },
+ {
+  "id": "dl34",
+  "store": "Kroger",
+  "productName": "Spaghetti 16 oz",
+  "category": "Pantry",
+  "price": 0.99,
+  "savingsPercent": 34,
+  "keywords": [
+   "spaghetti",
+   "pasta",
+   "penne",
+   "noodles"
+  ],
+  "endsInDays": 4,
+  "size": "16 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/807/680/019/5057/front_en.3809.400.jpg",
+  "brand": "Barilla"
+ },
+ {
+  "id": "dl35",
+  "store": "Walmart",
+  "productName": "Great Value Long Grain Rice 2 lb",
+  "category": "Pantry",
+  "price": 1.98,
+  "savingsPercent": 33,
+  "keywords": [
+   "rice",
+   "white rice",
+   "long grain rice"
+  ],
+  "endsInDays": 3,
+  "size": "2 lb"
+ },
+ {
+  "id": "dl36",
+  "store": "Aldi",
+  "productName": "Black Beans 4 ct",
+  "category": "Pantry",
+  "price": 3.16,
+  "unitPrice": "$0.79/can",
+  "savingsPercent": 20,
+  "keywords": [
+   "black beans",
+   "beans",
+   "kidney beans",
+   "chickpeas",
+   "garbanzo"
+  ],
+  "endsInDays": 5,
+  "size": "4 ct",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/505/737/374/8423/front_en.14.400.jpg",
+  "brand": "Tesco"
+ },
+ {
+  "id": "dl37",
+  "store": "Kroger",
+  "productName": "Crushed Tomatoes 28 oz",
+  "category": "Pantry",
+  "price": 1.29,
+  "savingsPercent": 19,
+  "keywords": [
+   "canned tomatoes",
+   "crushed tomatoes",
+   "diced tomatoes",
+   "tomato sauce",
+   "pasta sauce",
+   "marinara"
+  ],
+  "endsInDays": 4,
+  "size": "28 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/409/910/011/7882/front_en.8.400.jpg",
+  "brand": "Happy Harvest"
+ },
+ {
+  "id": "dl38",
+  "store": "Walmart",
+  "productName": "Peanut Butter 40 oz",
+  "category": "Pantry",
+  "price": 4.98,
+  "savingsPercent": 17,
+  "keywords": [
+   "peanut butter"
+  ],
+  "endsInDays": 4,
+  "size": "40 oz"
+ },
+ {
+  "id": "dl39",
+  "store": "Aldi",
+  "productName": "Rolled Oats 42 oz",
+  "category": "Pantry",
+  "price": 3.49,
+  "savingsPercent": 22,
+  "keywords": [
+   "oats",
+   "rolled oats",
+   "quick oats",
+   "oatmeal"
+  ],
+  "endsInDays": 5,
+  "size": "42 oz"
+ },
+ {
+  "id": "dl40",
+  "store": "Kroger",
+  "productName": "Chicken Broth 32 oz",
+  "category": "Pantry",
+  "price": 1.79,
+  "savingsPercent": 20,
+  "keywords": [
+   "broth",
+   "chicken broth",
+   "stock",
+   "vegetable broth"
+  ],
+  "endsInDays": 4,
+  "size": "32 oz"
+ },
+ {
+  "id": "dl41",
+  "store": "Aldi",
+  "productName": "Pasta Sauce 24 oz",
+  "category": "Pantry",
+  "price": 1.89,
+  "savingsPercent": 21,
+  "keywords": [
+   "pasta sauce",
+   "marinara",
+   "spaghetti sauce"
+  ],
+  "endsInDays": 5,
+  "size": "24 oz"
+ },
+ {
+  "id": "dl42",
+  "store": "Walmart",
+  "productName": "Wheat Bread 20 oz",
+  "category": "Bakery",
+  "price": 1.48,
+  "savingsPercent": 26,
+  "keywords": [
+   "bread",
+   "wheat bread",
+   "sandwich bread"
+  ],
+  "endsInDays": 2,
+  "size": "20 oz"
+ },
+ {
+  "id": "dl43",
+  "store": "Aldi",
+  "productName": "Flour Tortillas 10 ct",
+  "category": "Bakery",
+  "price": 1.79,
+  "savingsPercent": 25,
+  "keywords": [
+   "tortillas",
+   "flour tortillas",
+   "corn tortillas"
+  ],
+  "endsInDays": 4,
+  "size": "10 ct"
+ },
+ {
+  "id": "dl44",
+  "store": "Kroger",
+  "productName": "Bagels 6 ct",
+  "category": "Bakery",
+  "price": 2.99,
+  "savingsPercent": 14,
+  "keywords": [
+   "bagels"
+  ],
+  "endsInDays": 3,
+  "size": "6 ct"
+ },
+ {
+  "id": "dl45",
+  "store": "Walmart",
+  "productName": "Cereal 18 oz",
+  "category": "Pantry",
+  "price": 2.98,
+  "savingsPercent": 25,
+  "keywords": [
+   "cereal",
+   "corn flakes",
+   "oatmeal cereal"
+  ],
+  "endsInDays": 4,
+  "size": "18 oz"
+ },
+ {
+  "id": "dl46",
+  "store": "Aldi",
+  "productName": "Corn Chips 11 oz",
+  "category": "Snacks",
+  "price": 1.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "chips",
+   "corn chips",
+   "tortilla chips"
+  ],
+  "endsInDays": 5,
+  "size": "11 oz"
+ },
+ {
+  "id": "dl47",
+  "store": "Kroger",
+  "productName": "Cookies 14 oz",
+  "category": "Snacks",
+  "price": 2.99,
+  "savingsPercent": 17,
+  "keywords": [
+   "cookies",
+   "oreos",
+   "chocolate chip cookies"
+  ],
+  "endsInDays": 4,
+  "size": "14 oz"
+ },
+ {
+  "id": "dl48",
+  "store": "Walmart",
+  "productName": "Granola Bars 12 ct",
+  "category": "Snacks",
+  "price": 2.48,
+  "savingsPercent": 21,
+  "keywords": [
+   "granola bars",
+   "snack bars",
+   "protein bars"
+  ],
+  "endsInDays": 3,
+  "size": "12 ct"
+ },
+ {
+  "id": "dl49",
+  "store": "Aldi",
+  "productName": "Orange Juice 64 oz",
+  "category": "Drinks",
+  "price": 3.49,
+  "savingsPercent": 13,
+  "keywords": [
+   "orange juice",
+   "oj",
+   "juice"
+  ],
+  "endsInDays": 4,
+  "size": "64 oz"
+ },
+ {
+  "id": "dl50",
+  "store": "Kroger",
+  "productName": "Canned Tuna 5 ct",
+  "category": "Pantry",
+  "price": 4.49,
+  "unitPrice": "$0.90/can",
+  "savingsPercent": 25,
+  "keywords": [
+   "tuna",
+   "canned tuna"
+  ],
+  "endsInDays": 4,
+  "size": "5 ct"
+ },
+ {
+  "id": "dl51",
+  "store": "Walmart",
+  "productName": "Pasta Sauce 45 oz",
+  "category": "Pantry",
+  "price": 3.98,
+  "savingsPercent": 20,
+  "keywords": [
+   "pasta sauce",
+   "marinara"
+  ],
+  "endsInDays": 3,
+  "size": "45 oz"
+ },
+ {
+  "id": "dl52",
+  "store": "Aldi",
+  "productName": "Honey 16 oz",
+  "category": "Pantry",
+  "price": 3.99,
+  "savingsPercent": 15,
+  "keywords": [
+   "honey"
+  ],
+  "endsInDays": 5,
+  "size": "16 oz"
+ },
+ {
+  "id": "dl53",
+  "store": "Target",
+  "productName": "Coffee Grounds 12 oz",
+  "category": "Pantry",
+  "price": 5.99,
+  "savingsPercent": 14,
+  "keywords": [
+   "coffee",
+   "ground coffee",
+   "coffee beans"
+  ],
+  "endsInDays": 3,
+  "size": "12 oz"
+ },
+ {
+  "id": "dl54",
+  "store": "Kroger",
+  "productName": "Olive Oil 16.9 oz",
+  "category": "Pantry",
+  "price": 5.99,
+  "savingsPercent": 20,
+  "keywords": [
+   "olive oil",
+   "cooking oil",
+   "vegetable oil"
+  ],
+  "endsInDays": 4,
+  "size": "16.9 oz"
+ },
+ {
+  "id": "dl55",
+  "store": "Walmart",
+  "productName": "Soy Sauce 15 oz",
+  "category": "Condiments",
+  "price": 1.98,
+  "savingsPercent": 23,
+  "keywords": [
+   "soy sauce"
+  ],
+  "endsInDays": 4,
+  "size": "15 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/871/503/511/0809/front_en.194.400.jpg",
+  "brand": "Kikkoman"
+ },
+ {
+  "id": "dl56",
+  "store": "Aldi",
+  "productName": "Ketchup 38 oz",
+  "category": "Condiments",
+  "price": 1.99,
+  "savingsPercent": 33,
+  "keywords": [
+   "ketchup"
+  ],
+  "endsInDays": 5,
+  "size": "38 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/000/008/715/7215/front_en.208.400.jpg",
+  "brand": "Heinz"
+ },
+ {
+  "id": "dl57",
+  "store": "Kroger",
+  "productName": "Mustard 20 oz",
+  "category": "Condiments",
+  "price": 1.69,
+  "savingsPercent": 15,
+  "keywords": [
+   "mustard",
+   "dijon",
+   "yellow mustard"
+  ],
+  "endsInDays": 4,
+  "size": "20 oz",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/611/118/400/4716/front_en.35.400.jpg",
+  "brand": "Star moutarde de Dijon"
+ },
+ {
+  "id": "dl58",
+  "store": "Walmart",
+  "productName": "Mayonnaise 30 oz",
+  "category": "Condiments",
+  "price": 3.98,
+  "savingsPercent": 20,
+  "keywords": [
+   "mayo",
+   "mayonnaise",
+   "salad dressing"
+  ],
+  "endsInDays": 3,
+  "size": "30 oz"
+ },
+ {
+  "id": "dl59",
+  "store": "Aldi",
+  "productName": "Salsa 24 oz",
+  "category": "Condiments",
+  "price": 2.49,
+  "savingsPercent": 17,
+  "keywords": [
+   "salsa"
+  ],
+  "endsInDays": 5,
+  "size": "24 oz"
+ },
+ {
+  "id": "dl60",
+  "store": "Kroger",
+  "productName": "Dish Soap 24 oz",
+  "category": "Household",
+  "price": 1.99,
+  "savingsPercent": 33,
+  "keywords": [
+   "dish soap"
+  ],
+  "endsInDays": 4,
+  "size": "24 oz"
+ },
+ {
+  "id": "dl61",
+  "store": "Walmart",
+  "productName": "Paper Towels 6-roll",
+  "category": "Household",
+  "price": 6.98,
+  "savingsPercent": 22,
+  "keywords": [
+   "paper towels"
+  ],
+  "endsInDays": 3,
+  "size": "6 ct"
+ },
+ {
+  "id": "dl62",
+  "store": "Aldi",
+  "productName": "Trash Bags 40 ct",
+  "category": "Household",
+  "price": 4.99,
+  "savingsPercent": 17,
+  "keywords": [
+   "trash bags",
+   "garbage bags"
+  ],
+  "endsInDays": 5,
+  "size": "40 ct",
+  "imageUrl": "https://images.openfoodfacts.org/images/products/007/874/235/0745/front_en.3.400.jpg",
+  "brand": "Great Value"
+ },
+ {
+  "id": "dl63",
+  "store": "Target",
+  "productName": "Laundry Detergent 64 oz",
+  "category": "Household",
+  "price": 9.99,
+  "savingsPercent": 23,
+  "keywords": [
+   "laundry detergent",
+   "detergent",
+   "tide"
+  ],
+  "endsInDays": 3,
+  "size": "64 oz"
+ },
+ {
+  "id": "dl64",
+  "store": "Walmart",
+  "productName": "Shampoo 28 oz",
+  "category": "Health",
+  "price": 4.98,
+  "savingsPercent": 17,
+  "keywords": [
+   "shampoo",
+   "conditioner",
+   "body wash"
+  ],
+  "endsInDays": 4,
+  "size": "28 oz"
+ },
+ {
+  "id": "dl65",
+  "store": "CVS",
+  "productName": "Toothpaste 2-pack",
+  "category": "Health",
+  "price": 5.49,
+  "savingsPercent": 31,
+  "keywords": [
+   "toothpaste"
+  ],
+  "endsInDays": 3,
+  "size": "2 ct"
+ },
+ {
+  "id": "dl66",
+  "store": "Aldi",
+  "productName": "Multivitamins 150 ct",
+  "category": "Health",
+  "price": 5.99,
+  "savingsPercent": 25,
+  "keywords": [
+   "vitamins",
+   "multivitamin",
+   "vitamin c"
+  ],
+  "endsInDays": 4,
+  "size": "150 ct"
+ }
+]

@@ -1,0 +1,18 @@
+{
+  "name": "thrive-backend",
+  "version": "1.0.0",
+  "description": "Thrive sync API — daily deals, coupons, recipes, and catalog feeds with ETag caching and pluggable retailer sources.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

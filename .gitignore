@@ -1,0 +1,32 @@
+# Gradle / Android build
+.gradle/
+build/
+app/build/
+local.properties
+*.keystore
+*.jks
+# Local release keystore credentials (THRIVE_KEYSTORE_*) — never publish
+gradle.properties
+
+# Built artifacts
+*.apk
+*.aab
+
+# Logs and local scratch
+*.log
+*.hprof
+.freebuff/
+Erin/
+qa/
+tools/thrive-preview.zip
+boot-65s.png
+thrive-preview-1.png
+progress.html
+
+# Node (backend)
+backend/node_modules/
+
+# IDE
+.idea/
+.kotlin/
+*.iml

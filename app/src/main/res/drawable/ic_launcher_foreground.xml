@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Four-point sparkle: growth + a spark of savings -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M54,24 C55.8,40.2 61.8,46.2 78,48 C61.8,49.8 55.8,55.8 54,72 C52.2,55.8 46.2,49.8 30,48 C46.2,46.2 52.2,40.2 54,24 Z" />
+    <path
+        android:fillColor="#B9EBD6"
+        android:pathData="M54,60 C55.2,67.8 58.2,70.8 66,72 C58.2,73.2 55.2,76.2 54,84 C52.8,76.2 49.8,73.2 42,72 C49.8,70.8 52.8,67.8 54,60 Z" />
+</vector>

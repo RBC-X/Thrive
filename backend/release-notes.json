@@ -1,0 +1,46 @@
+{
+  "notes": {
+    "1.2.5": [
+      "Weekly plan cost now adds up honestly — no more charging you twice for pantry items",
+      "Plan a week from an empty pantry (starts from scratch)",
+      "Release signing credentials moved out of the build file",
+      "Deal-feed admin override locked behind a token"
+    ],
+    "1.2.4": [
+      "Real product photos for deals (no stock placeholders)",
+      "Copy coupon codes with verification + manual fallback",
+      "Deal finder: honest item matching, store-grouped trip totals",
+      "Clear 'no verified deal' state instead of fake matches",
+      "Add items to a non-empty shopping list"
+    ],
+    "1.2.3": [
+      "Release notes now show on the update card",
+      "One-command ship: build, stage, restart & install"
+    ],
+    "1.2.2": [
+      "Release pipeline: one-command build, stage & install",
+      "HTTPS update channel via cloudflared - no more 'file might be harmful'",
+      "Version string on the About screen now matches the real build"
+    ],
+    "1.2.1": [
+      "Update card only appears when a genuinely newer build is served"
+    ],
+    "1.2.0": [
+      "In-app update helper: card after sync links to the latest APK",
+      "Weekly meal planner (7 dinners under a budget)",
+      "Unit-price deal comparison for multi-pack & bulk buys",
+      "Live deal sync from the Thrive backend with offline fallback"
+    ],
+    "1.1.1": [
+      "Budget quick-chips now correctly enable 'Build my shopping list'"
+    ],
+    "1.1.0": [
+      "AI deal finder matches your shopping list to the live feed",
+      "Pantry-to-meal engine: 'Make me a meal' from what you have",
+      "Recipe details with brand suggestions and checkable steps"
+    ],
+    "1.0.0": [
+      "Thrive launches: Savings, Recipes, Pantry & Budget"
+    ]
+  }
+}

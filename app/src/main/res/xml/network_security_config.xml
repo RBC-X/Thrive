@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext is allowed so the app can reach a local/self-hosted Thrive sync
+     API (e.g. http://10.0.2.2:4000 or a LAN address). For production, point
+     the sync URL at an HTTPS endpoint and flip this back to false. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
