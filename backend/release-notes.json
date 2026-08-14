@@ -75,6 +75,10 @@
       "Bundled-feed notice when the live server is unreachable or sends no deals",
       "Self-healing service: backend + tunnel watchdog with boot auto-start",
       "Always-on deploy guide (backend/DEPLOY.md) + Docker setup for 24/7 hosting"
+    ],
+    "1.3.0": [
+      "Visible version badge in the header — you can see which build you’re on",
+      "Coupons now show real product photos matched to the item (no more random images); items without a verified photo keep a clean category tile"
     ]
   }
 }

@@ -198,6 +198,16 @@ private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onR
                 )
                 Spacer(Modifier.width(8.dp))
                 SyncChip(state.sync)
+                Spacer(Modifier.width(6.dp))
+                // Visible build badge — makes updates obvious and helps verify
+                // which release is installed.
+                Text(
+                    text = "v${com.thrive.app.BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                )
             }
             Text(
                 text = "Good morning! Here's what's on sale today.",

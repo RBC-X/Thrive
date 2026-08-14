@@ -85,7 +85,7 @@ Unit tests cover the deal-finder honesty rules (no misleading matches, unit-pric
 
 ## Release history
 
-See `backend/release-notes.json` for per-version notes. Latest: **1.2.11** — honest feed labeling ("Live" only when deals really came from the server, plus a bundled-feed notice when the server is unreachable), a self-healing backend+tunnel watchdog, and an always-on deploy guide (`backend/DEPLOY.md`) with Docker for 24/7 hosting. Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
+See `backend/release-notes.json` for per-version notes. Latest: **1.3.0** — coupons now show **real product photos matched to the item** (enriched from Open Food Facts + Wikimedia Commons with strict token matching; see `backend/enrich_coupon_images.py`), a visible version badge in the header, plus the v1.2.11 honest feed labeling ("Live" only when deals really came from the server, with a bundled-feed notice when the server is unreachable), a self-healing backend+tunnel watchdog, and an always-on deploy guide (`backend/DEPLOY.md`) with Docker for 24/7 hosting. Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
 
 ## License
 
