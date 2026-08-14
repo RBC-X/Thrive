@@ -11,7 +11,11 @@ import com.thrive.app.ai.WeeklyPlan
 import com.thrive.app.ai.WeeklyPlannerEngine
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.PantryItem
+import com.thrive.app.data.remote.BackupMerge
+import com.thrive.app.data.remote.StateBackup
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +56,38 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     private val _state = MutableStateFlow(PantryUiState(items = repo.loadPantry()))
     val state: StateFlow<PantryUiState> = _state.asStateFlow()
 
+    // Anonymous backup: pantry syncs under the same backup code as favorites.
+    private val backup = StateBackup((app as com.thrive.app.ThriveApp).settings) { repo.syncBaseUrl }
+    private var pushJob: Job? = null
+
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
+        // Non-blocking: pull pantry saved under this device's backup code and
+        // merge add-only, so pantry survives reinstalls. Silent when offline.
+        viewModelScope.launch {
+            val remote = backup.pull(backup.activeCode()).pantry
+            val local = _state.value.items
+            val merged = BackupMerge.pantry(local, remote)
+            if (merged != local) {
+                repo.savePantry(merged)
+                _state.update { it.copy(items = merged) }
+            }
+        }
+    }
+
+    /** Debounced pantry-only push so a burst of edits is one upload. */
+    private fun schedulePush() {
+        pushJob?.cancel()
+        pushJob = viewModelScope.launch {
+            delay(1_500)
+            runCatching { backup.pushPantry(_state.value.items) }
+        }
+    }
+
+    /** Applies a restored/merged pantry list (from Settings restore). */
+    fun applyRestored(items: List<PantryItem>) {
+        repo.savePantry(items)
+        _state.update { it.copy(items = items) }
     }
 
     fun addItem(
@@ -78,11 +112,13 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
             )
         )
         _state.update { it.copy(items = it.items + item) }
+        schedulePush()
     }
 
     fun removeItem(id: String) {
         repo.removePantryItem(id)
         _state.update { it.copy(items = it.items.filterNot { i -> i.id == id }) }
+        schedulePush()
     }
 
     fun changeQuantity(id: String, delta: Int) {
@@ -93,6 +129,7 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
         } else {
             repo.updatePantryItem(next)
             _state.update { it.copy(items = it.items.map { i -> if (i.id == id) next else i }) }
+            schedulePush()
         }
     }
 

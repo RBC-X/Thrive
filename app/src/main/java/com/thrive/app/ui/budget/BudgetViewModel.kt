@@ -8,8 +8,13 @@ import com.thrive.app.ai.AiService
 import com.thrive.app.ai.DealFinderEngine
 import com.thrive.app.ai.TripPlan
 import com.thrive.app.data.ThriveRepository
+import com.thrive.app.data.model.BudgetState
 import com.thrive.app.data.model.ShoppingItem
+import com.thrive.app.data.remote.BackupMerge
+import com.thrive.app.data.remote.StateBackup
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,8 +48,46 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
     })
     val state: StateFlow<BudgetUiState> = _state.asStateFlow()
 
+    // Anonymous backup: budget + shopping list sync under the backup code.
+    private val backup = StateBackup((app as com.thrive.app.ThriveApp).settings) { repo.syncBaseUrl }
+    private var pushJob: Job? = null
+
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
+        // Non-blocking: pull budget saved under this device's backup code and
+        // merge add-only, so the list survives reinstalls. Silent when offline.
+        viewModelScope.launch {
+            val remote = backup.pull(backup.activeCode()).budget
+            if (remote != null) {
+                val local = repo.loadBudget()
+                val merged = BackupMerge.budget(local, remote)
+                if (merged != local) {
+                    repo.saveBudget(merged)
+                    _state.update {
+                        it.copy(budget = merged.budget, people = merged.people, items = merged.items)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Debounced budget-only push so a burst of edits is one upload. */
+    private fun schedulePush() {
+        pushJob?.cancel()
+        pushJob = viewModelScope.launch {
+            delay(1_500)
+            val s = _state.value
+            runCatching {
+                backup.pushBudget(BudgetState(budget = s.budget, people = s.people, items = s.items))
+            }
+        }
+    }
+
+    /** Applies a restored/merged budget state (from Settings restore). */
+    fun applyRestored(budget: BudgetState?) {
+        if (budget == null) return
+        repo.saveBudget(budget)
+        _state.update { it.copy(budget = budget.budget, people = budget.people, items = budget.items) }
     }
 
     private fun persist() {
@@ -61,11 +104,13 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
     fun setBudget(value: Double) {
         _state.update { it.copy(budget = value) }
         persist()
+        schedulePush()
     }
 
     fun setPeople(value: Int) {
         _state.update { it.copy(people = value.coerceIn(1, 12)) }
         persist()
+        schedulePush()
     }
 
     fun addItem(name: String, category: String, quantity: Int, unit: String, estPrice: Double) {
@@ -81,12 +126,14 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
         )
         _state.update { it.copy(items = it.items + item) }
         persist()
+        schedulePush()
     }
 
     fun removeItem(id: String) {
         repo.removeShoppingItem(id)
         _state.update { it.copy(items = it.items.filterNot { i -> i.id == id }) }
         persist()
+        schedulePush()
     }
 
     fun changeQuantity(id: String, delta: Int) {
@@ -97,6 +144,7 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
         } else {
             repo.updateShoppingItem(next)
             _state.update { it.copy(items = it.items.map { i -> if (i.id == id) next else i }) }
+            schedulePush()
         }
     }
 
@@ -105,11 +153,13 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
         val next = current.copy(checked = !current.checked)
         repo.updateShoppingItem(next)
         _state.update { it.copy(items = it.items.map { i -> if (i.id == id) next else i }) }
+        schedulePush()
     }
 
     fun clearItems() {
         repo.clearShoppingList()
         _state.update { it.copy(items = emptyList(), plan = null) }
+        schedulePush()
     }
 
     fun clearPlanForEdit() = _state.update { it.copy(plan = null) }

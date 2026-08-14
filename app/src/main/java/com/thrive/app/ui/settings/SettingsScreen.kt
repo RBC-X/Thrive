@@ -213,11 +213,12 @@ fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
 
         item {
             Column(Modifier.padding(horizontal = 20.dp)) {
-                Text("Deal favorites backup", style = MaterialTheme.typography.titleMedium)
+                Text("Backup & sync", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Saved deals sync free between your own devices with a backup code — " +
-                        "no account or email. It works whenever your sync server is reachable.",
+                    text = "Your saved deals, pantry, and shopping list sync free between your own " +
+                        "devices with a backup code — no account or email. It works whenever your " +
+                        "sync server is reachable.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }

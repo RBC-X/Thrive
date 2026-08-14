@@ -248,18 +248,84 @@ app.get("/api/v1/sync", async (req0, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Anonymous favorites backup
+// Anonymous state backup (favorites + pantry + budget)
 // ---------------------------------------------------------------------------
-// Free, account-less deal-favorite sync: each install generates an 8-character
-// backup code (shown in Settings), and favorites are stored server-side under
-// that code. Entering the same code on another phone merges favorites across
-// devices. The code is the only credential — same trust model as a URL slug.
+// Free, account-less sync: each install generates an 8-character backup code
+// (shown in Settings), and the app's state — saved deals, pantry items, and
+// budget/shopping-list — is stored server-side under that code. Entering the
+// same code on another phone merges everything across devices. The code is
+// the only credential — same trust model as a URL slug.
+//
+// PUT merges per-section: only the sections present in the body replace the
+// stored copy, so an older app version pushing favorites alone never wipes a
+// device's pantry or budget.
 
 const BACKUP_DIR = path.join(__dirname, "data", "backups");
 const BACKUP_CODE_RE = /^[a-z0-9]{6,12}$/;
+const BACKUP_MAX_ITEMS = 500;
 
 function backupFile(code) {
   return path.join(BACKUP_DIR, `${code}.json`);
+}
+
+function readBackup(code) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(backupFile(code), "utf-8"));
+    return {
+      favorites: Array.isArray(saved.favorites) ? saved.favorites : [],
+      pantry: Array.isArray(saved.pantry) ? saved.pantry : [],
+      budget: saved.budget && typeof saved.budget === "object" ? saved.budget : null,
+      updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : null,
+    };
+  } catch {
+    return { favorites: [], pantry: [], budget: null, updatedAt: null };
+  }
+}
+
+function sanitizeFavorites(raw) {
+  return [...new Set(raw)]
+    .filter((f) => typeof f === "string" && f.length >= 1 && f.length <= 64)
+    .slice(0, BACKUP_MAX_ITEMS);
+}
+
+function sanitizePantry(raw) {
+  return raw
+    .filter((o) => o && typeof o === "object")
+    .map((o) => ({
+      id: String(o.id || "").slice(0, 64),
+      name: String(o.name || "").slice(0, 120),
+      category: String(o.category || "").slice(0, 40),
+      location: String(o.location || "").slice(0, 20),
+      quantity: Number.isFinite(Number(o.quantity)) ? Math.max(0, Math.floor(Number(o.quantity))) : 1,
+      unit: String(o.unit || "").slice(0, 24),
+      expiresAt: o.expiresAt == null ? null : (Number.isFinite(Number(o.expiresAt)) ? Number(o.expiresAt) : null),
+      addedAt: Number.isFinite(Number(o.addedAt)) ? Number(o.addedAt) : 0,
+    }))
+    .slice(0, BACKUP_MAX_ITEMS);
+}
+
+function sanitizeBudget(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const items = Array.isArray(raw.items)
+    ? raw.items
+        .filter((o) => o && typeof o === "object")
+        .map((o) => ({
+          id: String(o.id || "").slice(0, 64),
+          name: String(o.name || "").slice(0, 120),
+          category: String(o.category || "").slice(0, 40),
+          quantity: Number.isFinite(Number(o.quantity)) ? Math.max(0, Math.floor(Number(o.quantity))) : 1,
+          unit: String(o.unit || "").slice(0, 24),
+          estPrice: Number.isFinite(Number(o.estPrice)) ? Math.max(0, Number(o.estPrice)) : 0,
+          checked: !!o.checked,
+          brand: o.brand == null ? null : String(o.brand).slice(0, 60),
+        }))
+        .slice(0, BACKUP_MAX_ITEMS)
+    : [];
+  return {
+    budget: Number.isFinite(Number(raw.budget)) ? Math.max(0, Number(raw.budget)) : 0,
+    people: Number.isFinite(Number(raw.people)) ? Math.max(1, Math.min(12, Math.floor(Number(raw.people)))) : 1,
+    items,
+  };
 }
 
 app.get("/api/v1/backup/:code", (req0, res) => {
@@ -267,15 +333,10 @@ app.get("/api/v1/backup/:code", (req0, res) => {
   if (!BACKUP_CODE_RE.test(code)) {
     return res.status(400).json({ error: "invalid backup code" });
   }
-  try {
-    const raw = fs.readFileSync(backupFile(code), "utf-8");
-    const saved = JSON.parse(raw);
-    if (respondWithEtag(req0, res, saved)) return;
-    res.json(saved);
-  } catch {
-    // No backup yet for this code — an empty payload is the correct answer.
-    res.json({ favorites: [], updatedAt: null });
-  }
+  const saved = readBackup(code);
+  const body = { ...saved, updatedAt: saved.updatedAt || null };
+  if (respondWithEtag(req0, res, body)) return;
+  res.json(body);
 });
 
 app.put("/api/v1/backup/:code", (req0, res) => {
@@ -283,18 +344,30 @@ app.put("/api/v1/backup/:code", (req0, res) => {
   if (!BACKUP_CODE_RE.test(code)) {
     return res.status(400).json({ error: "invalid backup code" });
   }
-  const raw = req0.body && req0.body.favorites;
-  if (!Array.isArray(raw)) {
-    return res.status(400).json({ error: "body must be { favorites: string[] }" });
+  const body = req0.body && typeof req0.body === "object" ? req0.body : {};
+  const hasFavorites = Array.isArray(body.favorites);
+  const hasPantry = Array.isArray(body.pantry);
+  const hasBudget = body.budget !== undefined;
+  if (!hasFavorites && !hasPantry && !hasBudget) {
+    return res.status(400).json({ error: "body must include favorites, pantry, or budget" });
   }
-  const favorites = [...new Set(raw)]
-    .filter((f) => typeof f === "string" && f.length >= 1 && f.length <= 64)
-    .slice(0, 500);
+  const saved = readBackup(code);
+  const next = {
+    favorites: hasFavorites ? sanitizeFavorites(body.favorites) : saved.favorites,
+    pantry: hasPantry ? sanitizePantry(body.pantry) : saved.pantry,
+    budget: hasBudget ? sanitizeBudget(body.budget) : saved.budget,
+  };
   try {
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    const payload = { favorites, updatedAt: new Date().toISOString() };
+    const payload = { ...next, updatedAt: new Date().toISOString() };
     fs.writeFileSync(backupFile(code), JSON.stringify(payload, null, 2));
-    res.json({ ok: true, count: favorites.length, updatedAt: payload.updatedAt });
+    res.json({
+      ok: true,
+      favorites: next.favorites.length,
+      pantry: next.pantry.length,
+      budget: next.budget ? next.budget.items.length : 0,
+      updatedAt: payload.updatedAt,
+    });
   } catch (err) {
     res.status(500).json({ error: "could not save backup" });
   }

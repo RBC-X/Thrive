@@ -77,6 +77,15 @@ fun ThriveRoot() {
     val pantryVm: PantryViewModel = viewModel(factory = viewModelFactory { initializer { PantryViewModel(app, repo) } })
     val budgetVm: BudgetViewModel = viewModel(factory = viewModelFactory { initializer { BudgetViewModel(app, repo) } })
 
+    // After a Settings restore, push the merged pantry/budget into their tabs
+    // so the on-screen state matches what was just saved.
+    LaunchedEffect(savingsVm) {
+        savingsVm.restored.collect { snapshot ->
+            pantryVm.applyRestored(snapshot.pantry)
+            budgetVm.applyRestored(snapshot.budget)
+        }
+    }
+
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showTabs = tabs.any { it.route == currentRoute }

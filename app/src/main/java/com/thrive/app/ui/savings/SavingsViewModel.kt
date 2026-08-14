@@ -5,12 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.thrive.app.ThriveApp
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.Coupon
-import com.thrive.app.data.remote.FavoritesBackup
+import com.thrive.app.data.remote.BackupCode
+import com.thrive.app.data.remote.BackupSnapshot
+import com.thrive.app.data.remote.StateBackup
 import com.thrive.app.data.remote.SyncState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,8 +65,13 @@ data class SavingsUiState(
 
 class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {
 
-    private val backup = FavoritesBackup(app.settings) { repo.syncBaseUrl }
+    private val backup = StateBackup(app.settings) { repo.syncBaseUrl }
     private var pushJob: Job? = null
+
+    // Emitted after a full restore so other tabs (pantry/budget) refresh their
+    // on-screen state from the merged snapshot.
+    private val _restored = MutableSharedFlow<BackupSnapshot>(extraBufferCapacity = 1)
+    val restored: SharedFlow<BackupSnapshot> = _restored.asSharedFlow()
 
     private val _state = MutableStateFlow(
         SavingsUiState(coupons = repo.coupons, backupCode = backup.activeCode())
@@ -73,14 +83,14 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
         // Non-blocking: pull favorites saved under this device's backup code and
         // merge them in. Silent on failure — favorites stay local when offline.
         viewModelScope.launch {
-            val remote = backup.pull(backup.activeCode())
+            val remote = backup.pull(backup.activeCode()).favorites
             val local = repo.favoriteCouponIds()
             val merged = local + remote
             if (merged != local) {
                 repo.saveCouponFavorites(merged) // add-only merge: never un-favorites
                 _state.update { s -> s.copy(favorites = merged) }
             }
-            if (merged.isNotEmpty() && merged != remote) backup.push(merged)
+            if (merged.isNotEmpty() && merged != remote) backup.pushFavorites(merged)
         }
         // Follow sync progress so the feed header can show live/offline status
         // and the coupon list swaps to the remote feed when it arrives.
@@ -119,7 +129,7 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
             pushJob?.cancel()
             pushJob = viewModelScope.launch {
                 delay(1_500)
-                runCatching { backup.push(_state.value.favorites) }
+                runCatching { backup.pushFavorites(_state.value.favorites) }
                 _state.update { it.copy(backupMsg = null) }
             }
         }
@@ -128,11 +138,16 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
     /** Status line set from the Settings screen (e.g. "code copied"). */
     fun setBackupMsg(msg: String) = _state.update { it.copy(backupMsg = msg) }
 
-    /** Manual "Back up now" from Settings. */
+    /** Manual "Back up now" from Settings — pushes every section at once. */
     fun backupNow() {
         viewModelScope.launch {
             _state.update { it.copy(backupMsg = "Backing up…") }
-            val ok = runCatching { backup.push(_state.value.favorites) }.getOrDefault(false)
+            val snapshot = BackupSnapshot(
+                favorites = repo.favoriteCouponIds(),
+                pantry = repo.loadPantry(),
+                budget = repo.loadBudget(),
+            )
+            val ok = runCatching { backup.pushAll(snapshot) }.getOrDefault(false)
             _state.update {
                 it.copy(
                     backupMsg = if (ok) "Saved · code ${backup.activeCode()}" else "Backup failed — check your sync server.",
@@ -141,22 +156,38 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
         }
     }
 
-    /** Restores + merges favorites from another device's code, then adopts it. */
+    /**
+     * Restores + merges the full snapshot (saved deals, pantry, budget) from
+     * another device's code, adopts it, pushes the union back, and publishes
+     * the merged snapshot so every tab refreshes.
+     */
     fun restoreBackup(code: String) {
         viewModelScope.launch {
             val cleaned = code.trim().lowercase()
-            if (!com.thrive.app.data.remote.BackupCode.isValid(cleaned)) {
+            if (!BackupCode.isValid(cleaned)) {
                 _state.update { it.copy(backupMsg = "That doesn't look like a backup code (6-12 letters/numbers).") }
                 return@launch
             }
             _state.update { it.copy(backupMsg = "Restoring…") }
-            val merged = runCatching { backup.restore(cleaned, repo.favoriteCouponIds()) }
-                .getOrNull()
+            val local = BackupSnapshot(
+                favorites = repo.favoriteCouponIds(),
+                pantry = repo.loadPantry(),
+                budget = repo.loadBudget(),
+            )
+            val merged = runCatching { backup.restore(cleaned, local) }.getOrNull()
             if (merged != null) {
-                repo.saveCouponFavorites(merged)
+                repo.saveCouponFavorites(merged.favorites)
+                repo.savePantry(merged.pantry)
+                merged.budget?.let { repo.saveBudget(it) }
                 _state.update {
-                    it.copy(favorites = merged, backupCode = backup.activeCode(), backupMsg = "Restored ${merged.size} saved deals.")
+                    it.copy(
+                        favorites = merged.favorites,
+                        backupCode = backup.activeCode(),
+                        backupMsg = "Restored ${merged.favorites.size} saved deals, ${merged.pantry.size} pantry items, " +
+                            "and ${merged.budget?.items?.size ?: 0} shopping items.",
+                    )
                 }
+                _restored.tryEmit(merged)
             } else {
                 _state.update { it.copy(backupMsg = "Couldn't reach the backup server.") }
             }

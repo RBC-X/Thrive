@@ -48,6 +48,11 @@
       "Coupon catalog expanded to 415 offers across 8 categories from 35 retailers, with real store links on every offer",
       "Feed freshness rotation — new coupons are marked daily, so the Savings tab always has something new"
     ],
+    "1.2.8": [
+      "Backup now covers everything — saved deals, your pantry, and the shopping list all sync under one backup code",
+      "Restore pulls all three at once, merging add-only so nothing on either device is ever deleted",
+      "Pantry and budget push automatically as you edit them — no manual step needed"
+    ],
     "1.2.7": [
       "Saved-deal backup — your coupon favorites sync free between your devices with a backup code (no account)",
       "Live Kroger prices — plug in free Kroger developer credentials and deals update with real store prices"
