@@ -33,3 +33,4 @@ backend/node_modules/
 
 # User favorites backups (never committed)
 backend/data/backups/
+backend/.env

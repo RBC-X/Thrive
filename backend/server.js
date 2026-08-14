@@ -1,5 +1,7 @@
 "use strict";
 
+require("./dotenv"); // loads backend/.env so credentials can live in a file
+
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");

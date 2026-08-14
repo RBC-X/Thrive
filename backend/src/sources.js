@@ -1,5 +1,7 @@
 "use strict";
 
+require("../dotenv"); // loads backend/.env for standalone scripts/tools too
+
 /**
  * Deal sources for the Thrive sync API.
  *

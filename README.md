@@ -51,6 +51,28 @@ node server.js            # http://localhost:4000
 
 Drop a release APK at `backend/public/Thrive-release.apk` and restart the backend — the app shows an update card with release notes (`backend/release-notes.json`) only when the served version is newer than the installed one.
 
+## Live retailer prices (Kroger) — one manual step
+
+The backend ships a real Kroger adapter (`KrogerLiveSource`) that does the full
+OAuth2 client-credentials flow and returns **live prices** with exact product
+links. It activates automatically once credentials exist — with no credentials
+it stays disabled and the curated feed keeps serving, so the app never breaks.
+
+1. Sign up **free** at https://developer.kroger.com → *Register* → *Create an app*.
+2. Put your Client ID and Client Secret in `backend/.env` (gitignored):
+   ```
+   KROGER_CLIENT_ID=your_client_id
+   KROGER_CLIENT_SECRET=your_client_secret
+   KROGER_ZIP=45202        # optional, default 45202
+   KROGER_TERMS=eggs milk  # optional, default terms
+   ```
+3. Restart the backend (`cd backend && npm start`).
+4. Verify live prices with `node test_kroger_live.js` — it reports how many
+   deals came back live-priced (not estimated) with their real links.
+
+`backend/.env` is loaded by `backend/dotenv.js` for both the server and
+standalone scripts; real environment variables always win over the file.
+
 ## Tests
 
 ```bash
