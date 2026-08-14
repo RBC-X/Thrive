@@ -1,0 +1,31 @@
+# Thrive backend + optional cloudflared tunnel, one command:
+#
+#   cp .env.example .env   # fill in your Kroger credentials
+#   docker compose up -d
+#
+# The backend is exposed on http://localhost:4000. For a public HTTPS URL,
+# run the cloudflared service too (requires `cloudflared tunnel login` once)
+# and read its log for the trycloudflare.com URL, then publish it to the
+# GitHub release via tools/tunnel.sh (--no-publish won't help here; see
+# backend/DEPLOY.md for the named-tunnel path).
+services:
+  backend:
+    build: .
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    volumes:
+      - thrive_data:/data
+    restart: unless-stopped
+
+  # Optional: quick tunnel for instant public HTTPS. Logs show the URL.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://backend:4000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  thrive_data:

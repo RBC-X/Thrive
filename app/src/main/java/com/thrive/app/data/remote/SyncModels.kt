@@ -37,9 +37,19 @@ data class SyncState(
     val error: String? = null,
     val source: List<String> = emptyList(),
     val update: UpdateInfo? = null,
+    /**
+     * Where the coupon list actually came from on the last successful sync:
+     * "live" = the server's coupon list (fresh from the feed), "bundled" = the
+     * server was reachable but sent no coupons (or never connected), so the app
+     * fell back to its built-in catalog. The UI uses this to be honest about
+     * whether the deals shown are live or bundled estimates.
+     */
+    val feedOrigin: String = "bundled",
 ) {
     val isLive: Boolean get() = status == SyncStatus.OK
     val isWorking: Boolean get() = status == SyncStatus.SYNCING
+    /** True when the coupon list on screen actually came from the server. */
+    val hasLiveFeed: Boolean get() = status == SyncStatus.OK && feedOrigin == "live"
 }
 
 /** True when the server advertises a newer release than the installed build. */

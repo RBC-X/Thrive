@@ -69,6 +69,12 @@
     "1.2.10": [
       "One-tap connect to the public backup server (no URL or IP to type)",
       "Settings discovers the live server from the update channel"
+    ],
+    "1.2.11": [
+      "Honest feed labeling: “Live” only shows when deals really came from the server",
+      "Bundled-feed notice when the live server is unreachable or sends no deals",
+      "Self-healing service: backend + tunnel watchdog with boot auto-start",
+      "Always-on deploy guide (backend/DEPLOY.md) + Docker setup for 24/7 hosting"
     ]
   }
 }

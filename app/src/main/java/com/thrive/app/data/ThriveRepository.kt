@@ -60,7 +60,9 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         _syncState.update { it.copy(status = SyncStatus.SYNCING, error = null) }
         val base = syncBaseUrl
         if (base.isBlank()) {
-            _syncState.update { it.copy(status = SyncStatus.OFFLINE) }
+            _syncState.update {
+                it.copy(status = SyncStatus.OFFLINE, feedOrigin = "bundled")
+            }
             return
         }
         runCatching {
@@ -70,11 +72,19 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                 result.code == 304 -> {
                     // Nothing changed server-side; keep current data.
                     _syncState.update {
-                        it.copy(status = SyncStatus.OK, lastSyncedAt = System.currentTimeMillis())
+                        it.copy(
+                            status = SyncStatus.OK,
+                            lastSyncedAt = System.currentTimeMillis(),
+                            // Keep whatever origin the current coupons came from:
+                            // 304 means nothing changed, so the on-screen set is
+                            // still live if it was live before.
+                            feedOrigin = if (remoteCoupons != null) "live" else it.feedOrigin,
+                        )
                     }
                 }
                 result.code in 200..299 -> {
                     val payload = json.decodeFromString(SyncPayload.serializer(), result.body)
+                    val couponsFromServer = payload.coupons.isNotEmpty()
                     remoteCoupons = payload.coupons.ifEmpty { remoteCoupons }
                     remoteRecipes = payload.recipes.ifEmpty { remoteRecipes }
                     remoteDeals = payload.deals.ifEmpty { remoteDeals }
@@ -86,6 +96,7 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                             lastSyncedAt = System.currentTimeMillis(),
                             source = payload.source,
                             update = payload.update,
+                            feedOrigin = if (couponsFromServer) "live" else "bundled",
                         )
                     }
                 }
@@ -96,6 +107,7 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                 it.copy(
                     status = SyncStatus.ERROR,
                     error = err.message ?: "Sync failed",
+                    feedOrigin = if (remoteCoupons != null) "live" else "bundled",
                 )
             }
         }

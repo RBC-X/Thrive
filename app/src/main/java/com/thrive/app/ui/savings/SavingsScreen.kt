@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Search
@@ -204,6 +205,10 @@ private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onR
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
+            if (!state.sync.hasLiveFeed) {
+                Spacer(Modifier.height(6.dp))
+                BundledFeedNotice(state.sync)
+            }
         }
         IconButton(onClick = onRefresh) {
             Icon(
@@ -229,21 +234,24 @@ private fun SyncChip(sync: com.thrive.app.data.remote.SyncState) {
     val label: String
     val bg: Color
     val fg: Color
-    when (status) {
-        com.thrive.app.data.remote.SyncStatus.OK -> {
+    when {
+        // Honest: "Live" only when the coupons on screen actually came from
+        // the server. A reachable server that sent no coupons, or a dead one
+        // after a previous live sync, is NOT live — it's the bundled feed.
+        sync.hasLiveFeed -> {
             val mins = sync.lastSyncedAt?.let { ((System.currentTimeMillis() - it) / 60_000L).toInt() } ?: 0
             label = "Live · ${if (mins < 1) "just now" else "${mins}m ago"}"
             bg = accents.leafSoft
             fg = Color(0xFF1F6B2E)
         }
-        com.thrive.app.data.remote.SyncStatus.SYNCING -> {
+        status == com.thrive.app.data.remote.SyncStatus.SYNCING -> {
             label = "Syncing…"; bg = MaterialTheme.colorScheme.surfaceVariant; fg = MaterialTheme.colorScheme.onSurfaceVariant
         }
-        com.thrive.app.data.remote.SyncStatus.ERROR -> {
-            label = "Sync failed"; bg = accents.dealSoft; fg = Color(0xFFB33A1F)
+        status == com.thrive.app.data.remote.SyncStatus.ERROR -> {
+            label = "Offline feed"; bg = accents.dealSoft; fg = Color(0xFFB33A1F)
         }
         else -> {
-            label = "Offline feed"; bg = MaterialTheme.colorScheme.surfaceVariant; fg = MaterialTheme.colorScheme.onSurfaceVariant
+            label = "Bundled feed"; bg = MaterialTheme.colorScheme.surfaceVariant; fg = MaterialTheme.colorScheme.onSurfaceVariant
         }
     }
     Box(
@@ -257,6 +265,41 @@ private fun SyncChip(sync: com.thrive.app.data.remote.SyncState) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = fg,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun BundledFeedNotice(sync: com.thrive.app.data.remote.SyncState) {
+    val text = when (sync.status) {
+        com.thrive.app.data.remote.SyncStatus.ERROR ->
+            "Can't reach the live server — showing bundled deals with estimated prices. " +
+                "Pull to refresh or check Settings."
+        com.thrive.app.data.remote.SyncStatus.OK ->
+            "Server reached, but it sent no fresh deals — showing bundled estimates. " +
+                "Pull to refresh."
+        else ->
+            "Offline — showing bundled deals with estimated prices. Deals refresh when a server is configured."
+    }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
         )
     }

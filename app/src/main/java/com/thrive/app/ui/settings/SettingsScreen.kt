@@ -89,14 +89,19 @@ private fun syncStatusLabel(sync: SyncState, message: String?): String {
 }
 
 @Composable
-fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: SavingsViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as com.thrive.app.ThriveApp
     val settings = app.settings
     val ai = AiService(settings)
-    val repo = remember { com.thrive.app.data.ThriveRepository(app, settings) }
     val savingsState by savingsVm.state.collectAsState()
+    // Listen to the SHARED repository (the one the Savings VM also uses), so a
+    // sync started here is visible everywhere the moment it finishes — not just
+    // after the next periodic worker tick.
     var syncStatus by remember { mutableStateOf(repo.syncState.value) }
+    LaunchedEffect(repo) {
+        repo.syncState.collect { s -> syncStatus = s }
+    }
 
     var aiKey by remember { mutableStateOf(ai.apiKey) }
     var aiUrl by remember { mutableStateOf(ai.baseUrl) }

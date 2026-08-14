@@ -1,0 +1,7 @@
+# Never bake secrets or local data into the image.
+.env
+data/
+node_modules/
+test/
+*.log
+*.png

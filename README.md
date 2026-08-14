@@ -85,7 +85,7 @@ Unit tests cover the deal-finder honesty rules (no misleading matches, unit-pric
 
 ## Release history
 
-See `backend/release-notes.json` for per-version notes. Latest: **1.2.10** — one-tap connect to the public backup server (Settings discovers the live server from the update channel — no URL to type). Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
+See `backend/release-notes.json` for per-version notes. Latest: **1.2.11** — honest feed labeling ("Live" only when deals really came from the server, plus a bundled-feed notice when the server is unreachable), a self-healing backend+tunnel watchdog, and an always-on deploy guide (`backend/DEPLOY.md`) with Docker for 24/7 hosting. Run `bash tools/check_release.sh` before shipping to verify README, Gradle metadata, release notes, tag, and APK agree.
 
 ## License
 
