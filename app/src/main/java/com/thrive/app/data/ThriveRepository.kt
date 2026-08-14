@@ -170,6 +170,11 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         return id in favs
     }
 
+    /** Replaces the full coupon-favorites set (used by backup merge/restore). */
+    fun saveCouponFavorites(favs: Set<String>) {
+        settings.putString(KEY_FAV_COUPONS, favs.joinToString(","))
+    }
+
     fun favoriteCouponIds(): Set<String> =
         settings.getString(KEY_FAV_COUPONS, "").orEmpty().split(",").filter { it.isNotBlank() }.toSet()
 

@@ -5,7 +5,7 @@ const cors = require("cors");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { DailyRotationSource, PartnerApiSource } = require("./src/sources");
+const { DailyRotationSource, PartnerApiSource, KrogerLiveSource } = require("./src/sources");
 
 const app = express();
 app.use(cors());
@@ -99,7 +99,7 @@ function rotateCoupons(day) {
   });
 }
 
-const sources = [new DailyRotationSource(), new PartnerApiSource()].filter((s) => s.enabled !== false);
+const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource()].filter((s) => s.enabled !== false);
 
 const VERSION = 3;
 
@@ -245,6 +245,59 @@ app.get("/api/v1/sync", async (req0, res) => {
   const body = { ...payload, update };
   if (respondWithEtag(req0, res, body)) return;
   res.json(body);
+});
+
+// ---------------------------------------------------------------------------
+// Anonymous favorites backup
+// ---------------------------------------------------------------------------
+// Free, account-less deal-favorite sync: each install generates an 8-character
+// backup code (shown in Settings), and favorites are stored server-side under
+// that code. Entering the same code on another phone merges favorites across
+// devices. The code is the only credential — same trust model as a URL slug.
+
+const BACKUP_DIR = path.join(__dirname, "data", "backups");
+const BACKUP_CODE_RE = /^[a-z0-9]{6,12}$/;
+
+function backupFile(code) {
+  return path.join(BACKUP_DIR, `${code}.json`);
+}
+
+app.get("/api/v1/backup/:code", (req0, res) => {
+  const code = String(req0.params.code || "").toLowerCase();
+  if (!BACKUP_CODE_RE.test(code)) {
+    return res.status(400).json({ error: "invalid backup code" });
+  }
+  try {
+    const raw = fs.readFileSync(backupFile(code), "utf-8");
+    const saved = JSON.parse(raw);
+    if (respondWithEtag(req0, res, saved)) return;
+    res.json(saved);
+  } catch {
+    // No backup yet for this code — an empty payload is the correct answer.
+    res.json({ favorites: [], updatedAt: null });
+  }
+});
+
+app.put("/api/v1/backup/:code", (req0, res) => {
+  const code = String(req0.params.code || "").toLowerCase();
+  if (!BACKUP_CODE_RE.test(code)) {
+    return res.status(400).json({ error: "invalid backup code" });
+  }
+  const raw = req0.body && req0.body.favorites;
+  if (!Array.isArray(raw)) {
+    return res.status(400).json({ error: "body must be { favorites: string[] }" });
+  }
+  const favorites = [...new Set(raw)]
+    .filter((f) => typeof f === "string" && f.length >= 1 && f.length <= 64)
+    .slice(0, 500);
+  try {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    const payload = { favorites, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(backupFile(code), JSON.stringify(payload, null, 2));
+    res.json({ ok: true, count: favorites.length, updatedAt: payload.updatedAt });
+  } catch (err) {
+    res.status(500).json({ error: "could not save backup" });
+  }
 });
 
 // Manual override: POST a deals array to preview a custom feed. The server may

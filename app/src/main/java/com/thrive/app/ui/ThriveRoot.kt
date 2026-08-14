@@ -72,7 +72,7 @@ fun ThriveRoot() {
     // server responds, and nothing breaks if it can't be reached.
     LaunchedEffect(repo) { repo.syncNow(force = false) }
 
-    val savingsVm: SavingsViewModel = viewModel(factory = viewModelFactory { initializer { SavingsViewModel(repo) } })
+    val savingsVm: SavingsViewModel = viewModel(factory = viewModelFactory { initializer { SavingsViewModel(app, repo) } })
     val recipesVm: RecipesViewModel = viewModel(factory = viewModelFactory { initializer { RecipesViewModel(repo) } })
     val pantryVm: PantryViewModel = viewModel(factory = viewModelFactory { initializer { PantryViewModel(app, repo) } })
     val budgetVm: BudgetViewModel = viewModel(factory = viewModelFactory { initializer { BudgetViewModel(app, repo) } })
@@ -131,7 +131,7 @@ fun ThriveRoot() {
                 )
             }
             composable("budget") { BudgetScreen(budgetVm, onOpenSettings = { nav.navigate("settings") }) }
-            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable("settings") { SettingsScreen(savingsVm, onBack = { nav.popBackStack() }) }
             composable("coupon/{couponId}") { entry ->
                 val id = entry.arguments?.getString("couponId") ?: ""
                 CouponDetailScreen(

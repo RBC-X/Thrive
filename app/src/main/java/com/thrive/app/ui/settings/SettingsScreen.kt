@@ -22,9 +22,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
@@ -40,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,10 +61,12 @@ import com.thrive.app.ai.AiService
 import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.data.remote.SyncStatus
-import com.thrive.app.update.GithubUpdateChecker
-import com.thrive.app.update.UpdateBus
+import com.thrive.app.ui.savings.SavingsViewModel
 import com.thrive.app.ui.theme.LocalThriveColors
 import com.thrive.app.ui.theme.ThriveFont
+import com.thrive.app.update.GithubUpdateChecker
+import com.thrive.app.update.UpdateBus
+import com.thrive.app.util.Clipboard
 import kotlinx.coroutines.launch
 
 private fun syncStatusLabel(sync: SyncState, message: String?): String {
@@ -74,12 +80,13 @@ private fun syncStatusLabel(sync: SyncState, message: String?): String {
 }
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(savingsVm: SavingsViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as com.thrive.app.ThriveApp
     val settings = app.settings
     val ai = AiService(settings)
     val repo = remember { com.thrive.app.data.ThriveRepository(app, settings) }
+    val savingsState by savingsVm.state.collectAsState()
     var syncStatus by remember { mutableStateOf(repo.syncState.value) }
 
     var aiKey by remember { mutableStateOf(ai.apiKey) }
@@ -91,6 +98,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var syncMessage by remember { mutableStateOf<String?>(null) }
     var checkingUpdates by remember { mutableStateOf(false) }
     var updateCheckMsg by remember { mutableStateOf<String?>(null) }
+    var restoreCode by remember { mutableStateOf("") }
     val accents = LocalThriveColors.current
 
     val scope = rememberCoroutineScope()
@@ -200,6 +208,95 @@ fun SettingsScreen(onBack: () -> Unit) {
                     text = "Offline-first: until a sync succeeds (or if the server is unreachable), Thrive uses its bundled feed with no feature loss.",
                     style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
+            }
+        }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                Text("Deal favorites backup", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Saved deals sync free between your own devices with a backup code — " +
+                        "no account or email. It works whenever your sync server is reachable.",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                )
+            }
+        }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Your code: ",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = savingsState.backupCode.ifBlank { "…" },
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = ThriveFont,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                        ),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val ok = Clipboard.copy(context, "Thrive backup code", savingsState.backupCode)
+                            savingsVm.setBackupMsg(if (ok) "Backup code copied." else "Copy blocked on this device — write the code down.")
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Copy")
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { savingsVm.backupNow() },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
+                ) {
+                    Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Back up now")
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = restoreCode,
+                        onValueChange = { restoreCode = it },
+                        label = { Text("Restore from a code") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    OutlinedButton(
+                        onClick = { savingsVm.restoreBackup(restoreCode) },
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp),
+                    ) {
+                        Icon(Icons.Rounded.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Restore")
+                    }
+                }
+                savingsState.backupMsg?.let { msg ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = if (msg.contains("failed") || msg.contains("Couldn't") || msg.contains("doesn't"))
+                                Color(0xFFB33A1F) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    )
+                }
             }
         }
 

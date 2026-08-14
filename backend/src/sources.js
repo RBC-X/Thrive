@@ -79,6 +79,154 @@ class DailyRotationSource {
 }
 
 /**
+ * Live Kroger prices via the official Kroger Connect API (OAuth2 client
+ * credentials). Configure:
+ *   KROGER_CLIENT_ID / KROGER_CLIENT_SECRET   (from developer.kroger.com)
+ *   KROGER_ZIP (optional, default 45202)       zip used to pick a store
+ *   KROGER_TERMS (optional)                    comma-separated search terms;
+ *                                              defaults to the deal catalog's
+ *                                              product names so the budget
+ *                                              finder gets real, current prices
+ * Without credentials the source disables itself and the curated feed is
+ * served instead — the app never breaks.
+ */
+class KrogerLiveSource {
+  constructor() {
+    this.name = "kroger-live";
+    this.clientId = process.env.KROGER_CLIENT_ID || "";
+    this.clientSecret = process.env.KROGER_CLIENT_SECRET || "";
+    this.zip = process.env.KROGER_ZIP || "45202";
+    this.terms = (process.env.KROGER_TERMS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    this._token = null;
+    this._tokenAt = 0;
+    this._location = null;
+  }
+
+  get enabled() {
+    return Boolean(this.clientId && this.clientSecret);
+  }
+
+  /** OAuth2 client-credentials token, cached until ~5 min before expiry. */
+  async _accessToken() {
+    if (this._token && Date.now() - this._tokenAt < 1500 * 1000) return this._token;
+    const res = await fetch("https://api.kroger.com/v1/connect/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: "Basic " + Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64"),
+      },
+      body: new URLSearchParams({ grant_type: "client_credentials", scope: "product.compact" }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`kroger token ${res.status}`);
+    const json = await res.json();
+    if (!json.access_token) throw new Error("kroger token response missing access_token");
+    this._token = json.access_token;
+    this._tokenAt = Date.now();
+    return this._token;
+  }
+
+  /** Nearest store to the configured zip (products need a locationId for prices). */
+  async _locationId() {
+    if (this._location) return this._location;
+    const token = await this._accessToken();
+    const res = await fetch(
+      `https://api.kroger.com/v1/locations?filter.zipCode.near=${encodeURIComponent(this.zip)}&filter.limit=1`,
+      { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) throw new Error(`kroger locations ${res.status}`);
+    const json = await res.json();
+    this._location = (json.data && json.data[0] && json.data[0].locationId) || null;
+    return this._location;
+  }
+
+  async deals() {
+    const token = await this._accessToken();
+    const loc = await this._locationId();
+    if (!loc) return [];
+    const terms = this.terms.length ? this.terms : defaultSearchTerms();
+    const out = [];
+    const seen = new Set();
+    for (const term of terms) {
+      const res = await fetch(
+        `https://api.kroger.com/v1/products?filter.term=${encodeURIComponent(term)}&filter.locationId=${encodeURIComponent(loc)}&filter.limit=5`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
+      );
+      if (!res.ok) continue;
+      const json = await res.json();
+      for (const it of json.data || []) {
+        if (!it.productId || seen.has(it.productId)) continue; // same product via another term
+        const price = it.items && it.items[0] && it.items[0].price;
+        const regular = price && Number(price.regularPrice) > 0 ? Number(price.regularPrice) : 0;
+        const promo = price && Number(price.promoPrice) > 0 ? Number(price.promoPrice) : 0;
+        const best = promo || regular;
+        if (!best) continue;
+        seen.add(it.productId);
+        out.push({
+          id: `kroger-${it.productId}`,
+          store: "Kroger",
+          productName: it.description || "Kroger product",
+          category: mapKrogerCategory((it.categories && it.categories[0]) || ""),
+          price: Math.round(best * 100) / 100,
+          unitPrice: it.size ? `$${(best / unitQty(it.size)).toFixed(2)}/${unitName(it.size)}` : "",
+          savingsPercent: promo && regular ? Math.round((1 - promo / regular) * 100) : 0,
+          keywords: term.toLowerCase().split(/\s+/),
+          endsInDays: 7,
+          url: `https://www.kroger.com/p/${it.productId}`,
+          urlVerified: true, // the /p/{id} URL resolves to this exact product page
+          size: it.size || null,
+          brand: it.brand || null,
+          imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,
+          estimated: false, // live price from the Kroger API for the resolved store
+        });
+      }
+    }
+    return out;
+  }
+}
+
+/** Maps a Kroger department ("Meat & Seafood/Chicken") to Thrive's category. */
+function mapKrogerCategory(raw) {
+  const c = String(raw || "").toLowerCase();
+  if (c.includes("produce")) return "Produce";
+  if (c.includes("dairy")) return "Dairy";
+  if (c.includes("meat") || c.includes("seafood")) return "Meat";
+  if (c.includes("frozen")) return "Frozen";
+  if (c.includes("bakery")) return "Bakery";
+  if (c.includes("snack") || c.includes("candy")) return "Snacks";
+  if (c.includes("beverage") || c.includes("drink")) return "Drinks";
+  if (c.includes("condiment") || c.includes("sauce")) return "Condiments";
+  if (c.includes("household") || c.includes("cleaning") || c.includes("paper")) return "Household";
+  if (c.includes("health") || c.includes("pharm")) return "Health";
+  if (c.includes("pantry") || c.includes("grocery")) return "Pantry";
+  return "Grocery";
+}
+
+/** Extracts a comparable number from a size string like "1 gal", "48 oz". */
+function unitQty(size) {
+  const m = String(size || "").match(/([\d.]+)\s*([a-zA-Z]+)/);
+  return m ? Number(m[1]) || 1 : 1;
+}
+
+function unitName(size) {
+  const m = String(size || "").match(/([\d.]+)\s*([a-zA-Z]+)/);
+  return (m && m[2]) || "unit";
+}
+
+/** Default search terms = the first chunk of the curated deal catalog. */
+function defaultSearchTerms() {
+  try {
+    const deals = loadJson("deals.json");
+    return deals.map((d) => d.productName).filter((n) => typeof n === "string").slice(0, 25);
+  } catch {
+    return ["milk", "eggs", "chicken", "ground beef", "pasta", "bread", "apples", "bananas"];
+  }
+}
+
+/**
  * Adapter point for a real partner API (Kroger Connect, Walmart Affiliate,
  * Instacart, ...). Configure THRIVE_RETAILER_TOKEN and the source pulls live
  * deal data; without credentials it disables itself.
@@ -123,4 +271,4 @@ class PartnerApiSource {
   }
 }
 
-module.exports = { DailyRotationSource, PartnerApiSource };
+module.exports = { DailyRotationSource, PartnerApiSource, KrogerLiveSource };

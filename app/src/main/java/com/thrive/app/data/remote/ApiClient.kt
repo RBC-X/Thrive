@@ -33,4 +33,25 @@ object ApiClient {
                 conn.disconnect()
             }
         }
+
+    /** PUTs a JSON string (used by the anonymous favorites backup). */
+    suspend fun putJson(url: String, jsonBody: String): HttpResult =
+        withContext(Dispatchers.IO) {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = "PUT"
+                conn.connectTimeout = 8_000
+                conn.readTimeout = 15_000
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.instanceFollowRedirects = true
+                conn.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val body = stream?.bufferedReader()?.use { it.readText() } ?: ""
+                HttpResult(code, body, conn.getHeaderField("ETag"))
+            } finally {
+                conn.disconnect()
+            }
+        }
 }

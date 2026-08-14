@@ -47,6 +47,10 @@
       "Tech deals category added — 99 tech coupons across Best Buy, Apple, Amazon, Walmart, Target, Newegg, eBay and more",
       "Coupon catalog expanded to 415 offers across 8 categories from 35 retailers, with real store links on every offer",
       "Feed freshness rotation — new coupons are marked daily, so the Savings tab always has something new"
+    ],
+    "1.2.7": [
+      "Saved-deal backup — your coupon favorites sync free between your devices with a backup code (no account)",
+      "Live Kroger prices — plug in free Kroger developer credentials and deals update with real store prices"
     ]
   }
 }

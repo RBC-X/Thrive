@@ -30,3 +30,6 @@ backend/node_modules/
 .idea/
 .kotlin/
 *.iml
+
+# User favorites backups (never committed)
+backend/data/backups/
