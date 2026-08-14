@@ -60,8 +60,19 @@ object GithubUpdateChecker {
         return UpdateInfo(
             versionName = version,
             apkUrl = release.apkUrl,
-            notes = release.body.lines().map { it.trim() }.filter { it.isNotBlank() }.take(5),
+            notes = cleanNotes(release.body),
         )
+    }
+
+    /** Turns a GitHub release body into plain bullet lines for the dialog. */
+    private fun cleanNotes(body: String): List<String> {
+        return body.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() && !it.startsWith("#") } // drop markdown headers
+            .map { it.removePrefix("- ").removePrefix("* ").trim() } // strip bullet markers
+            .map { it.replace("**", "").trim() } // strip bold markers
+            .filter { it.isNotBlank() }
+            .take(5)
     }
 
     private fun parse(json: String): GithubRelease? {
