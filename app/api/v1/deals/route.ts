@@ -1,0 +1,2 @@
+import { dailyDeals, jsonWithEtag } from "../../../../lib/thrive-data";
+export async function GET(request: Request) { const url=new URL(request.url); let out=dailyDeals(); const category=url.searchParams.get("category"); if(category)out=out.filter(x=>x.category.toLowerCase()===category.toLowerCase()); const limit=Math.max(0,Math.min(100,Number(url.searchParams.get("limit")||100))); return jsonWithEtag(request,{deals:out.slice(0,limit),generatedAt:new Date().toISOString()},"public, max-age=300"); }
