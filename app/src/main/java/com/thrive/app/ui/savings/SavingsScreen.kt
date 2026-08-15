@@ -15,19 +15,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +86,7 @@ fun SavingsScreen(
     onOpenSettings: () -> Unit,
 ) {
     val state by vm.state.collectAsState()
+    var expandedStores by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -89,40 +98,331 @@ fun SavingsScreen(
                 item { UpdateBanner(update) }
             }
         }
-        state.dailyPick?.let { pick ->
-            item { DailyPickHero(pick, onClick = { onOpenCoupon(pick.id) }) }
+        if (state.mode == "Deals") {
+            state.dailyPick?.let { pick ->
+                item { DailyPickHero(pick, onClick = { onOpenCoupon(pick.id) }) }
+            }
+            item { SavingsSummaryStrip(state) }
+        } else {
+            item { StoresIntro(state) }
         }
-        item { SavingsSummaryStrip(state) }
-        item { SearchField(query = state.query, onQuery = vm::setQuery) }
-        item { CategoryChips(state.category, state.categories, vm::selectCategory) }
-        item {
-            Text(
-                text = if (state.filtered.isEmpty()) "No deals match" else "${state.filtered.size} deals",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-        }
-        if (state.filtered.isEmpty()) {
+        if (state.mode == "Deals" && state.query.isBlank() && state.newThisWeek.isNotEmpty()) {
+            item { SectionHeader("New this week", "Fresh offers, while they last") }
             item {
-                Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                    Text("Try a different search or category.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                NewThisWeekShelf(
+                    deals = state.newThisWeek,
+                    onOpen = { onOpenCoupon(it.id) },
+                )
             }
         }
-        items(state.filtered, key = { it.id }) { coupon ->
-            DealCard(
-                coupon = coupon,
-                isFavorite = coupon.id in state.favorites,
-                onClick = { onOpenCoupon(coupon.id) },
-                onFavorite = { vm.toggleFavorite(coupon.id) },
+        item { SearchField(query = state.query, onQuery = vm::setQuery) }
+        item { ModeTabs(mode = state.mode, onSelect = vm::setMode) }
+        item { CategoryChips(state.category, state.categories, vm::selectCategory) }
+        if (state.mode == "Deals") {
+            item {
+                Text(
+                    text = if (state.filtered.isEmpty()) "No deals match" else "${state.filtered.size} deals",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+            }
+            if (state.filtered.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                        Text("Try a different search or category.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            items(state.filtered, key = { it.id }) { coupon ->
+                DealCard(
+                    coupon = coupon,
+                    isFavorite = coupon.id in state.favorites,
+                    onClick = { onOpenCoupon(coupon.id) },
+                    onFavorite = { vm.toggleFavorite(coupon.id) },
+                )
+            }
+        } else {
+            StoresList(
+                sections = state.storeSections,
+                favorites = state.favorites,
+                expandedStores = expandedStores,
+                onToggleStore = { store ->
+                    expandedStores = if (store in expandedStores) expandedStores - store else expandedStores + store
+                },
+                onOpenCoupon = onOpenCoupon,
+                onFavorite = { vm.toggleFavorite(it) },
             )
         }
     }
 }
+
+@Composable
+private fun StoresIntro(state: SavingsUiState) {
+    val accents = LocalThriveColors.current
+    val located = state.sync.nearbyStores.isNotEmpty()
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (located) Icons.Rounded.MyLocation else Icons.Rounded.Storefront,
+            contentDescription = null,
+            tint = accents.leaf,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = if (located)
+                "Stores nearest you first — every deal at each store."
+            else
+                "Stores listed A–Z. Share your approximate location in Settings to see the nearest ones first.",
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun ModeTabs(mode: String, onSelect: (String) -> Unit) {
+    Row(
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf("Deals", "Stores").forEach { m ->
+            val selected = mode == m
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    .clickable { onSelect(m) }
+                    .padding(horizontal = 18.dp, vertical = 9.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (m == "Deals") Icons.Rounded.LocalOffer else Icons.Rounded.Storefront,
+                        contentDescription = null,
+                        tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = m,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, subtitle: String) {
+    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 2.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+        )
+    }
+}
+
+@Composable
+private fun NewThisWeekShelf(deals: List<Coupon>, onOpen: (Coupon) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(deals, key = { it.id }) { deal ->
+            MiniDealCard(deal, onClick = { onOpen(deal) })
+        }
+    }
+}
+
+@Composable
+private fun MiniDealCard(coupon: Coupon, onClick: () -> Unit) {
+    val accents = LocalThriveColors.current
+    Column(
+        modifier = Modifier
+            .width(158.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+    ) {
+        Box {
+            ProductImage(
+                seed = coupon.imageSeed,
+                category = coupon.category,
+                imageUrl = coupon.imageUrl,
+                logoUrl = coupon.storeLogoUrl,
+                corner = 12.dp,
+                modifier = Modifier.size(110.dp),
+                iconSize = 24.dp,
+            )
+            if (coupon.isNew) {
+                NewPill()
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = coupon.store,
+            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+        )
+        Text(
+            text = coupon.title,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = Money.fmt(coupon.priceAfter),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                text = "Save ${coupon.discountPercent}%",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = accents.deal,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
+    }
+}
+
+private fun LazyListScope.StoresList(
+    sections: List<StoreSection>,
+    favorites: Set<String>,
+    expandedStores: Set<String>,
+    onToggleStore: (String) -> Unit,
+    onOpenCoupon: (String) -> Unit,
+    onFavorite: (String) -> Unit,
+) {
+    item {
+        Text(
+            text = if (sections.isEmpty()) "No stores match"
+            else "${sections.size} store${if (sections.size == 1) "" else "s"} · ${sections.sumOf { it.coupons.size }} deals",
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+    }
+    if (sections.isEmpty()) {
+        item {
+            Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                Text("Try a different search or category.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    sections.forEach { section ->
+        val isOpen = section.store in expandedStores
+        item(key = "store-${section.store}") {
+            StoreHeader(
+                section = section,
+                isOpen = isOpen,
+                onClick = { onToggleStore(section.store) },
+            )
+        }
+        if (isOpen) {
+            items(section.coupons, key = { it.id }) { coupon ->
+                DealCard(
+                    coupon = coupon,
+                    isFavorite = coupon.id in favorites,
+                    onClick = { onOpenCoupon(coupon.id) },
+                    onFavorite = { onFavorite(coupon.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreHeader(section: StoreSection, isOpen: Boolean, onClick: () -> Unit) {
+    val accents = LocalThriveColors.current
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 5.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProductImage(
+            seed = section.store.lowercase(),
+            category = "Grocery",
+            imageUrl = null,
+            logoUrl = section.coupons.firstOrNull()?.storeLogoUrl,
+            corner = 12.dp,
+            modifier = Modifier.size(44.dp),
+            iconSize = 20.dp,
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = section.store,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (section.distMi != null) {
+                    Icon(
+                        Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        tint = accents.leaf,
+                        modifier = Modifier.size(13.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = "~${formatMi(section.distMi)}${section.city?.let { " · $it" } ?: ""}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = "${section.coupons.size} deal${if (section.coupons.size == 1) "" else "s"}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                )
+            }
+        }
+        Icon(
+            imageVector = if (isOpen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+            contentDescription = if (isOpen) "Collapse ${section.store}" else "Expand ${section.store}",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private fun formatMi(mi: Double): String =
+    if (mi < 10) String.format("%.1f mi", mi) else String.format("%.0f mi", mi)
 
 @Composable
 private fun UpdateBanner(update: UpdateInfo) {
@@ -468,7 +768,7 @@ private fun SearchField(query: String, onQuery: (String) -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 4.dp),
         placeholder = {
-            Text("Search stores or products", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Search products, stores, or brands", color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         leadingIcon = {
             Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

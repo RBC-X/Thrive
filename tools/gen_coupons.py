@@ -1070,6 +1070,51 @@ DEAL_TYPE_TERMS = {
 }
 
 
+
+
+# Known product brands, longest-first so "Good & Gather" wins over "Good".
+# The brand is derived from the coupon title prefix (deterministic); a coupon
+# whose title names no known brand keeps brand=null.
+BRAND_TOKENS = sorted({
+    # store house brands (expansion + curated)
+    "Great Value", "Good & Gather", "Kirkland Signature", "Member's Mark",
+    "Better Homes & Gardens", "CVS Health", "Amazon Basics", "DG Smart",
+    "Trader Joe's", "365 Everyday Value", "Dollar Tree", "Mainstays",
+    "Pittsburgh", "Insignia", "Husky", "Rubbermaid", "Hampton Bay",
+    "Frigidaire", "Leviton", "Kobalt", "Realspace", "Staples", "TUL",
+    # grocery / pantry brands
+    "Kroger", "Aldi", "Equate", "up & up", "Walgreens", "Kirkland", "Oscar Mayer",
+    "Hillshire", "Jimmy Dean", "Eggo", "DiGiorno", "Red Baron", "Stouffer's",
+    "Lean Cuisine", "Bird's Eye", "Green Giant", "Del Monte", "Campbell's",
+    "Progresso", "Barilla", "Ragu", "Prego", "Hunt's", "Heinz", "French's",
+    "Hidden Valley", "Kikkoman", "Sweet Baby Ray's", "Smucker's", "Jif",
+    "Skippy", "Quaker", "Kellogg's", "Cheerios", "Frosted Flakes",
+    "Cinnamon Toast Crunch", "Nature Valley", "Yoplait", "Chobani", "Oikos",
+    "Dannon", "Philadelphia", "Kraft Singles", "Velveeta", "Sargento",
+    "Tillamook", "Land O'Lakes", "Kerrygold", "Silk", "Almond Breeze",
+    "Tropicana", "Minute Maid", "Ocean Spray", "Gatorade", "Powerade",
+    "Coca-Cola", "Pepsi", "Dr Pepper", "Mountain Dew", "Folgers",
+    "Maxwell House", "Dunkin'", "Nescafé", "Hershey's", "Reese's", "Oreo",
+    "Chips Ahoy!", "Goldfish", "Doritos", "Lay's", "Cheetos", "Ritz", "Kraft",
+    # tech / home / beauty / health brands
+    "Apple", "Samsung", "Anker", "Logitech", "SanDisk", "TP-Link", "JBL",
+    "Netgear", "PlayStation", "Xbox", "Nintendo", "Roku", "HP", "Canon",
+    "Epson", "Dell", "LG", "TCL", "Vizio", "Kindle", "Garmin", "Fitbit",
+    "Razer", "WD", "Brother", "Post-it", "e.l.f.", "Neutrogena", "Maybelline",
+    "CoverGirl", "CeraVe", "Cetaphil", "Pantene", "Dove", "Secret",
+    "Garnier Fructis", "Olay", "NYX", "Revlon", "L'Oréal", "The Ordinary",
+    "Sephora Collection", "Milwaukee", "Ryobi", "Glidden", "DeWalt",
+    "Husky", "Bounty", "Clorox", "Cascade", "Tide", "Dawn", "Mr. Clean",
+    "Swiffer", "Pampers", "Huggies", "Colgate", "Crest", "Oral-B", "Gillette",
+    "Head & Shoulders", "Old Spice", "Degree", "Aveeno",
+}, key=len, reverse=True)
+
+def brand_for(title):
+    for b in BRAND_TOKENS:
+        if title.lower().startswith(b.lower()):
+            return b
+    return None
+
 def slug(title):
     return "".join(c if c.isalnum() else "-" for c in title.lower()).strip("-")
 
@@ -1095,6 +1140,7 @@ def build():
             "dealType": deal,
             "code": code,
             "url": url,
+            "brand": brand_for(title),
             "endsInDays": ends,
             "isNew": is_new,
             "terms": "Curated offer — retail prices change daily; confirm at checkout. "

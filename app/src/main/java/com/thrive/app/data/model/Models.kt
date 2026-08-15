@@ -18,6 +18,7 @@ data class Coupon(
     val dealType: String = "LINK", // CODE | LINK | IN_STORE | PICKUP
     val code: String? = null,
     val url: String? = null,
+    val brand: String? = null,      // product brand ("Great Value", "Equate", "Apple", ...) when known
     val endsInDays: Int,
     val isNew: Boolean = false,
     val terms: String = "",

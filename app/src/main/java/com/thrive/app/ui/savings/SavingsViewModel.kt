@@ -24,10 +24,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+/** One store's worth of deals, with its nearest-branch distance (when known). */
+data class StoreSection(
+    val store: String,
+    val coupons: List<Coupon>,
+    val distMi: Double? = null,
+    val city: String? = null,
+)
+
 data class SavingsUiState(
     val coupons: List<Coupon> = emptyList(),
     val category: String = "All",
     val query: String = "",
+    val mode: String = "Deals",   // "Deals" | "Stores"
     val favorites: Set<String> = emptySet(),
     val sync: SyncState = SyncState(),
     val backupCode: String = "",
@@ -45,20 +54,103 @@ data class SavingsUiState(
                 present.filterNot { it in canonical }
         }
 
+    /** True when the query matches title, store, category, or brand. */
+    private fun matchesQuery(c: Coupon, q: String): Boolean =
+        c.title.contains(q, ignoreCase = true) ||
+            c.store.contains(q, ignoreCase = true) ||
+            c.category.contains(q, ignoreCase = true) ||
+            (c.brand?.contains(q, ignoreCase = true) == true)
+
+    /** How strongly a coupon answers a query (brand > title > category/store). */
+    private fun queryScore(c: Coupon, q: String): Int {
+        var score = 0
+        if (c.title.startsWith(q, ignoreCase = true)) score += 4
+        else if (c.title.contains(q, ignoreCase = true)) score += 3
+        if (c.brand?.contains(q, ignoreCase = true) == true) score += 2
+        if (c.category.contains(q, ignoreCase = true)) score += 1
+        if (c.store.contains(q, ignoreCase = true)) score += 1
+        return score
+    }
+
     val filtered: List<Coupon>
-        get() = coupons.filter { c ->
-            (category == "All" || c.category == category) &&
-                (query.isBlank() ||
-                    c.title.contains(query, ignoreCase = true) ||
-                    c.store.contains(query, ignoreCase = true))
+        get() {
+            val inCategory = coupons.filter { category == "All" || it.category == category }
+            val q = query.trim()
+            if (q.isBlank()) return inCategory
+            return inCategory
+                .filter { matchesQuery(it, q) }
+                .sortedWith(
+                    // Rank results by how well they answer the query, then by
+                    // savings (percent, then absolute), then by urgency.
+                    compareByDescending<Coupon> { queryScore(it, q) }
+                        .thenByDescending { it.discountPercent }
+                        .thenByDescending { it.priceBefore - it.priceAfter }
+                        .thenBy { it.endsInDays }
+                )
         }
 
-    /** Deterministic "deal of the day" so the feed always has a hero. */
+    /** Every deal at each store, grouped and sorted by nearest-branch distance. */
+    val storeSections: List<StoreSection>
+        get() {
+            // Filter-aware (category + query), so the Stores tab honors the
+            // same chips and search box as the Deals tab.
+            val ranked = filtered
+            if (ranked.isEmpty()) return emptyList()
+            val dist = sync.nearbyStores.associate { it.store to it }
+            return ranked
+                .groupBy { it.store }
+                .map { (store, list) ->
+                    val info = dist[store]
+                    StoreSection(
+                        store = store,
+                        coupons = list.sortedWith(
+                            compareByDescending<Coupon> { it.discountPercent }
+                                .thenBy { it.endsInDays }
+                        ),
+                        distMi = info?.distMi,
+                        city = info?.city,
+                    )
+                }
+                .sortedWith(
+                    // Stores with a known distance come first (nearest on top);
+                    // the rest fall back to alphabetical order.
+                    compareBy<StoreSection> { it.distMi ?: Double.MAX_VALUE }
+                        .thenBy { it.store.lowercase() }
+                )
+        }
+
+    /** Fresh "new this week" deals — falls back to soonest-expiring when none are flagged new. */
+    val newThisWeek: List<Coupon>
+        get() {
+            val fresh = coupons
+                .filter { it.isNew }
+                .sortedWith(compareBy<Coupon> { it.endsInDays }.thenBy { it.id })
+            return (if (fresh.isNotEmpty()) fresh else coupons.sortedBy { it.endsInDays }).take(10)
+        }
+
+    /**
+     * Deterministic "deal of the day" so the feed always has a hero: the
+     * strongest deal (big cut, real dollar savings, little time left, fresh)
+     * rotating daily among the top three — a genuinely great offer, never a
+     * random catalog index.
+     */
     val dailyPick: Coupon?
         get() {
             if (coupons.isEmpty()) return null
-            val index = (Calendar.getInstance().get(Calendar.DAY_OF_YEAR)) % coupons.size
-            return coupons[index]
+            val day = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+            fun strength(c: Coupon): Double {
+                var s = c.discountPercent.toDouble()
+                s += ((c.priceBefore - c.priceAfter) / 10.0).coerceAtMost(20.0)
+                if (c.endsInDays <= 3) s += 18
+                else if (c.endsInDays <= 7) s += 9
+                if (c.isNew) s += 6
+                return s
+            }
+            val ranked = coupons.sortedWith(
+                compareByDescending<Coupon> { strength(it) }
+                    .thenBy { kotlin.math.abs((it.id + day.toString()).hashCode()) }
+            )
+            return ranked[day % 3]
         }
 
     /**
@@ -134,6 +226,8 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
     fun selectCategory(category: String) = _state.update { it.copy(category = category) }
 
     fun setQuery(query: String) = _state.update { it.copy(query = query) }
+
+    fun setMode(mode: String) = _state.update { it.copy(mode = mode) }
 
     fun toggleFavorite(id: String) {
         viewModelScope.launch {
