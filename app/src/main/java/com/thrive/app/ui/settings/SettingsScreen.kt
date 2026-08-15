@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -115,6 +116,9 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
     var checkingUpdates by remember { mutableStateOf(false) }
     var updateCheckMsg by remember { mutableStateOf<String?>(null) }
     var restoreCode by remember { mutableStateOf("") }
+    var remindersEnabled by remember {
+        mutableStateOf(app.settings.getBoolean(com.thrive.app.update.ReEngagement.KEY_ENABLED, true))
+    }
     var locMessage by remember { mutableStateOf<String?>(null) }
     var locWorking by remember { mutableStateOf(false) }
     var locDenied by remember { mutableStateOf(false) }
@@ -775,6 +779,62 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
                             PackageManager.PERMISSION_GRANTED,
                         onCheckedChange = { requestNotifications() },
                         colors = SwitchDefaults.colors(checkedTrackColor = accents.deal),
+                    )
+                }
+            }
+        }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accents.leafSoft),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.NotificationsActive,
+                            contentDescription = null,
+                            tint = accents.leaf,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "Deal reminders",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                        Text(
+                            text = "If you haven't opened Thrive in over 42 hours, a short reminder " +
+                                "brings you back to fresh deals. At most one per absence — no spam.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = remindersEnabled,
+                        onCheckedChange = { on ->
+                            remindersEnabled = on
+                            app.settings.putBoolean(com.thrive.app.update.ReEngagement.KEY_ENABLED, on)
+                            if (on && Build.VERSION.SDK_INT >= 33 &&
+                                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                PackageManager.PERMISSION_GRANTED
+                            ) {
+                                // Reminders need the same permission as update alerts.
+                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = accents.leaf),
                     )
                 }
             }

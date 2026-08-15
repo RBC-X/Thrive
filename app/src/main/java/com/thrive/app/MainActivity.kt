@@ -29,5 +29,7 @@ class MainActivity : ComponentActivity() {
         // After the user grants "install unknown apps" in Settings and returns,
         // finish the install that was waiting.
         DownloadReceiver.resumePending(this)
+        // Any foreground visit resets the 42h re-engagement idle timer.
+        (application as ThriveApp).markAppUsed()
     }
 }
