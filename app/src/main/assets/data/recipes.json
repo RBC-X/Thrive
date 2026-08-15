@@ -54,7 +54,7 @@
   ],
   "imageSeed": "black-bean-tacos",
   "featured": true,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg/500px-Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg/500px-Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg"
  },
  {
   "id": "r02",
@@ -107,7 +107,7 @@
   ],
   "imageSeed": "aglio-olio",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg/500px-Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg/500px-Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg"
  },
  {
   "id": "r03",
@@ -163,7 +163,7 @@
   ],
   "imageSeed": "fried-rice",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Egg_Fried_Rice.jpg/500px-Egg_Fried_Rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Egg_Fried_Rice.jpg/500px-Egg_Fried_Rice.jpg"
  },
  {
   "id": "r04",
@@ -215,7 +215,7 @@
   ],
   "imageSeed": "grilled-cheese",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg/500px-Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg/500px-Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg"
  },
  {
   "id": "r05",
@@ -266,7 +266,7 @@
   ],
   "imageSeed": "tuna-melt",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Tuna_Melts_My_Heart.jpg/500px-Tuna_Melts_My_Heart.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Tuna_Melts_My_Heart.jpg/500px-Tuna_Melts_My_Heart.jpg"
  },
  {
   "id": "r06",
@@ -326,7 +326,7 @@
   ],
   "imageSeed": "chili-mac",
   "featured": true,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Chili_Mac_3_%2837562806074%29.jpg/500px-Chili_Mac_3_%2837562806074%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Chili_Mac_3_%2837562806074%29.jpg/500px-Chili_Mac_3_%2837562806074%29.jpg"
  },
  {
   "id": "r07",
@@ -386,7 +386,7 @@
   ],
   "imageSeed": "chicken-rice-bowl",
   "featured": true,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg/500px-Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg/500px-Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg"
  },
  {
   "id": "r08",
@@ -449,7 +449,8 @@
    "Stir-fry the vegetables 3 minutes. Return the beef, pour in the sauce, and toss until thick and glossy, 1 minute. Serve over rice."
   ],
   "imageSeed": "beef-stirfry",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Cooking_stir_fry_beef%2C_Terrytown%2C_Louisiana%2C_February_2016.jpg/500px-Cooking_stir_fry_beef%2C_Terrytown%2C_Louisiana%2C_February_2016.jpg"
  },
  {
   "id": "r09",
@@ -502,7 +503,7 @@
   ],
   "imageSeed": "creamy-garlic-pasta",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg/500px-Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg/500px-Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg"
  },
  {
   "id": "r10",
@@ -554,7 +555,8 @@
    "Serve the salmon over rice with the pan sauce spooned on top."
   ],
   "imageSeed": "lemon-salmon",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Liat_Portal_for_Foodie_Disorder_-_Grilled_salmon_with_sweet_potatoes.jpg/500px-Liat_Portal_for_Foodie_Disorder_-_Grilled_salmon_with_sweet_potatoes.jpg"
  },
  {
   "id": "r11",
@@ -609,7 +611,7 @@
   ],
   "imageSeed": "sloppy-joes",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Millburn_Deli_Sloppy_Joes.jpg/500px-Millburn_Deli_Sloppy_Joes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Millburn_Deli_Sloppy_Joes.jpg/500px-Millburn_Deli_Sloppy_Joes.jpg"
  },
  {
   "id": "r12",
@@ -664,7 +666,8 @@
    "Cut into wedges and serve with sour cream and salsa."
   ],
   "imageSeed": "quesadilla",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/At_Long_Island_2023_267.jpg/500px-At_Long_Island_2023_267.jpg"
  },
  {
   "id": "r13",
@@ -716,7 +719,7 @@
   ],
   "imageSeed": "sausage-peppers",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Cold_chicken_sausage%2C_avocado%2C_and_bell_peppers_on_mixed_greens%2C_with_black_pepper%2C_grated_cheddar_cheese%2C_and_dressing_of_mustard%2C_olive_oil%2C_and_vinegar_-_Massachusetts.jpg/500px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Cold_chicken_sausage%2C_avocado%2C_and_bell_peppers_on_mixed_greens%2C_with_black_pepper%2C_grated_cheddar_cheese%2C_and_dressing_of_mustard%2C_olive_oil%2C_and_vinegar_-_Massachusetts.jpg/500px-thumbnail.jpg"
  },
  {
   "id": "r14",
@@ -772,7 +775,7 @@
   ],
   "imageSeed": "chicken-fajitas",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Chicken_fajitas.jpg/500px-Chicken_fajitas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Chicken_fajitas.jpg/500px-Chicken_fajitas.jpg"
  },
  {
   "id": "r15",
@@ -819,7 +822,8 @@
    "Pile onto buns or serve over rice. Freeze leftovers in portions."
   ],
   "imageSeed": "bbq-chicken",
-  "featured": true
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Barbecue_chicken_at_California_Strawberry_Festival_2012.jpg/500px-Barbecue_chicken_at_California_Strawberry_Festival_2012.jpg"
  },
  {
   "id": "r16",
@@ -866,7 +870,8 @@
    "Bake at 400°F for 20 minutes until bubbly and golden. Rest 5 minutes before serving."
   ],
   "imageSeed": "baked-ziti",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Baked_Ziti_%28cropped%29.jpg/500px-Baked_Ziti_%28cropped%29.jpg"
  },
  {
   "id": "r17",
@@ -914,7 +919,7 @@
   ],
   "imageSeed": "peanut-noodles",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg/500px-Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg/500px-Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg"
  },
  {
   "id": "r18",
@@ -962,7 +967,7 @@
   ],
   "imageSeed": "salsa-chicken",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Chicken_with_salsa_filipino.jpg/500px-Chicken_with_salsa_filipino.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Chicken_with_salsa_filipino.jpg/500px-Chicken_with_salsa_filipino.jpg"
  },
  {
   "id": "r19",
@@ -1009,7 +1014,8 @@
    "Remove from heat and stir in the cheese until melted. Top with more cheese if you dare."
   ],
   "imageSeed": "taco-pasta",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/2020-08-09_21_39_35_Ground_beef_starting_to_cook_on_a_hot_skillet_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg/500px-2020-08-09_21_39_35_Ground_beef_starting_to_cook_on_a_hot_skillet_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg"
  },
  {
   "id": "r20",
@@ -1057,7 +1063,7 @@
   ],
   "imageSeed": "pancakes",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg/500px-Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg/500px-Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg"
  },
  {
   "id": "r21",
@@ -1113,7 +1119,7 @@
   ],
   "imageSeed": "meatballs",
   "featured": true,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg/500px-Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg/500px-Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg"
  },
  {
   "id": "r22",
@@ -1165,7 +1171,7 @@
   ],
   "imageSeed": "mac-cheese",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Homemade_Mac_%26_Cheese_%28436029030%29.jpg/500px-Homemade_Mac_%26_Cheese_%28436029030%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Homemade_Mac_%26_Cheese_%28436029030%29.jpg/500px-Homemade_Mac_%26_Cheese_%28436029030%29.jpg"
  },
  {
   "id": "r23",
@@ -1221,7 +1227,7 @@
   ],
   "imageSeed": "chicken-potpie",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/191-365_Chicken_Pot_Pie.jpg/500px-191-365_Chicken_Pot_Pie.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/191-365_Chicken_Pot_Pie.jpg/500px-191-365_Chicken_Pot_Pie.jpg"
  },
  {
   "id": "r24",
@@ -1281,7 +1287,7 @@
   ],
   "imageSeed": "shepherds-pie",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg/500px-Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg/500px-Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg"
  },
  {
   "id": "r25",
@@ -1337,7 +1343,7 @@
   ],
   "imageSeed": "meatloaf",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/2020-07-17_00_33_05_A_heated_Hungry_Man_Home-Style_Meatloaf_meal_%28Meatloaf_patties_with_mashed_potatoes%2C_gravy%2C_mixed_vegetables_and_a_brownie%29_in_Rochelle_Park%2C_Bergen_County%2C_New_Jersey.jpg/500px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/2020-07-17_00_33_05_A_heated_Hungry_Man_Home-Style_Meatloaf_meal_%28Meatloaf_patties_with_mashed_potatoes%2C_gravy%2C_mixed_vegetables_and_a_brownie%29_in_Rochelle_Park%2C_Bergen_County%2C_New_Jersey.jpg/500px-thumbnail.jpg"
  },
  {
   "id": "r26",
@@ -1460,7 +1466,8 @@
    "Let rest 5 minutes covered, then fluff and serve."
   ],
   "imageSeed": "jambalaya",
-  "featured": false
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Jambalaya_%2830750226186%29.jpg/500px-Jambalaya_%2830750226186%29.jpg"
  },
  {
   "id": "r28",
@@ -1509,7 +1516,7 @@
   ],
   "imageSeed": "tortellini",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg/500px-Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg/500px-Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg"
  },
  {
   "id": "r29",
@@ -1565,7 +1572,7 @@
   ],
   "imageSeed": "stroganoff",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Beef_Stroganoff-01.jpg/500px-Beef_Stroganoff-01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Beef_Stroganoff-01.jpg/500px-Beef_Stroganoff-01.jpg"
  },
  {
   "id": "r30",
@@ -1621,7 +1628,7 @@
   ],
   "imageSeed": "coconut-curry",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Aappam_with_chicken_curry_with_coconut_milk.jpg/500px-Aappam_with_chicken_curry_with_coconut_milk.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Aappam_with_chicken_curry_with_coconut_milk.jpg/500px-Aappam_with_chicken_curry_with_coconut_milk.jpg"
  },
  {
   "id": "r31",
@@ -1677,6 +1684,6 @@
   ],
   "imageSeed": "alfredo",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Chicken-alfredo.jpg/500px-Chicken-alfredo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Chicken-alfredo.jpg/500px-Chicken-alfredo.jpg"
  }
 ]

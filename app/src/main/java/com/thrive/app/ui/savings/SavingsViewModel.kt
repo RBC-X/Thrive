@@ -43,13 +43,16 @@ data class SavingsUiState(
     val backupMsg: String? = null,
 ) {
     /**
-     * Only offers with a verified direct product link are available — a deal
-     * you can actually open at the exact product page. Feed items without a
-     * verified destination are never presented as available.
+     * Offers with a real destination link are available. Every bundled coupon
+     * carries a live retailer link (an exact product page when urlVerified,
+     * otherwise the retailer's own search for that exact item), so the whole
+     * catalog is reachable. The detail screen labels the two link kinds
+     * honestly — "Open product page" vs "Search <store> for this item".
+     * Only coupons with no destination at all are held back.
      */
-    val available: List<Coupon> get() = coupons.filter { it.urlVerified }
+    val available: List<Coupon> get() = coupons.filter { !it.url.isNullOrBlank() }
 
-    /** How many feed offers are hidden because they lack a verified product link. */
+    /** How many feed offers are hidden because they have no usable link. */
     val hiddenUnverified: Int get() = coupons.size - available.size
 
     val categories: List<String>

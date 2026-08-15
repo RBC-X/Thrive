@@ -135,6 +135,11 @@
       "Missing deals/recipes show an honest 'not available' state instead of a blank screen, and the 4,000+ coupon catalog sorts are memoized so search stays smooth",
       "Added 4 instrumented UI tests (Savings, Pantry, Budget flows run on a real emulator) and 23 new unit tests — 127 unit + 24 backend tests green",
       "Full visual QA matrix captured on a standard emulator: light, dark, 2x font, small/large phone breakpoints, and the honest offline state"
+    ],
+    "1.4.2": [
+      "On-device AI is now a genuine chef: 144 recipe blueprints (12 cooking methods x 12 flavor directions), token-based ingredient matching (\"boneless skinless chicken breast\" matches \"chicken breast\"), and every pantry item woven in — with a real food photo on the generated dish",
+      "Recipe photos fixed: every recipe in the app now shows a real photo of the dish (browser-grade image loading), and the 7 recipes that had none got real Wikimedia photos",
+      "Thousands of coupons now visible: the full 4,235-offer catalog with direct links (exact product pages marked verified; retailer search links labeled honestly)"
     ]
   }
 }

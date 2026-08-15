@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.data.model.PantryItem
+import com.thrive.app.ui.components.FoodImage
 import com.thrive.app.ui.components.QuantityStepper
 import com.thrive.app.ui.components.SectionHeader
 import com.thrive.app.ui.budget.BudgetViewModel
@@ -694,6 +695,14 @@ private fun GeneratedRecipeCard(
             .background(MaterialTheme.colorScheme.surface)
             .padding(18.dp),
     ) {
+        FoodImage(
+            seed = gen.recipe.imageSeed,
+            imageUrl = gen.recipe.imageUrl,
+            modifier = Modifier.fillMaxWidth().height(150.dp),
+            corner = 16.dp,
+            iconSize = 42.dp,
+        )
+        Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 SoftChip(

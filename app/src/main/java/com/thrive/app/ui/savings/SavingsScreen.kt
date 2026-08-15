@@ -557,8 +557,10 @@ private fun SavingsHeader(
                 Spacer(Modifier.height(6.dp))
                 BundledFeedNotice(state.sync)
             }
-            // Honest availability: only offers with a verified direct product
-            // link are shown. Tell the user when some feed items were hidden.
+            // Honest availability: every deal shown has a live link — an exact
+            // product page where verified, otherwise the retailer's own search
+            // for that exact item (the detail screen labels which one). Tell
+            // the user when offers with no usable link were hidden.
             if (hiddenCount > 0) {
                 Spacer(Modifier.height(6.dp))
                 Row(
@@ -576,8 +578,8 @@ private fun SavingsHeader(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Showing $verifiedCount verified deals — " +
-                            "$hiddenCount offers without a verified product link are hidden.",
+                        text = "Showing $verifiedCount deals with live links — " +
+                            "$hiddenCount offers with no usable link are hidden.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),

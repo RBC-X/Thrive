@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 32
-        versionName = "1.4.1"
+        versionCode = 33
+        versionName = "1.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -127,6 +127,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Store logos are served as SVG by Wikimedia's Special:FilePath — Coil needs
     // the SVG decoder artifact to render them (without it every logo is blank).
     implementation("io.coil-kt:coil-svg:2.7.0")
