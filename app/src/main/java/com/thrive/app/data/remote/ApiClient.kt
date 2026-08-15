@@ -16,7 +16,10 @@ object ApiClient {
             try {
                 conn.requestMethod = "GET"
                 conn.connectTimeout = 8_000
-                conn.readTimeout = 15_000
+                // The sync feed pulls hundreds of live retailer terms on a cold
+                // cache, so the first request of the day legitimately takes
+                // longer than the 15s that fits simple endpoints.
+                conn.readTimeout = 60_000
                 if (!ifNoneMatch.isNullOrBlank()) {
                     conn.setRequestProperty("If-None-Match", ifNoneMatch)
                 }

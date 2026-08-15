@@ -103,6 +103,8 @@ fun StrikePrice(price: Double, modifier: Modifier = Modifier) {
 
 @Composable
 fun SavingsPill(percent: Int, modifier: Modifier = Modifier, filled: Boolean = true) {
+    // No fake savings: a live regular-price item (no promo) gets no pill at all.
+    if (percent <= 0) return
     val bg = if (filled) DealCoral else DealCoralSoft
     val fg = if (filled) Color.White else DealCoral
     Box(

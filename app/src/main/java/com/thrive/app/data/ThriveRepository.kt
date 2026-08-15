@@ -35,11 +35,42 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
 
     // Remote data replaces the bundled feed after a successful sync; the
     // bundled datasets remain the offline fallback until then (and forever if
-    // no server is configured/reachable).
+    // no server is configured/reachable). The last-good live feed is persisted
+    // so a process restart (or a 304 "nothing changed" answer) keeps showing
+    // the live catalog instead of silently falling back to bundled.
+    private val cacheFile = java.io.File(appContext.filesDir, "sync_payload.json")
+
     @Volatile private var remoteCoupons: List<Coupon>? = null
     @Volatile private var remoteRecipes: List<Recipe>? = null
     @Volatile private var remoteDeals: List<Deal>? = null
     @Volatile private var remoteCatalog: List<CatalogItem>? = null
+
+    init {
+        restoreCachedPayload()
+    }
+
+    /** Loads the last successfully-synced payload from disk (empty cache = no-op). */
+    private fun restoreCachedPayload() {
+        try {
+            if (!cacheFile.exists()) return
+            val payload = json.decodeFromString(SyncPayload.serializer(), cacheFile.readText())
+            if (payload.coupons.isNotEmpty()) remoteCoupons = payload.coupons
+            if (payload.recipes.isNotEmpty()) remoteRecipes = payload.recipes
+            if (payload.deals.isNotEmpty()) remoteDeals = payload.deals
+            if (payload.catalog.isNotEmpty()) remoteCatalog = payload.catalog
+        } catch (_: Exception) {
+            cacheFile.delete() // corrupt cache — never block startup
+        }
+    }
+
+    /** Persists the last-good live payload so restarts keep the live feed. */
+    private fun cachePayload(payload: SyncPayload) {
+        try {
+            cacheFile.writeText(json.encodeToString(SyncPayload.serializer(), payload))
+        } catch (_: Exception) {
+            /* cache is best-effort */
+        }
+    }
 
     val coupons: List<Coupon> get() = remoteCoupons ?: bundledCoupons
     val recipes: List<Recipe> get() = remoteRecipes ?: bundledRecipes
@@ -106,6 +137,13 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
             val result = ApiClient.get(url, if (force) null else etag)
             when {
                 result.code == 304 -> {
+                    if (remoteCoupons == null) {
+                        // A fresh process with no in-memory live data: the ETag
+                        // says nothing changed, but we have nothing to show.
+                        // Force a full fetch once so the live feed actually loads.
+                        syncNow(force = true)
+                        return
+                    }
                     // Nothing changed server-side; keep current data.
                     _syncState.update {
                         it.copy(
@@ -114,7 +152,7 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                             // Keep whatever origin the current coupons came from:
                             // 304 means nothing changed, so the on-screen set is
                             // still live if it was live before.
-                            feedOrigin = if (remoteCoupons != null) "live" else it.feedOrigin,
+                            feedOrigin = "live",
                         )
                     }
                 }
@@ -125,6 +163,7 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                     remoteRecipes = payload.recipes.ifEmpty { remoteRecipes }
                     remoteDeals = payload.deals.ifEmpty { remoteDeals }
                     remoteCatalog = payload.catalog.ifEmpty { remoteCatalog }
+                    cachePayload(payload)
                     result.etag?.let { settings.putString(KEY_SYNC_ETAG, it) }
                     _syncState.update {
                         it.copy(

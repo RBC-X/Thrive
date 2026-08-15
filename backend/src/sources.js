@@ -108,6 +108,7 @@ class KrogerLiveSource {
     this._locationKey = null;
     this._locationAt = 0;
     this._storeGeo = null;
+    this._termsCache = null;
   }
 
   /** Bucket for a user coordinate pair (≈1/100° ≈ 1 km) so nearby users share one lookup. */
@@ -171,7 +172,12 @@ class KrogerLiveSource {
     return this._location;
   }
 
-  /** True when a live-price fetch for the given area is already in flight. */
+  /**
+   * Fetches live products for every configured (or catalog-derived) search
+   * term, with a small bounded concurrency so a few hundred terms finish in
+   * seconds while staying comfortably inside Kroger's 10,000 calls/day limit.
+   * Every returned deal carries a verified product-page URL from the API.
+   */
   async deals(lat, lng) {
     const token = await this._accessToken();
     const loc = await this._locationId(lat, lng);
@@ -179,51 +185,70 @@ class KrogerLiveSource {
     const terms = this.terms.length ? this.terms : defaultSearchTerms();
     const out = [];
     const seen = new Set();
-    for (const term of terms) {
-      const res = await fetch(
-        `https://api.kroger.com/v1/products?filter.term=${encodeURIComponent(term)}&filter.locationId=${encodeURIComponent(loc)}&filter.limit=5`,
-        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
-      );
-      if (!res.ok) continue;
-      const json = await res.json();
-      for (const it of json.data || []) {
-        if (!it.productId || seen.has(it.productId)) continue; // same product via another term
-        const item0 = it.items && it.items[0];
-        const price = item0 && item0.price;
-        // Kroger's Products API exposes `price.regular` / `price.promo`;
-        // accept the older `regularPrice`/`promoPrice` shape defensively too.
-        const regular = price && Number(price.regular ?? price.regularPrice) > 0
-          ? Number(price.regular ?? price.regularPrice) : 0;
-        const promo = price && Number(price.promo ?? price.promoPrice) > 0
-          ? Number(price.promo ?? price.promoPrice) : 0;
-        const best = promo || regular;
-        if (!best) continue;
-        seen.add(it.productId);
-        const size = (item0 && item0.size) || null;
-        // productPageURI is the canonical page path (may carry a cid tracking
-        // query) — prefer it over guessing /p/{id}.
-        const pagePath = String(it.productPageURI || "/p/" + it.productId).split("?")[0];
-        out.push({
-          id: `kroger-${it.productId}`,
-          store: "Kroger",
-          productName: it.description || "Kroger product",
-          category: mapKrogerCategory((it.categories && it.categories[0]) || ""),
-          price: Math.round(best * 100) / 100,
-          unitPrice: size ? `$${(best / unitQty(size)).toFixed(2)}/${unitName(size)}` : "",
-          savingsPercent: promo && regular ? Math.round((1 - promo / regular) * 100) : 0,
-          keywords: term.toLowerCase().split(/\s+/),
-          endsInDays: 7,
-          url: `https://www.kroger.com${pagePath}`,
-          urlVerified: true, // productPageURI from the API resolves to this exact product
-          size: size,
-          brand: it.brand || null,
-          imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,
-          estimated: false, // live price from the Kroger API for the resolved store
-          storeLat: this._storeGeo ? this._storeGeo.lat : null,
-          storeLng: this._storeGeo ? this._storeGeo.lng : null,
-        });
+    const CONCURRENCY = 6;
+    const queue = [...terms];
+    const self = this; // workers are plain closures — keep the instance for store coords
+    const worker = async () => {
+      while (queue.length) {
+        const term = queue.shift();
+        try {
+          const res = await fetch(
+            `https://api.kroger.com/v1/products?filter.term=${encodeURIComponent(term)}&filter.locationId=${encodeURIComponent(loc)}&filter.limit=50`,
+            { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(10000) }
+          );
+          if (!res.ok) {
+            if (res.status === 429) {
+              // Back off briefly on rate limiting, then keep going.
+              await new Promise((r) => setTimeout(r, 1500));
+            }
+            continue;
+          }
+          const json = await res.json();
+          for (const it of json.data || []) {
+            if (!it.productId || seen.has(it.productId)) continue; // same product via another term
+            const item0 = it.items && it.items[0];
+            const price = item0 && item0.price;
+            // Kroger's Products API exposes `price.regular` / `price.promo`;
+            // accept the older `regularPrice`/`promoPrice` shape defensively too.
+            const regular = price && Number(price.regular ?? price.regularPrice) > 0
+              ? Number(price.regular ?? price.regularPrice) : 0;
+            const promo = price && Number(price.promo ?? price.promoPrice) > 0
+              ? Number(price.promo ?? price.promoPrice) : 0;
+            const best = promo || regular;
+            if (!best) continue;
+            seen.add(it.productId);
+            const size = (item0 && item0.size) || null;
+            // productPageURI is the canonical page path (may carry a cid tracking
+            // query) — prefer it over guessing /p/{id}.
+            const pagePath = String(it.productPageURI || "/p/" + it.productId).split("?")[0];
+            out.push({
+              id: `kroger-${it.productId}`,
+              store: "Kroger",
+              productName: it.description || "Kroger product",
+              category: mapKrogerCategory((it.categories && it.categories[0]) || ""),
+              price: Math.round(best * 100) / 100,
+              regularPrice: regular ? Math.round(regular * 100) / 100 : null, // honest before-price when a promo is live
+              unitPrice: size ? `$${(best / unitQty(size)).toFixed(2)}/${unitName(size)}` : "",
+              savingsPercent: promo && regular ? Math.round((1 - promo / regular) * 100) : 0,
+              keywords: term.toLowerCase().split(/\s+/),
+              endsInDays: 7,
+              url: `https://www.kroger.com${pagePath}`,
+              urlVerified: true, // productPageURI from the API resolves to this exact product
+              size: size,
+              brand: it.brand || null,
+              imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,
+              estimated: false, // live price from the Kroger API for the resolved store
+              storeLat: self._storeGeo ? self._storeGeo.lat : null,
+              storeLng: self._storeGeo ? self._storeGeo.lng : null,
+            });
+          }
+        } catch (e) {
+          /* a single term failing never kills the feed */
+          if (process.env.KROGER_DEBUG) console.error(`[kroger term:${term}] ${e.message}`);
+        }
       }
     }
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
     return out;
   }
 }
@@ -256,14 +281,47 @@ function unitName(size) {
   return (m && m[2]) || "unit";
 }
 
-/** Default search terms = the first chunk of the curated deal catalog. */
+/**
+ * Default search terms: every product-looking title in the bundled coupon
+ * catalog (brand + size stripped, deduped, capped so a single daily refresh
+ * stays far inside Kroger's 10,000 calls/day budget). This is what turns the
+ * live feed from a handful of staples into a real catalog with direct
+ * product-page links for thousands of items.
+ */
 function defaultSearchTerms() {
+  const knownBrands = [
+    "great value", "kirkland signature", "equate", "cvs health", "365 everyday value",
+    "up & up", "member's mark", "good & gather", "simple truth", "market pantry",
+    "apple", "samsung", "sony", "lg", "dyson", "nike", "adidas", "kroger",
+    "aldi", "walmart", "target", "costco", "starbucks", "dunkin", "chipotle",
+    "olive garden", "taco bell", "home depot", "best buy", "walgreens",
+  ];
   try {
-    const deals = loadJson("deals.json");
-    return deals.map((d) => d.productName).filter((n) => typeof n === "string").slice(0, 25);
-  } catch {
-    return ["milk", "eggs", "chicken", "ground beef", "pasta", "bread", "apples", "bananas"];
+    const coupons = loadJson("coupons.json");
+    const terms = [];
+    const seen = new Set();
+    for (const c of coupons) {
+      if (!c || typeof c.title !== "string") continue;
+      let t = c.title.split(",")[0].trim(); // strip the size suffix
+      const low = t.toLowerCase();
+      for (const b of knownBrands) {
+        if (low.startsWith(b + " ")) {
+          t = t.slice(b.length + 1).trim();
+          break;
+        }
+      }
+      const words = t.split(/\s+/).filter(Boolean);
+      if (words.length < 1 || words.length > 6) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      terms.push(t);
+    }
+    if (terms.length) return terms.slice(0, 160);
+  } catch (_) {
+    /* fall through to the hardcoded list */
   }
+  return ["milk", "eggs", "chicken", "ground beef", "pasta", "bread", "apples", "bananas"];
 }
 
 /**

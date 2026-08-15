@@ -42,6 +42,16 @@ data class SavingsUiState(
     val backupCode: String = "",
     val backupMsg: String? = null,
 ) {
+    /**
+     * Only offers with a verified direct product link are available — a deal
+     * you can actually open at the exact product page. Feed items without a
+     * verified destination are never presented as available.
+     */
+    val available: List<Coupon> get() = coupons.filter { it.urlVerified }
+
+    /** How many feed offers are hidden because they lack a verified product link. */
+    val hiddenUnverified: Int get() = coupons.size - available.size
+
     val categories: List<String>
         get() {
             // Stable order so Tech and every category always appear as chips,
@@ -49,7 +59,7 @@ data class SavingsUiState(
             val canonical = listOf(
                 "All", "Grocery", "Dining", "Essentials", "Beauty", "Health", "Home", "Travel", "Tech",
             )
-            val present = coupons.map { it.category }.distinct()
+            val present = available.map { it.category }.distinct()
             return canonical.filter { it == "All" || it in present } +
                 present.filterNot { it in canonical }
         }
@@ -74,7 +84,7 @@ data class SavingsUiState(
 
     val filtered: List<Coupon>
         get() {
-            val inCategory = coupons.filter { category == "All" || it.category == category }
+            val inCategory = available.filter { category == "All" || it.category == category }
             val q = query.trim()
             if (q.isBlank()) return inCategory
             return inCategory
@@ -122,10 +132,10 @@ data class SavingsUiState(
     /** Fresh "new this week" deals — falls back to soonest-expiring when none are flagged new. */
     val newThisWeek: List<Coupon>
         get() {
-            val fresh = coupons
+            val fresh = available
                 .filter { it.isNew }
                 .sortedWith(compareBy<Coupon> { it.endsInDays }.thenBy { it.id })
-            return (if (fresh.isNotEmpty()) fresh else coupons.sortedBy { it.endsInDays }).take(10)
+            return (if (fresh.isNotEmpty()) fresh else available.sortedBy { it.endsInDays }).take(10)
         }
 
     /**
@@ -136,7 +146,7 @@ data class SavingsUiState(
      */
     val dailyPick: Coupon?
         get() {
-            if (coupons.isEmpty()) return null
+            if (available.isEmpty()) return null
             val day = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
             fun strength(c: Coupon): Double {
                 var s = c.discountPercent.toDouble()
@@ -146,11 +156,13 @@ data class SavingsUiState(
                 if (c.isNew) s += 6
                 return s
             }
-            val ranked = coupons.sortedWith(
+            val ranked = available.sortedWith(
                 compareByDescending<Coupon> { strength(it) }
                     .thenBy { kotlin.math.abs((it.id + day.toString()).hashCode()) }
             )
-            return ranked[day % 3]
+            // Clamp so a small (or single-item) catalog never throws — the hero
+            // is the strongest offer when fewer than three exist.
+            return ranked[minOf(day % 3, ranked.size - 1)]
         }
 
     /**
@@ -160,7 +172,7 @@ data class SavingsUiState(
      */
     val favoritesSavings: Pair<Double, Int>?
         get() {
-            val fav = coupons.filter { it.id in favorites && it.priceBefore > it.priceAfter }
+            val fav = available.filter { it.id in favorites && it.priceBefore > it.priceAfter }
             if (fav.isEmpty()) return null
             return (fav.sumOf { it.priceBefore - it.priceAfter }) to fav.size
         }

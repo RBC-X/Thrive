@@ -112,6 +112,57 @@ function rotateCoupons(day) {
 
 const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource()].filter((s) => s.enabled !== false);
 
+/**
+ * Converts a live Deal (e.g. a Kroger product with a verified product-page
+ * URL) into the Coupon shape the Savings feed expects. Live deals are honest
+ * by construction: urlVerified=true, real before-price when a promo is live,
+ * and the API's own product photo when one exists.
+ */
+function dealToCoupon(d) {
+  const before = d.regularPrice && d.regularPrice > d.price
+    ? d.regularPrice
+    : d.savingsPercent > 0 && d.savingsPercent < 100
+      ? d.price / (1 - d.savingsPercent / 100)
+      : d.price;
+  return {
+    id: d.id,
+    store: d.store,
+    title: d.productName,
+    description: d.productName + (d.size ? `, ${d.size}` : ""),
+    category: d.category || "Grocery",
+    priceBefore: Math.round(before * 100) / 100,
+    priceAfter: Math.round(d.price * 100) / 100,
+    dealType: "LINK",
+    code: null,
+    url: d.url || null,
+    urlVerified: !!d.urlVerified,
+    brand: d.brand || null,
+    endsInDays: Number.isInteger(d.endsInDays) ? d.endsInDays : 7,
+    isNew: true,
+    terms: "Live price from the retailer API — opens the exact product page.",
+    imageSeed: null,
+    imageUrl: d.imageUrl || null,
+    storeLogoUrl: null,
+    estimated: !!d.estimated,
+  };
+}
+
+/**
+ * The Savings feed: live deals with verified product links first (they are
+ * real, current, and open the exact product page), then the bundled catalog.
+ * The app itself shows only urlVerified offers as available — this ordering
+ * simply makes the live catalog the first thing a synced phone sees.
+ */
+function couponsFor(deals) {
+  const bundled = rotateCoupons(daySeed());
+  const live = Array.isArray(deals)
+    ? deals.filter((d) => d && d.urlVerified).map(dealToCoupon)
+    : [];
+  if (!live.length) return bundled;
+  const verifiedBundled = bundled.filter((c) => c && c.urlVerified);
+  return [...live, ...verifiedBundled];
+}
+
 const VERSION = 4;
 
 let dealsCache = null;
@@ -339,7 +390,7 @@ async function syncPayload(lat, lng) {
     source: sources.map((s) => s.name),
     location,
     deals: withLoc ? annotateNearby(lat, lng, deals) : deals,
-    coupons: rotateCoupons(daySeed()),
+    coupons: couponsFor(deals),
     recipes,
     catalog,
   };
@@ -422,17 +473,19 @@ app.get("/api/v1/deals", asyncRoute(async (req0, res) => {
   res.json({ deals: out, generatedAt: new Date().toISOString() });
 }));
 
-app.get("/api/v1/coupons", (req0, res) => {
+app.get("/api/v1/coupons", asyncRoute(async (req0, res) => {
   const category = parseCategory(req0.query.category);
   const limit = parseLimit(req0.query.limit);
-  let out = rotateCoupons(daySeed());
+  const [lat, lng] = parseLocation(req0.query);
+  const deals = await getDeals(lat, lng);
+  let out = couponsFor(deals);
   if (category) {
     out = out.filter((c) => c && typeof c.category === "string" && c.category.toLowerCase() === category);
   }
   if (limit !== null) out = out.slice(0, limit);
   if (respondWithEtag(req0, res, out)) return;
   res.json({ coupons: out, generatedAt: new Date().toISOString() });
-});
+}));
 
 app.get("/api/v1/recipes", (req0, res) => {
   let out = recipes;
@@ -764,6 +817,7 @@ app.post("/api/v1/deals", (req0, res) => {
     productName: String(d.productName).trim(),
     category: String(d.category).trim(),
     price: d.price,
+    regularPrice: Number.isFinite(d.regularPrice) && d.regularPrice > 0 ? Math.round(d.regularPrice * 100) / 100 : null,
     unitPrice: typeof d.unitPrice === "string" ? d.unitPrice : "",
     savingsPercent: Number.isInteger(d.savingsPercent) ? d.savingsPercent : 0,
     keywords: Array.isArray(d.keywords) ? d.keywords.map((k) => String(k)) : [],
@@ -816,6 +870,10 @@ if (require.main === module) {
     console.log(`  GET /api/v1/sync   (ETag-cached full payload)`);
     console.log(`  GET /api/v1/deals | /coupons | /recipes | /catalog`);
   });
+  // Warm the deal cache in the background so the first phone sync of the day
+  // is fast (a cold cache pulls hundreds of live retailer terms and can take
+  // ~15-20s — warming it at boot makes the first request snappy).
+  getDeals().then(() => console.log("[warmup] deal cache ready")).catch((e) => console.error(`[warmup] ${e.message}`));
 }
 
 module.exports = app;

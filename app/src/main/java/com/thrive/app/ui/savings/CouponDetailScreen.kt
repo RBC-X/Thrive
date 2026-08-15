@@ -167,17 +167,31 @@ fun CouponDetailScreen(
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = Money.fmt(coupon.priceBefore),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
-                        ),
-                    )
-                    Spacer(Modifier.width(10.dp))
+                    if (coupon.discountPercent > 0) {
+                        Text(
+                            text = Money.fmt(coupon.priceBefore),
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                            ),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                    }
                     PriceTag(coupon.priceAfter, size = 28)
                     Spacer(Modifier.width(10.dp))
-                    SavingsPill(coupon.discountPercent)
+                    if (coupon.discountPercent > 0) {
+                        SavingsPill(coupon.discountPercent)
+                    } else if (!coupon.estimated) {
+                        // No fake "was" price: a live item without a promo just
+                        // shows its real current price.
+                        Text(
+                            text = "Live price",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                    }
                 }
                 if (coupon.estimated) {
                     Spacer(Modifier.height(6.dp))
@@ -448,8 +462,10 @@ private fun SimilarDealCard(deal: Coupon, onClick: () -> Unit) {
         )
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StrikePrice(deal.priceBefore)
-            Spacer(Modifier.width(5.dp))
+            if (deal.discountPercent > 0) {
+                StrikePrice(deal.priceBefore)
+                Spacer(Modifier.width(5.dp))
+            }
             PriceTag(deal.priceAfter, size = 15)
         }
     }

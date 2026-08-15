@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LocalOffer
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
@@ -300,14 +301,25 @@ private fun MiniDealCard(coupon: Coupon, onClick: () -> Unit) {
                 text = Money.fmt(coupon.priceAfter),
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
             )
-            Spacer(Modifier.width(5.dp))
-            Text(
-                text = "Save ${coupon.discountPercent}%",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = accents.deal,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
+            if (coupon.discountPercent > 0) {
+                Spacer(Modifier.width(5.dp))
+                Text(                            text = if (coupon.discountPercent > 0) "Save ${coupon.discountPercent}%" else "Live price",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (coupon.discountPercent > 0) accents.deal else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+            } else if (!coupon.estimated) {
+                // Honest live price: no promo is running, so no invented cut.
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = "Live price",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
         }
     }
 }
@@ -482,6 +494,7 @@ private fun UpdateBanner(update: UpdateInfo) {
 
 @Composable
 private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onRefresh: () -> Unit) {
+    val accents = LocalThriveColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -520,6 +533,33 @@ private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onR
             if (!state.sync.hasLiveFeed) {
                 Spacer(Modifier.height(6.dp))
                 BundledFeedNotice(state.sync)
+            }
+            // Honest availability: only offers with a verified direct product
+            // link are shown. Tell the user when some feed items were hidden.
+            if (state.hiddenUnverified > 0) {
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accents.dealSoft.copy(alpha = 0.7f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        tint = accents.deal,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Showing ${state.filtered.size} verified deals — " +
+                            "${state.hiddenUnverified} offers without a verified product link are hidden.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    )
+                }
             }
         }
         IconButton(onClick = onRefresh) {

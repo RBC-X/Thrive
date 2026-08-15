@@ -326,6 +326,46 @@ test("admin deals: a valid payload is stored and served", async () => {
   assert.equal((await req("GET", "/api/v1/health")).status, 200);
 });
 
+test("live verified deals appear first in the coupons feed as real links", async () => {
+  const auth = { "x-thrive-admin-token": "test-admin-token" };
+  const live = [
+    {
+      ...validDeal("kroger-live-1"),
+      store: "Kroger",
+      productName: "Kroger Whole Milk, 1 gal",
+      url: "https://www.kroger.com/p/kroger-whole-milk-1-gal/0000111109333",
+      urlVerified: true,
+      estimated: false,
+      regularPrice: 3.49,
+      price: 2.99,
+      imageUrl: "https://www.kroger.com/product/images/medium/front/0000111109333",
+      brand: "Kroger",
+      size: "1 gal",
+    },
+    { ...validDeal("kroger-live-2"), store: "Kroger", productName: "Eggland's Best Eggs", url: "https://www.kroger.com/p/eggland-s-best-eggs/0071514111357", urlVerified: true, estimated: false, price: 6.99 },
+  ];
+  const ok = await req("POST", "/api/v1/deals", { body: live, headers: auth });
+  assert.equal(ok.status, 200);
+
+  const coupons = await req("GET", "/api/v1/coupons");
+  assert.equal(coupons.status, 200);
+  const list = coupons.json.coupons;
+  assert.ok(list.length >= 2, "feed should include the live deals");
+  const first = list[0];
+  assert.equal(first.id, "kroger-live-1");
+  assert.equal(first.urlVerified, true);
+  assert.equal(first.url, "https://www.kroger.com/p/kroger-whole-milk-1-gal/0000111109333");
+  assert.equal(first.store, "Kroger");
+  assert.equal(first.title, "Kroger Whole Milk, 1 gal");
+  assert.equal(first.priceBefore, 3.49); // honest before-price from the promo
+  assert.equal(first.priceAfter, 2.99);
+  assert.equal(first.imageUrl, "https://www.kroger.com/product/images/medium/front/0000111109333");
+  assert.equal(first.estimated, false);
+  // The bundled catalog stays available too (unverified items remain, the app
+  // decides availability) — but the live deal must be first.
+  assert.ok(list.some((c) => c.id === "kroger-live-2"));
+});
+
 test("malformed JSON body returns 400 and health survives", async () => {
   const r = await req("POST", "/api/v1/deals", { body: "{ not json", headers: { "x-thrive-admin-token": "test-admin-token", "Content-Type": "application/json" } });
   assert.equal(r.status, 400);

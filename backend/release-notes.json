@@ -1,5 +1,10 @@
 {
   "notes": {
+    "1.3.9": [
+      "Only real, buyable deals are available now: every deal shown has a verified direct link to the exact product page on the store's own site",
+      "The live feed grew from 63 to thousands of real Kroger products with current prices, real product photos, and direct product-page links",
+      "Offers without a verified product link are honestly hidden and counted, and live items with no promo say \"Live price\" instead of inventing a discount"
+    ],
     "1.3.8": [
       "Images fixed across the app: every store logo is now bundled inside the app, so logos always show instantly — even offline",
       "Real store logos added for 12 chains that had none (Kroger, Chipotle, Taco Bell, Home Depot, Newegg and more)",
