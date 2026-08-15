@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generates app/src/main/assets/data/coupons.json — the bundled offline coupon
-catalog (hundreds of coupons, 20+ retailers, all categories incl. Tech).
+catalog (thousands of coupons, 30+ retailers, all categories incl. Tech).
 
 Every coupon carries a REAL destination URL that resolves to the correct
 retailer for that exact product (retailer product-search URLs are stable and
@@ -518,6 +518,543 @@ add(TE, "Dollar General", "DG Smart Phone Case", 7.50, 5.25, "IN_STORE")
 add(TE, "Dollar General", "DG Smart Charging Cable, 6 ft", 6.50, 4.50, "IN_STORE")
 add(TE, "Dollar General", "DG Smart Wireless Earbuds", 19.50, 13.65, "IN_STORE")
 
+# ===========================================================================
+# Catalog expansion — product families scale the catalog into the thousands.
+# ---------------------------------------------------------------------------
+# Each family generates one coupon per (store, size). Titles carry the
+# store's house brand so they read naturally ("Great Value Milk, 1 gallon").
+# Fully deterministic — the same seed always produces the same catalog.
+# Curated flagship items above keep their ids and any API-enriched fields
+# (product photos, verified product links, store logos) across runs; the
+# freshly generated coupons start with the honest store-search URL and get
+# store logos from backend/enrich_store_logos.py.
+# ===========================================================================
+
+BRANDS = {
+    "Walmart": "Great Value",
+    "Kroger": "Kroger",
+    "Target": "Good & Gather",
+    "Aldi": "Aldi",
+    "Costco": "Kirkland Signature",
+    "Sam's Club": "Member's Mark",
+    "Dollar General": "DG Smart",
+    "Dollar Tree": "Dollar Tree",
+    "Trader Joe's": "Trader Joe's",
+    "Whole Foods": "365 Everyday Value",
+    "CVS": "CVS Health",
+    "Walgreens": "Walgreens",
+    "Amazon": "Amazon Basics",
+    "Best Buy": "Insignia",
+    "Home Depot": "HDX",
+    "Lowe's": "Smart",
+    "Staples": "Staples",
+    "Office Depot": "TUL",
+    "IKEA": "IKEA",
+    "Harbor Freight": "Pittsburgh",
+}
+
+# Category -> (stores, families). Family shape:
+#   (base_title, [(size_label, before, after), ...], deal="IN_STORE", brand=True, stores=None)
+# deal: "IN_STORE" | "CODE" | "LINK". brand=False for fresh produce/meat/fish.
+# stores: optional explicit store allowlist (None = all stores of the category).
+
+EXPANSION = []
+
+def exp(category, stores, families):
+    EXPANSION.append((category, stores, families))
+
+G_STORES = ["Walmart", "Kroger", "Target", "Aldi", "Costco", "Sam's Club",
+            "Dollar General", "Dollar Tree", "Trader Joe's", "Whole Foods"]
+
+exp("Grocery", G_STORES, [
+    ("Milk", [("1 gallon", 3.98, 2.98), ("half gallon", 2.49, 1.79)]),
+    ("Eggs", [("dozen", 3.29, 2.19), ("18 count", 4.38, 3.18)]),
+    ("Butter", [("1 lb", 4.58, 3.28)]),
+    ("Cheddar Cheese Block", [("8 oz", 3.49, 2.49), ("16 oz", 5.98, 4.28)]),
+    ("Shredded Mozzarella", [("8 oz", 3.29, 2.29)]),
+    ("Cream Cheese", [("8 oz", 2.98, 1.98)]),
+    ("Greek Yogurt", [("32 oz", 4.98, 3.48), ("4 pk cups", 3.49, 2.49)]),
+    ("Sour Cream", [("16 oz", 2.29, 1.59)]),
+    ("Half & Half", [("quart", 2.79, 1.99)]),
+    ("Bacon", [("12 oz", 5.99, 3.99)]),
+    ("Breakfast Sausage", [("14 oz", 3.99, 2.79)]),
+    ("Sliced Ham Lunch Meat", [("16 oz", 4.98, 3.48)]),
+    ("Ground Turkey", [("1 lb", 4.99, 2.99)]),
+    ("Beef Stew Meat", [("1 lb", 5.99, 4.49)]),
+    ("Whole Chicken", [("4 lb", 6.98, 4.98)], "IN_STORE", False),
+    ("Frozen Shrimp", [("16 oz", 9.98, 6.98)]),
+    ("Canned Tuna", [("5 oz", 1.48, 0.98)], "CODE"),
+    ("Salmon Fillet", [("1 lb", 11.99, 8.99)], "IN_STORE", False),
+    ("White Rice", [("2 lb", 2.49, 1.79), ("5 lb", 4.98, 3.48)]),
+    ("Brown Rice", [("2 lb", 3.29, 2.29)]),
+    ("Quinoa", [("16 oz", 5.99, 3.99)]),
+    ("Penne Pasta", [("16 oz", 1.58, 0.98)]),
+    ("Spaghetti", [("16 oz", 1.48, 0.88)]),
+    ("Boxed Mac & Cheese", [("6 ct", 5.98, 3.98)]),
+    ("Canned Black Beans", [("15 oz", 1.18, 0.78)], "CODE"),
+    ("Canned Kidney Beans", [("15 oz", 1.28, 0.88)], "CODE"),
+    ("Canned Chickpeas", [("15 oz", 1.28, 0.88)], "CODE"),
+    ("Canned Corn", [("15 oz", 0.98, 0.58)], "CODE"),
+    ("Diced Tomatoes", [("14.5 oz", 1.28, 0.88)], "CODE"),
+    ("Crushed Tomatoes", [("28 oz", 2.48, 1.68)], "CODE"),
+    ("Marinara Sauce", [("24 oz", 2.98, 1.98)], "CODE"),
+    ("Tomato Paste", [("6 oz", 1.18, 0.78)], "CODE"),
+    ("Salsa", [("16 oz", 3.49, 2.49)], "CODE"),
+    ("Ketchup", [("64 oz", 4.98, 3.48)]),
+    ("Yellow Mustard", [("20 oz", 2.48, 1.48)], "CODE"),
+    ("Mayonnaise", [("30 oz", 5.98, 3.98)]),
+    ("Soy Sauce", [("15 oz", 2.98, 1.98)], "CODE"),
+    ("Hot Sauce", [("12 oz", 3.48, 2.48)], "CODE"),
+    ("BBQ Sauce", [("18 oz", 2.98, 1.98)], "CODE"),
+    ("Honey", [("24 oz", 8.98, 5.98)]),
+    ("Peanut Butter", [("40 oz", 6.98, 4.98), ("16 oz", 3.48, 2.48)]),
+    ("Grape Jelly", [("32 oz", 4.48, 2.98)]),
+    ("Old Fashioned Oats", [("42 oz", 5.28, 3.78), ("18 oz", 3.28, 2.28)]),
+    ("Cereal", [("family size 18 oz", 5.28, 3.28)]),
+    ("Granola Bars", [("48 ct", 9.98, 6.98), ("12 ct", 3.98, 2.48)]),
+    ("Frozen Waffles", [("10 ct", 3.98, 2.48)]),
+    ("Pancake Mix", [("32 oz", 3.98, 2.48)], "CODE"),
+    ("Pancake Syrup", [("24 oz", 3.48, 2.28)], "CODE"),
+    ("Frozen Broccoli", [("12 oz", 1.98, 1.28)]),
+    ("Frozen Peas", [("32 oz", 3.24, 2.24)]),
+    ("Frozen Mixed Vegetables", [("32 oz", 3.49, 2.49)]),
+    ("Frozen Corn", [("16 oz", 2.48, 1.48)]),
+    ("Frozen Berries", [("16 oz", 5.98, 3.98)]),
+    ("Frozen Pizza", [("13.5 oz", 3.98, 2.78)]),
+    ("Chicken Nuggets", [("32 oz", 8.48, 5.98)]),
+    ("French Fries", [("28 oz", 3.98, 2.78)]),
+    ("Ice Cream", [("48 oz", 3.98, 2.98)]),
+    ("Bagels", [("6 ct", 3.98, 2.48)]),
+    ("Flour Tortillas", [("10 ct", 3.48, 2.28)]),
+    ("Tortilla Chips", [("13 oz", 3.29, 2.29)]),
+    ("Butter Crackers", [("9 oz", 3.48, 2.28)]),
+    ("Potato Chips", [("8 oz", 3.98, 2.48)]),
+    ("White Bread", [("20 oz", 2.48, 1.48)]),
+    ("Apples", [("3 lb bag", 4.48, 2.98)], "IN_STORE", False),
+    ("Bananas", [("bunch", 1.28, 0.89)], "IN_STORE", False),
+    ("Navel Oranges", [("3 lb bag", 4.98, 2.98)], "IN_STORE", False),
+    ("Red Grapes", [("2 lb", 4.98, 2.98)], "IN_STORE", False),
+    ("Avocados", [("4 ct", 4.98, 2.98)], "IN_STORE", False),
+    ("Vine Tomatoes", [("2 lb", 3.98, 2.48)], "IN_STORE", False),
+    ("Yellow Onions", [("3 lb", 2.98, 1.98)], "IN_STORE", False),
+    ("Russet Potatoes", [("5 lb", 4.98, 2.98)], "IN_STORE", False),
+    ("Sweet Potatoes", [("3 lb", 3.98, 2.48)], "IN_STORE", False),
+    ("Baby Carrots", [("2 lb", 2.98, 1.98)], "IN_STORE", False),
+    ("Celery", [("bunch", 2.48, 1.48)], "IN_STORE", False),
+    ("Romaine Lettuce", [("3 ct", 3.98, 2.48)], "IN_STORE", False),
+    ("Baby Spinach", [("10 oz", 2.99, 1.99)], "IN_STORE", False),
+    ("Broccoli Crowns", [("1 lb", 2.98, 1.98)], "IN_STORE", False),
+    ("White Mushrooms", [("8 oz", 2.98, 1.98)], "IN_STORE", False),
+    ("Bell Peppers", [("3 ct", 3.98, 2.48)], "IN_STORE", False),
+    ("Cucumbers", [("1 ct", 1.98, 1.18)], "IN_STORE", False),
+    ("Lemons", [("2 lb bag", 3.98, 2.48)], "IN_STORE", False),
+    ("Limes", [("2 lb bag", 3.98, 2.48)], "IN_STORE", False),
+    ("Strawberries", [("1 lb", 4.99, 2.99)], "IN_STORE", False),
+    ("Blueberries", [("18 oz", 6.98, 4.48)], "IN_STORE", False),
+    ("Ground Coffee", [("30 oz", 9.98, 6.98)]),
+    ("Black Tea Bags", [("100 ct", 5.98, 3.98)]),
+    ("Orange Juice", [("59 oz", 4.49, 2.99)]),
+    ("Soda", [("12 pk cans", 8.98, 5.98)]),
+    ("Bottled Water", [("24 pk", 6.98, 3.98)]),
+    ("Canned Chicken Noodle Soup", [("10.5 oz, 4 pk", 4.98, 3.28)], "CODE"),
+    ("Chicken Broth", [("32 oz", 2.98, 1.98)], "CODE"),
+    ("Olive Oil", [("33.8 fl oz", 13.98, 9.98), ("16.9 fl oz", 8.98, 5.98)]),
+    ("Canola Oil", [("48 oz", 5.98, 3.98)]),
+    ("All-Purpose Flour", [("5 lb", 4.98, 3.28)]),
+    ("White Sugar", [("4 lb", 3.98, 2.48)]),
+    ("Brown Sugar", [("2 lb", 3.48, 2.28)]),
+    ("Baking Soda", [("16 oz", 2.48, 1.48)]),
+    ("Vanilla Extract", [("2 oz", 4.98, 2.98)]),
+    ("Chocolate Chips", [("24 oz", 5.98, 3.98)]),
+    ("Raisins", [("24 oz", 4.98, 3.28)]),
+    ("Mixed Nuts", [("16 oz", 8.98, 5.98)]),
+    ("Almonds", [("16 oz", 9.98, 6.48)]),
+    ("Granola", [("11 oz", 3.99, 2.99)]),
+    ("Dry Dog Food", [("15 lb", 22.98, 16.98)]),
+    ("Cat Litter", [("20 lb", 13.98, 9.98)]),
+    ("Canned Cat Food", [("24 ct", 18.98, 13.98)]),
+    ("Wet Dog Food Trays", [("12 ct", 14.98, 10.98)]),
+])
+
+E_STORES = ["Walmart", "Target", "Kroger", "CVS", "Walgreens",
+            "Dollar General", "Dollar Tree", "Amazon", "Costco", "Sam's Club"]
+
+exp("Essentials", E_STORES, [
+    ("Toilet Paper", [("12 rolls", 9.98, 6.98), ("4 rolls", 3.48, 2.28)]),
+    ("Paper Towels", [("6 rolls", 7.98, 4.98), ("2 rolls", 2.98, 1.98)]),
+    ("Facial Tissue", [("6 boxes", 7.98, 4.98)]),
+    ("Laundry Detergent", [("92 loads", 13.98, 9.98), ("40 loads", 8.98, 5.98)]),
+    ("Fabric Softener Sheets", [("120 ct", 6.98, 4.48)]),
+    ("Dish Soap", [("28 oz", 2.98, 1.98)], "CODE"),
+    ("Dishwasher Pods", [("45 ct", 11.98, 8.48)]),
+    ("Trash Bags", [("80 ct", 14.98, 9.98), ("30 ct", 6.98, 4.48)]),
+    ("Zipper Bags", [("120 ct", 5.98, 3.98)]),
+    ("Aluminum Foil", [("200 sq ft", 4.98, 2.98)]),
+    ("Plastic Wrap", [("200 sq ft", 3.48, 2.28)]),
+    ("Sponges", [("6 ct", 2.48, 1.48)]),
+    ("All-Purpose Cleaner", [("32 oz", 2.48, 1.48)], "CODE"),
+    ("Glass Cleaner", [("32 oz", 2.98, 1.98)], "CODE"),
+    ("Bathroom Cleaner", [("32 oz", 3.48, 2.28)], "CODE"),
+    ("Bleach", [("121 oz", 3.98, 2.48)], "CODE"),
+    ("Hand Soap", [("7.5 oz", 1.48, 0.98)], "CODE"),
+    ("Bar Soap", [("8 ct", 4.98, 2.98)]),
+    ("Paper Plates", [("80 ct", 5.98, 3.98)]),
+    ("Paper Cups", [("50 ct", 3.98, 2.48)]),
+    ("Plastic Cutlery", [("120 ct", 4.98, 2.98)]),
+    ("Plastic Food Storage", [("20 ct", 7.98, 4.98)]),
+    ("Freezer Bags", [("30 ct", 4.98, 2.98)]),
+    ("Trash Can Liners", [("40 ct", 9.98, 6.98)]),
+    ("Air Freshener", [("2 ct", 4.98, 2.98)], "CODE"),
+    ("Dusting Spray", [("10 oz", 4.98, 2.98)]),
+    ("Mop Refill", [("2 ct", 6.98, 4.48)]),
+    ("Broom", [("1 ct", 9.98, 6.98)]),
+    ("Laundry Baskets", [("1 ct", 7.98, 4.98)]),
+    ("Dryer Sheets", [("240 ct", 9.98, 6.98)]),
+    ("Shower Cleaner", [("32 oz", 3.98, 2.48)]),
+    ("Toilet Bowl Cleaner", [("2 ct", 4.98, 2.98)]),
+    ("Garbage Bags Kitchen", [("45 ct", 11.98, 8.48)]),
+    ("Reusable Shopping Bags", [("5 ct", 4.98, 2.98)]),
+    ("Clothespins", [("60 ct", 2.48, 1.48)]),
+    ("Dustpan & Brush", [("1 ct", 4.98, 2.98)]),
+    ("Scrub Brushes", [("2 ct", 3.48, 2.28)]),
+    ("Microfiber Cloths", [("12 ct", 6.98, 4.48)]),
+    ("Latex Gloves", [("12 ct", 4.98, 2.98)]),
+    ("Extension Cord", [("6 ft", 9.98, 6.98)], "IN_STORE", True, ["Walmart", "Target", "Home Depot", "Lowe's", "Dollar General"]),
+    ("Batteries AA", [("24 pk", 14.99, 10.99)], "CODE"),
+    ("Batteries AAA", [("24 pk", 14.99, 10.99)], "CODE"),
+    ("LED Light Bulbs", [("4 pk", 9.98, 5.98)]),
+    ("Flashlight", [("1 ct", 7.98, 4.98)]),
+    ("First Aid Tape", [("2 ct", 4.98, 2.98)]),
+])
+
+B_STORES = ["Target", "Walmart", "CVS", "Walgreens", "Ulta", "Sephora",
+            "Amazon", "Dollar General", "Dollar Tree"]
+
+exp("Beauty", B_STORES, [
+    ("Face Wash", [("8 oz", 8.99, 5.99)], "CODE"),
+    ("Moisturizer", [("16 oz", 14.99, 9.99)], "CODE"),
+    ("Body Lotion", [("20 oz", 6.98, 3.98)], "CODE"),
+    ("Body Wash", [("30 oz", 7.98, 4.98)], "CODE"),
+    ("Shampoo", [("23 oz", 6.98, 3.98)], "CODE"),
+    ("Conditioner", [("23 oz", 6.98, 3.98)], "CODE"),
+    ("2-in-1 Shampoo", [("23 oz", 6.48, 3.98)], "CODE"),
+    ("Hair Spray", [("10 oz", 5.98, 3.48)], "CODE"),
+    ("Hair Gel", [("12 oz", 4.98, 2.98)], "CODE"),
+    ("Deodorant", [("2 pk", 7.98, 4.98)], "CODE"),
+    ("Toothpaste", [("6 oz", 3.98, 2.28)], "CODE"),
+    ("Electric Toothbrush Heads", [("4 pk", 12.98, 7.98)], "CODE"),
+    ("Mouthwash", [("33.8 oz", 5.98, 3.48)], "CODE"),
+    ("Dental Floss", [("6 pk", 8.98, 5.48)], "CODE"),
+    ("Shaving Cream", [("11 oz", 3.98, 2.28)], "CODE"),
+    ("Razor Cartridges", [("8 ct", 18.98, 12.98)], "CODE"),
+    ("Disposable Razors", [("10 ct", 8.98, 5.98)], "CODE"),
+    ("Cotton Swabs", [("500 ct", 3.98, 2.48)], "CODE"),
+    ("Cotton Balls", [("200 ct", 3.48, 2.28)], "CODE"),
+    ("Nail Polish Remover", [("12 oz", 4.98, 2.98)], "CODE"),
+    ("Nail Polish", [("1 ct", 3.98, 2.48)], "CODE"),
+    ("Lip Balm", [("2 pk", 3.98, 2.28)], "CODE"),
+    ("Face Serum", [("1 oz", 9.98, 6.48)], "CODE"),
+    ("Sunscreen SPF 50", [("8 oz", 10.98, 6.98)], "CODE"),
+    ("Facial Cleansing Wipes", [("25 ct", 5.98, 3.48)], "CODE"),
+    ("Makeup Remover", [("5 oz", 8.98, 5.98)], "CODE"),
+    ("Foundation", [("1 ct", 10.99, 6.99)], "CODE"),
+    ("Mascara", [("1 ct", 9.99, 5.99)], "CODE"),
+    ("Eyeliner", [("1 ct", 8.99, 5.49)], "CODE"),
+    ("Lipstick", [("1 ct", 9.99, 6.49)], "CODE"),
+    ("Blush", [("1 ct", 9.98, 6.48)], "CODE"),
+    ("Eyeshadow Palette", [("1 ct", 12.99, 8.99)], "CODE"),
+    ("Hair Dryer", [("1 ct", 24.99, 17.99)], "CODE"),
+    ("Curling Iron", [("1 ct", 29.99, 19.99)], "CODE"),
+    ("Flat Iron", [("1 ct", 34.99, 24.99)], "CODE"),
+    ("Bath Bombs", [("6 ct", 12.99, 8.99)], "CODE"),
+    ("Body Scrub", [("12 oz", 9.98, 6.48)], "CODE"),
+    ("Hand Cream", [("3 oz", 5.49, 3.49)], "CODE"),
+    ("Shower Pouf", [("2 pk", 4.98, 2.98)], "CODE"),
+    ("Hair Brush", [("1 ct", 7.98, 4.98)], "CODE"),
+    ("Comb Set", [("3 ct", 5.98, 3.48)], "CODE"),
+    ("Makeup Sponges", [("4 ct", 8.98, 5.98)], "CODE"),
+])
+
+H_STORES = ["CVS", "Walgreens", "Walmart", "Target", "Kroger",
+            "Dollar General", "Dollar Tree", "Amazon"]
+
+exp("Health", H_STORES, [
+    ("Pain Relief", [("200 ct", 8.99, 5.99)], "CODE"),
+    ("Extra Strength Pain Relief", [("100 ct", 7.98, 4.98)], "CODE"),
+    ("Allergy Relief 24 Hour", [("24 ct", 7.99, 4.99)], "CODE"),
+    ("Allergy Relief Non-Drowsy", [("45 ct", 11.98, 7.98)], "CODE"),
+    ("Cold & Flu Day/Night", [("24 ct", 9.98, 6.48)], "CODE"),
+    ("Cough Drops", [("45 ct", 4.98, 2.98)], "CODE"),
+    ("Cough Syrup", [("8 oz", 6.98, 4.48)], "CODE"),
+    ("Sore Throat Spray", [("4 oz", 6.48, 4.28)], "CODE"),
+    ("Nasal Decongestant", [("20 ct", 5.98, 3.98)], "CODE"),
+    ("Antihistamine", [("36 ct", 8.98, 5.98)], "CODE"),
+    ("Multivitamin", [("150 ct", 10.99, 6.99)], "CODE"),
+    ("Multivitamin Gummies", [("90 ct", 8.98, 5.98)], "CODE"),
+    ("Vitamin C", [("250 ct", 8.49, 4.99)], "CODE"),
+    ("Vitamin D3", [("200 ct", 8.99, 5.49)], "CODE"),
+    ("Vitamin B12", [("100 ct", 7.98, 4.98)], "CODE"),
+    ("Calcium + D3", [("120 ct", 9.98, 6.48)], "CODE"),
+    ("Fish Oil", [("120 ct", 12.98, 8.98)], "CODE"),
+    ("Melatonin", [("120 ct", 8.98, 5.98)], "CODE"),
+    ("Sleep Aid", [("36 ct", 7.48, 4.48)], "CODE"),
+    ("Antacid", [("150 ct", 6.98, 4.48)], "CODE"),
+    ("Heartburn Relief", [("42 ct", 9.98, 6.48)], "CODE"),
+    ("Laxative", [("100 ct", 8.98, 5.98)], "CODE"),
+    ("Anti-Diarrheal", [("24 ct", 7.98, 4.98)], "CODE"),
+    ("Motion Sickness", [("36 ct", 8.99, 5.99)], "CODE"),
+    ("First Aid Kit", [("140 pc", 14.99, 9.99)], "CODE"),
+    ("Bandages", [("120 ct", 5.99, 3.99)], "CODE"),
+    ("Adhesive Tape", [("2 ct", 4.98, 2.98)], "CODE"),
+    ("Gauze Pads", [("40 ct", 6.98, 4.48)], "CODE"),
+    ("Antiseptic Spray", [("6 oz", 5.98, 3.98)], "CODE"),
+    ("Antibiotic Ointment", [("1 oz", 6.98, 4.48)], "CODE"),
+    ("Digital Thermometer", [("1 ct", 12.99, 7.99)], "CODE"),
+    ("Blood Pressure Monitor", [("1 ct", 39.99, 27.99)], "CODE"),
+    ("Heating Pad", [("1 ct", 19.99, 13.99)], "CODE"),
+    ("Ice Pack", [("2 ct", 9.98, 6.48)], "CODE"),
+    ("Eye Drops", [("0.5 oz", 8.98, 5.98)], "CODE"),
+    ("Saline Nasal Spray", [("6 oz", 6.98, 4.48)], "CODE"),
+    ("Oral Pain Relief", [("0.45 oz", 5.98, 3.98)], "CODE"),
+    ("Hydrocortisone Cream", [("1 oz", 7.98, 4.98)], "CODE"),
+    ("Insect Repellent", [("6 oz", 8.98, 5.98)], "CODE"),
+    ("Hand Sanitizer", [("12 oz", 4.98, 2.98)], "CODE"),
+    ("Isopropyl Alcohol", [("32 oz", 4.98, 2.98)], "CODE"),
+    ("Hydrogen Peroxide", [("32 oz", 3.48, 2.28)], "CODE"),
+])
+
+HM_STORES = ["Walmart", "Target", "Home Depot", "Lowe's", "IKEA", "Costco",
+             "Harbor Freight", "Dollar General", "Dollar Tree"]
+
+exp("Home", HM_STORES, [
+    ("Bath Towel", [("2 pk", 12.98, 7.98)]),
+    ("Hand Towel", [("4 pk", 9.98, 6.48)]),
+    ("Washcloth Set", [("12 pk", 8.98, 5.98)]),
+    ("Bath Mat", [("1 ct", 9.98, 5.98)]),
+    ("Shower Curtain", [("1 ct", 14.98, 9.98)]),
+    ("Bed Sheet Set", [("queen", 24.98, 16.98)]),
+    ("Pillow", [("2 pk", 17.98, 11.98)]),
+    ("Comforter", [("queen", 49.98, 34.98)]),
+    ("Blanket Throw", [("50x60 in", 19.98, 12.98)]),
+    ("Pillowcases", [("2 pk", 8.98, 5.98)]),
+    ("Dinner Plate Set", [("4 pk", 24.99, 16.99)]),
+    ("Drinking Glasses", [("12 ct", 14.98, 9.98)]),
+    ("Mug Set", [("4 pk", 12.98, 8.98)]),
+    ("Cookware Set", [("8 pc", 79.98, 49.98)]),
+    ("Nonstick Skillet", [("10 in", 24.98, 16.98)]),
+    ("Saucepan Set", [("3 pc", 34.98, 24.98)]),
+    ("Baking Sheet", [("2 pk", 14.98, 9.98)]),
+    ("Mixing Bowl Set", [("5 pk", 19.98, 12.98)]),
+    ("Measuring Cups", [("8 pc", 9.98, 6.48)]),
+    ("Cutting Board", [("2 pk", 14.98, 9.98)]),
+    ("Chef's Knife", [("8 in", 24.98, 16.98)]),
+    ("Kitchen Utensil Set", [("12 pc", 14.98, 9.98)]),
+    ("Food Storage Containers", [("20 ct", 24.98, 16.98)]),
+    ("Trash Can", [("13 gal", 24.98, 16.98)]),
+    ("Paper Towel Holder", [("1 ct", 9.98, 6.48)]),
+    ("Dish Drying Rack", [("1 ct", 19.98, 13.98)]),
+    ("Storage Bins", [("6 pk", 24.98, 16.98)]),
+    ("Plastic Hangers", [("30 pk", 9.98, 5.98)]),
+    ("Shoe Rack", [("1 ct", 19.98, 12.98)]),
+    ("Laundry Hamper", [("1 ct", 14.98, 9.98)]),
+    ("Closet Organizer", [("1 ct", 19.98, 12.98)]),
+    ("LED Bulbs", [("4 pk", 9.98, 5.98)]),
+    ("Extension Cord", [("10 ft", 12.98, 8.98)]),
+    ("Power Strip", [("1 ct", 19.98, 13.98)]),
+    ("Smoke Detector", [("2 pk", 24.98, 16.98)]),
+    ("Carbon Monoxide Detector", [("1 ct", 29.98, 19.98)]),
+    ("Tool Kit", [("55 pc", 29.98, 19.98)]),
+    ("Hammer", [("16 oz", 9.98, 6.48)]),
+    ("Screwdriver Set", [("11 pc", 14.98, 9.98)]),
+    ("Tape Measure", [("25 ft", 12.98, 8.98)]),
+    ("Utility Knife", [("1 ct", 7.98, 4.98)]),
+    ("Work Gloves", [("2 pk", 9.99, 6.99)]),
+    ("Safety Glasses", [("1 ct", 4.98, 2.98)]),
+    ("Paint Roller Set", [("1 ct", 9.98, 6.48)]),
+    ("Caulk Gun", [("1 ct", 8.98, 5.98)]),
+    ("Flashlight", [("2 pk", 7.99, 4.99)]),
+    ("Step Stool", [("1 ct", 29.98, 19.98)]),
+    ("Bookshelf", [("5 shelf", 89.00, 59.00)], "IN_STORE", True, ["Walmart", "Target", "IKEA", "Amazon"]),
+    ("Side Table", [("1 ct", 29.98, 19.98)], "IN_STORE", True, ["Walmart", "Target", "IKEA", "Amazon"]),
+])
+
+T_STORES = ["Amazon", "Walmart", "Target", "Costco", "Sam's Club", "CVS",
+            "Walgreens", "Dollar General", "Dollar Tree"]
+
+exp("Travel", T_STORES, [
+    ("Carry-On Luggage", [("1 ct", 79.99, 54.99)]),
+    ("Checked Luggage", [("28 in", 129.99, 89.99)]),
+    ("Weekender Duffel", [("1 ct", 39.98, 27.98)]),
+    ("Packing Cubes", [("6 pk", 29.99, 19.99)]),
+    ("Toiletry Bag", [("1 ct", 19.98, 13.98)]),
+    ("Travel Toiletry Bottles", [("8 pk", 14.99, 9.99)]),
+    ("TSA Luggage Locks", [("2 pk", 12.99, 8.99)]),
+    ("Luggage Tags", [("4 pk", 9.98, 6.48)]),
+    ("Neck Pillow", [("memory foam", 21.99, 14.99)]),
+    ("Sleep Mask", [("1 ct", 9.98, 6.48)]),
+    ("Travel Blanket", [("1 ct", 24.98, 16.98)]),
+    ("Passport Holder", [("1 ct", 14.98, 9.98)]),
+    ("Sunscreen SPF 50", [("8 oz", 11.99, 7.99)], "CODE"),
+    ("After-Sun Lotion", [("16 oz", 9.98, 6.48)], "CODE"),
+    ("Insect Repellent", [("6 oz", 8.98, 5.98)], "CODE"),
+    ("Motion Sickness", [("36 ct", 8.99, 5.99)], "CODE"),
+    ("Travel First Aid Kit", [("1 ct", 9.99, 6.99)], "CODE"),
+    ("Cooler", [("30 qt", 49.98, 34.98)]),
+    ("Water Bottle", [("32 oz", 19.98, 13.98)]),
+    ("Insulated Tumbler", [("20 oz", 24.98, 16.98)]),
+    ("Camping Chair", [("2 pk", 39.98, 24.98)]),
+    ("Sleeping Bag", [("1 ct", 29.98, 19.98)]),
+    ("Camping Lantern", [("1 ct", 24.98, 16.98)]),
+    ("Beach Towel", [("1 ct", 16.99, 11.99)]),
+    ("Beach Umbrella", [("1 ct", 24.98, 16.98)]),
+    ("Sunglasses", [("1 ct", 19.98, 12.98)]),
+    ("Sun Hat", [("1 ct", 14.98, 9.98)]),
+    ("Travel Umbrella", [("1 ct", 14.98, 9.98)]),
+    ("Backpack", [("30 L", 39.98, 27.98)]),
+    ("Laptop Backpack", [("1 ct", 49.98, 34.98)]),
+    ("Garment Bag", [("1 ct", 29.98, 19.98)]),
+    ("Travel Iron", [("1 ct", 24.98, 16.98)]),
+    ("Travel Steamer", [("1 ct", 29.98, 19.98)]),
+    ("Shoe Bag", [("2 pk", 9.98, 6.48)]),
+    ("Laundry Bag", [("2 pk", 8.98, 5.98)]),
+    ("Travel Coffee Mug", [("1 ct", 14.98, 9.98)]),
+])
+
+TE_STORES = ["Best Buy", "Walmart", "Target", "Newegg", "Amazon",
+             "Staples", "Office Depot", "Dollar General"]
+
+exp("Tech", TE_STORES, [
+    ("Wireless Mouse", [("1 ct", 12.99, 9.99)], "CODE"),
+    ("Wireless Keyboard", [("1 ct", 24.99, 17.99)], "CODE"),
+    ("Keyboard & Mouse Combo", [("1 ct", 29.99, 19.99)], "CODE"),
+    ("USB-C Cable", [("2 pk", 13.99, 9.99)], "CODE"),
+    ("Lightning Cable", [("2 pk", 19.99, 13.99)], "CODE"),
+    ("Wall Charger 20W", [("1 ct", 19.99, 13.99)], "CODE"),
+    ("65W USB-C Charger", [("1 ct", 39.99, 27.99)], "CODE"),
+    ("Power Bank 10,000mAh", [("1 ct", 25.99, 17.99)], "CODE"),
+    ("Power Bank 20,000mAh", [("1 ct", 49.99, 34.99)], "CODE"),
+    ("Car Charger", [("1 ct", 19.99, 13.99)], "CODE"),
+    ("Wireless Charger Pad", [("1 ct", 19.99, 13.99)], "CODE"),
+    ("Bluetooth Earbuds", [("1 ct", 24.99, 17.99)], "CODE"),
+    ("Bluetooth Speaker", [("1 ct", 49.99, 29.99)]),
+    ("Headphones Over-Ear", [("1 ct", 49.99, 34.99)]),
+    ("Earbuds Wired", [("1 ct", 9.99, 6.99)], "CODE"),
+    ("Webcam 1080p", [("1 ct", 49.99, 34.99)], "CODE"),
+    ("USB Hub", [("4 port", 19.99, 13.99)], "CODE"),
+    ("SD Card 64GB", [("1 ct", 14.99, 9.99)], "CODE"),
+    ("microSD 128GB", [("1 ct", 22.99, 14.99)], "CODE"),
+    ("USB Flash Drive 64GB", [("1 ct", 12.99, 8.99)], "CODE"),
+    ("External SSD 1TB", [("1 ct", 89.99, 64.99)]),
+    ("External HDD 4TB", [("1 ct", 99.99, 69.99)]),
+    ("Monitor 24in 1080p", [("1 ct", 129.99, 89.99)]),
+    ("Monitor 27in 1080p", [("1 ct", 169.99, 129.99)]),
+    ("Mechanical Keyboard", [("1 ct", 59.99, 39.99)]),
+    ("Gaming Mouse", [("1 ct", 49.99, 34.99)]),
+    ("Gaming Headset", [("1 ct", 59.99, 39.99)]),
+    ("WiFi Router AX1800", [("1 ct", 89.99, 59.99)]),
+    ("WiFi 6 Router", [("1 ct", 129.99, 89.99)]),
+    ("WiFi Extender", [("1 ct", 39.99, 27.99)]),
+    ("Smart Plug", [("2 pk", 24.99, 17.99)]),
+    ("Smart Speaker", [("1 ct", 49.99, 29.99)]),
+    ("Smart Bulb", [("2 pk", 19.99, 13.99)]),
+    ("Video Doorbell", [("1 ct", 99.99, 69.99)]),
+    ("Security Camera", [("1 ct", 59.99, 39.99)]),
+    ("Streaming Stick", [("4K", 49.99, 29.99)]),
+    ("Fire TV Stick", [("4K", 49.99, 29.99)]),
+    ("Roku Stick", [("4K", 49.99, 29.99)]),
+    ("Tablet 10in", [("32GB", 89.99, 54.99)]),
+    ("Laptop 15.6in", [("8GB/256GB", 349.00, 279.00)]),
+    ("Inkjet Printer", [("1 ct", 79.99, 49.99)]),
+    ("Laser Printer", [("1 ct", 129.99, 89.99)]),
+    ("Ink Cartridge Pack", [("2 ct", 59.99, 39.99)], "CODE"),
+    ("Paper 8.5x11", [("10 reams", 49.99, 34.99)]),
+    ("Notebooks", [("6 pk", 14.99, 9.99)]),
+    ("Pens", [("60 ct", 12.99, 8.99)], "CODE"),
+    ("AA Batteries", [("24 pk", 14.99, 10.99)], "CODE"),
+    ("AAA Batteries", [("24 pk", 14.99, 10.99)], "CODE"),
+    ("9V Batteries", [("8 pk", 12.99, 8.99)], "CODE"),
+    ("Phone Case", [("1 ct", 14.99, 9.99)], "CODE"),
+    ("Screen Protector", [("2 pk", 9.99, 6.99)], "CODE"),
+    ("Phone Stand", [("1 ct", 14.99, 9.99)], "CODE"),
+    ("Laptop Sleeve", [("1 ct", 19.99, 13.99)], "CODE"),
+    ("Mouse Pad", [("1 ct", 9.99, 6.99)], "CODE"),
+    ("Cable Organizer", [("10 ct", 9.99, 6.99)], "CODE"),
+])
+
+D_STORES = ["Chipotle", "Panera", "Subway", "Starbucks", "McDonald's",
+            "Pizza Hut", "Domino's", "Olive Garden", "Chick-fil-A", "Taco Bell"]
+
+exp("Dining", D_STORES, [
+    ("Chipotle Burrito", [("1 ct", 11.65, 8.75)], "CODE"),
+    ("Chipotle Bowl", [("1 ct", 11.25, 8.50)], "CODE"),
+    ("Chipotle Quesadilla", [("1 ct", 10.25, 7.99)], "CODE"),
+    ("Chipotle Kids Meal", [("1 ct", 8.25, 6.99)], "CODE"),
+    ("Panera Soup Cup", [("1 ct", 6.99, 5.49)], "CODE"),
+    ("Panera Sandwich", [("1 ct", 9.99, 7.99)], "CODE"),
+    ("Panera Salad", [("1 ct", 10.99, 8.99)], "CODE"),
+    ("Panera Baguette", [("1 ct", 3.49, 2.79)], "CODE"),
+    ("Subway Footlong", [("1 ct", 9.49, 6.99)], "CODE"),
+    ("Subway 6-inch", [("1 ct", 6.49, 4.99)], "CODE"),
+    ("Subway Cookie Bundle", [("3 ct", 3.49, 2.49)], "CODE"),
+    ("Starbucks Grande Latte", [("1 ct", 5.45, 4.36)], "CODE"),
+    ("Starbucks Cold Brew", [("1 ct", 4.75, 3.80)], "CODE"),
+    ("Starbucks Breakfast Sandwich", [("1 ct", 6.25, 5.00)], "CODE"),
+    ("Starbucks Cake Pop", [("1 ct", 3.45, 2.76)], "CODE"),
+    ("McDonald's Big Mac", [("1 ct", 5.99, 4.99)], "CODE"),
+    ("McDonald's Quarter Pounder", [("1 ct", 6.29, 5.19)], "CODE"),
+    ("McDonald's Happy Meal", [("1 ct", 4.99, 3.99)], "CODE"),
+    ("McDonald's Fries Large", [("1 ct", 4.19, 2.99)], "CODE"),
+    ("Pizza Hut Large Pizza", [("1 ct", 14.99, 9.99)], "CODE"),
+    ("Pizza Hut Breadsticks", [("1 ct", 7.99, 5.99)], "CODE"),
+    ("Pizza Hut Wings", [("8 ct", 10.99, 7.99)], "CODE"),
+    ("Domino's Large Pizza", [("1 ct", 15.99, 9.99)], "CODE"),
+    ("Domino's Cheesy Bread", [("1 ct", 7.99, 5.99)], "CODE"),
+    ("Domino's 2-Liter Soda", [("1 ct", 3.49, 2.49)], "CODE"),
+    ("Olive Garden Soup & Salad", [("1 ct", 10.99, 8.99)], "CODE"),
+    ("Olive Garden Breadsticks", [("1 ct", 4.99, 3.99)], "CODE"),
+    ("Olive Garden Lasagna", [("1 ct", 18.99, 14.99)], "CODE"),
+    ("Chick-fil-A Sandwich", [("1 ct", 6.79, 5.43)], "CODE"),
+    ("Chick-fil-A Nuggets", [("8 ct", 6.29, 5.03)], "CODE"),
+    ("Chick-fil-A Fries", [("1 ct", 3.65, 2.92)], "CODE"),
+    ("Chick-fil-A Milkshake", [("1 ct", 5.45, 4.36)], "CODE"),
+    ("Taco Bell Crunchwrap", [("1 ct", 5.49, 4.39)], "CODE"),
+    ("Taco Bell Cravings Box", [("1 ct", 8.99, 6.99)], "CODE"),
+    ("Taco Bell Nachos", [("1 ct", 3.99, 2.99)], "CODE"),
+])
+
+def expand_catalog():
+    """Append generated family coupons to ITEMS. Deterministic — the same
+    seed and tables always produce the same catalog. Titles that already
+    exist (curated flagship items or an earlier family) are skipped so a
+    store never carries two differently-priced coupons with the same name."""
+    # Seed with the curated items already in ITEMS (module-level add() calls).
+    seen = {(it[1], it[2]) for it in ITEMS}
+    count = 0
+    skipped = 0
+    for category, stores_all, families in EXPANSION:
+        for fam in families:
+            parts = list(fam)
+            base, sizes = parts[0], parts[1]
+            deal = parts[2] if len(parts) > 2 and isinstance(parts[2], str) else "IN_STORE"
+            brand = parts[3] if len(parts) > 3 else True
+            restrict = parts[4] if len(parts) > 4 else None
+            stores = restrict if restrict else stores_all
+            for store in stores:
+                for (size, before, after) in sizes:
+                    prefix = (BRANDS.get(store) or "") if brand else ""
+                    title = (f"{prefix} {base}" if prefix else base)
+                    if size:
+                        title += f", {size}"
+                    key = (store, title)
+                    if key in seen:
+                        skipped += 1
+                        continue
+                    seen.add(key)
+                    add(category, store, title, before, after, deal)
+                    count += 1
+    print(f"  expansion: +{count} coupons, {skipped} skipped (already in catalog)")
+    return count
+
 # ---------------------------------------------------------------------------
 # Build the JSON
 # ---------------------------------------------------------------------------
@@ -538,6 +1075,7 @@ def slug(title):
 
 
 def build():
+    expand_catalog()  # family expansion -> thousands of coupons (deterministic)
     coupons = []
     for i, (category, store, title, query, before, after, deal) in enumerate(ITEMS, start=1):
         url = RETAILERS[store](query)
@@ -566,6 +1104,20 @@ def build():
             "urlVerified": False,
             "estimated": True,
         })
+    # Preserve API-enriched fields (product photos, verified product links,
+    # store logos) for any coupon that already exists under the same id.
+    try:
+        prev = {}
+        if OUT.exists():
+            prev = {c.get("id"): c for c in json.loads(OUT.read_text(encoding="utf-8"))}
+        for c in coupons:
+            old = prev.get(c["id"])
+            if old:
+                for k in ("imageUrl", "storeLogoUrl", "url", "urlVerified", "estimated", "imageSeed"):
+                    if old.get(k):
+                        c[k] = old[k]
+    except Exception:
+        pass
     return coupons
 
 

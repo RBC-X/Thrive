@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "1.3.5"
+        versionCode = 27
+        versionName = "1.3.6"
     }
 
     signingConfigs {
