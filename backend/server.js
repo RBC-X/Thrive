@@ -112,45 +112,239 @@ function rotateCoupons(day) {
 
 const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource()].filter((s) => s.enabled !== false);
 
-const VERSION = 3;
+const VERSION = 4;
 
 let dealsCache = null;
 let dealsCacheAt = 0;
 let payloadCache = null;
 let payloadCacheAt = 0;
 
-async function getDeals() {
+// ---------------------------------------------------------------------------
+// Nearby-deals support
+// ---------------------------------------------------------------------------
+// When the app shares an approximate location (coarse permission, opt-in), the
+// feed annotates every deal with the distance to the user's nearest branch of
+// that store chain and sorts nearest-first. Kroger live deals carry the exact
+// resolved store coordinates from the Kroger Locations API; curated chains use
+// this registry of representative branch coordinates across major metros. The
+// distance is an honest estimate ("~3 mi to nearest branch"), not a promise of
+// the exact store's stock.
+
+const STORES = {
+  Walmart: [
+    { city: "Seattle", lat: 47.62, lng: -122.33 }, { city: "Denver", lat: 39.74, lng: -104.99 },
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "Atlanta", lat: 33.75, lng: -84.39 },
+    { city: "Phoenix", lat: 33.45, lng: -112.07 }, { city: "Boston", lat: 42.36, lng: -71.06 },
+    { city: "Dallas", lat: 32.78, lng: -96.80 }, { city: "Orlando", lat: 28.54, lng: -81.38 },
+  ],
+  Kroger: [
+    { city: "Cincinnati", lat: 39.10, lng: -84.51 }, { city: "Atlanta", lat: 33.77, lng: -84.39 },
+    { city: "Houston", lat: 29.76, lng: -95.37 }, { city: "Columbus", lat: 39.96, lng: -82.99 },
+    { city: "Nashville", lat: 36.16, lng: -86.78 }, { city: "Louisville", lat: 38.25, lng: -85.76 },
+    { city: "Indianapolis", lat: 39.77, lng: -86.16 }, { city: "Denver", lat: 39.74, lng: -104.99 },
+  ],
+  Target: [
+    { city: "Minneapolis", lat: 44.98, lng: -93.27 }, { city: "Chicago", lat: 41.88, lng: -87.63 },
+    { city: "Dallas", lat: 32.78, lng: -96.80 }, { city: "San Diego", lat: 32.72, lng: -117.16 },
+    { city: "Miami", lat: 25.76, lng: -80.19 }, { city: "Portland", lat: 45.52, lng: -122.68 },
+  ],
+  Costco: [
+    { city: "Seattle", lat: 47.62, lng: -122.33 }, { city: "Sacramento", lat: 38.58, lng: -121.49 },
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "Atlanta", lat: 33.75, lng: -84.39 },
+    { city: "Houston", lat: 29.76, lng: -95.37 }, { city: "Boston", lat: 42.36, lng: -71.06 },
+  ],
+  Aldi: [
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "St. Louis", lat: 38.63, lng: -90.20 },
+    { city: "Cincinnati", lat: 39.10, lng: -84.51 }, { city: "Charlotte", lat: 35.23, lng: -80.84 },
+    { city: "Tampa", lat: 27.95, lng: -82.46 }, { city: "Kansas City", lat: 39.10, lng: -94.58 },
+  ],
+  Publix: [
+    { city: "Miami", lat: 25.76, lng: -80.19 }, { city: "Tampa", lat: 27.95, lng: -82.46 },
+    { city: "Orlando", lat: 28.54, lng: -81.38 }, { city: "Atlanta", lat: 33.75, lng: -84.39 },
+    { city: "Charlotte", lat: 35.23, lng: -80.84 }, { city: "Jacksonville", lat: 30.33, lng: -81.66 },
+  ],
+  "Dollar General": [
+    { city: "Nashville", lat: 36.16, lng: -86.78 }, { city: "Birmingham", lat: 33.52, lng: -86.81 },
+    { city: "Columbus", lat: 39.96, lng: -82.99 }, { city: "Memphis", lat: 35.15, lng: -90.05 },
+  ],
+  CVS: [
+    { city: "Boston", lat: 42.36, lng: -71.06 }, { city: "Phoenix", lat: 33.45, lng: -112.07 },
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "Dallas", lat: 32.78, lng: -96.80 },
+  ],
+  Walgreens: [
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "Denver", lat: 39.74, lng: -104.99 },
+    { city: "San Diego", lat: 32.72, lng: -117.16 }, { city: "Houston", lat: 29.76, lng: -95.37 },
+  ],
+  "Whole Foods": [
+    { city: "Austin", lat: 30.27, lng: -97.74 }, { city: "Boston", lat: 42.36, lng: -71.06 },
+    { city: "Chicago", lat: 41.88, lng: -87.63 }, { city: "San Francisco", lat: 37.77, lng: -122.42 },
+  ],
+  "Trader Joe's": [
+    { city: "Los Angeles", lat: 34.05, lng: -118.24 }, { city: "Portland", lat: 45.52, lng: -122.68 },
+    { city: "New York", lat: 40.71, lng: -74.01 }, { city: "Chicago", lat: 41.88, lng: -87.63 },
+  ],
+};
+
+const R_EARTH_MI = 3958.8;
+
+function haversineMi(lat1, lng1, lat2, lng2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R_EARTH_MI * Math.asin(Math.sqrt(a));
+}
+
+/** Nearest branch of [storeName] to (lat, lng) from the registry, or null. */
+function nearestBranch(storeName, lat, lng) {
+  const chain = STORES[String(storeName || "")];
+  if (!chain) return null;
+  let best = null;
+  for (const b of chain) {
+    const d = haversineMi(lat, lng, b.lat, b.lng);
+    if (!best || d < best.distMi) best = { ...b, distMi: d };
+  }
+  return best;
+}
+
+/**
+ * Annotates deals with storeDistanceMi (nearest branch) and returns them
+ * sorted nearest-first. Kroger live deals already carry the exact store's
+ * coordinates; everything else uses the registry. Deals with no store match
+ * sort last (they stay visible, just unranked).
+ */
+function annotateNearby(lat, lng, deals) {
+  return deals
+    .map((d) => {
+      let distMi = null;
+      let branch = null;
+      if (d.storeLat != null && d.storeLng != null) {
+        distMi = haversineMi(lat, lng, d.storeLat, d.storeLng);
+      } else {
+        branch = nearestBranch(d.store, lat, lng);
+        if (branch) distMi = branch.distMi;
+      }
+      const out = { ...d, storeDistanceMi: distMi != null ? Math.round(distMi * 10) / 10 : null };
+      if (branch) out.storeCity = branch.city;
+      return out;
+    })
+    .sort((a, b) => {
+      if (a.storeDistanceMi == null && b.storeDistanceMi == null) return 0;
+      if (a.storeDistanceMi == null) return 1;
+      if (b.storeDistanceMi == null) return -1;
+      return a.storeDistanceMi - b.storeDistanceMi;
+    });
+}
+
+/** Top store chains by nearest branch, for a "stores near you" summary. */
+function nearbyStores(lat, lng) {
+  const rows = [];
+  for (const chain of Object.keys(STORES)) {
+    const b = nearestBranch(chain, lat, lng);
+    if (b) rows.push({ store: chain, city: b.city, distMi: Math.round(b.distMi * 10) / 10, lat: b.lat, lng: b.lng });
+  }
+  return rows.sort((a, b) => a.distMi - b.distMi).slice(0, 6);
+}
+
+/** Strict lat/lng query parsing — garbage in is a 400, never NaN propagation. */
+function parseCoord(raw, name, lo, hi) {
+  if (raw === undefined) return null;
+  const s = String(raw);
+  // Real GPS fixes carry 10-14 decimals — accept full precision, reject junk
+  // (letters, exponents, empty) via the numeric + range checks below.
+  if (!/^-?\d{1,3}(\.\d{1,15})?$/.test(s)) {
+    const err = new Error(`${name} must be a decimal number`);
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < lo || n > hi) {
+    const err = new Error(`${name} must be between ${lo} and ${hi}`);
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  return n;
+}
+
+/** Require both coords or neither — a lone lat/lng is a broken client, 400. */
+function parseLocation(query) {
+  const lat = parseCoord(query.lat, "lat", -90, 90);
+  const lng = parseCoord(query.lng, "lng", -180, 180);
+  if ((lat == null) !== (lng == null)) {
+    const err = new Error("lat and lng must be provided together");
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  return [lat, lng];
+}
+
+/** Buckets coordinates (~1/100° ≈ 1 km) so nearby users share a cached payload. */
+function locBucket(lat, lng) {
+  return `${Math.round(lat * 100)},${Math.round(lng * 100)}`;
+}
+
+const locCache = new Map(); // location-aware deal/payload cache (bounded)
+
+async function getDeals(lat, lng) {
   const todayKey = new Date().toISOString().slice(0, 10);
-  if (dealsCache && dealsCacheAt === todayKey) return dealsCache;
+  const withLoc = lat != null && lng != null;
+  if (!withLoc && dealsCache && dealsCacheAt === todayKey) return dealsCache;
+  const key = withLoc ? `deal:${locBucket(lat, lng)}` : null;
+  if (withLoc) {
+    const hit = locCache.get(key);
+    if (hit && hit.at === todayKey) return hit.deals;
+  }
   const merged = [];
   for (const source of sources) {
     try {
-      const deals = await source.deals();
+      const deals = withLoc ? await source.deals(lat, lng) : await source.deals();
       if (Array.isArray(deals)) merged.push(...deals);
     } catch (err) {
       console.error(`[source:${source.name}] ${err.message}`);
     }
   }
-  dealsCache = merged.length ? merged : loadJson("deals.json");
+  const out = merged.length ? merged : loadJson("deals.json");
+  if (withLoc) {
+    locCache.set(key, { at: todayKey, deals: out });
+    if (locCache.size > 40) locCache.delete(locCache.keys().next().value); // bound memory
+    return out;
+  }
+  dealsCache = out;
   dealsCacheAt = todayKey;
   payloadCache = null; // force payload rebuild with a fresh timestamp
   return dealsCache;
 }
 
-async function syncPayload() {
+async function syncPayload(lat, lng) {
   const todayKey = new Date().toISOString().slice(0, 10);
-  if (payloadCache && payloadCacheAt === todayKey) return payloadCache;
-  const deals = await getDeals();
+  const withLoc = lat != null && lng != null;
+  if (!withLoc && payloadCache && payloadCacheAt === todayKey) return payloadCache;
+  const pKey = withLoc ? `payload:${locBucket(lat, lng)}` : null;
+  if (withLoc) {
+    const hit = locCache.get(pKey);
+    if (hit && hit.at === todayKey) return hit.deals;
+  }
+  const deals = await getDeals(lat, lng);
+  const location = withLoc
+    ? { lat, lng, nearbyStores: nearbyStores(lat, lng) }
+    : null;
   payloadCache = {
     version: VERSION,
     generatedAt: new Date().toISOString(),
     source: sources.map((s) => s.name),
-    deals,
+    location,
+    deals: withLoc ? annotateNearby(lat, lng, deals) : deals,
     coupons: rotateCoupons(daySeed()),
     recipes,
     catalog,
   };
   payloadCacheAt = todayKey;
+  if (withLoc) locCache.set(pKey, { at: todayKey, deals: payloadCache });
   return payloadCache;
 }
 
@@ -214,10 +408,11 @@ function parseCategory(raw) {
 }
 
 app.get("/api/v1/deals", asyncRoute(async (req0, res) => {
-  const deals = await getDeals();
+  const [lat, lng] = parseLocation(req0.query);
+  const deals = await getDeals(lat, lng);
   const category = parseCategory(req0.query.category);
   const limit = parseLimit(req0.query.limit);
-  let out = deals;
+  let out = lat != null && lng != null ? annotateNearby(lat, lng, deals) : deals;
   if (category) {
     // Defensive: never assume a source/deal has a string category.
     out = out.filter((d) => d && typeof d.category === "string" && d.category.toLowerCase() === category);
@@ -266,7 +461,8 @@ app.get("/api/v1/catalog", (req0, res) => {
 });
 
 app.get("/api/v1/sync", asyncRoute(async (req0, res) => {
-  const payload = await syncPayload();
+  const [lat, lng] = parseLocation(req0.query);
+  const payload = await syncPayload(lat, lng);
   // Built per-request so the APK URL points at whatever host the app used.
   // Only advertise an update when a release APK is actually present to serve.
   // The request may arrive via a TLS-terminating proxy (e.g. cloudflared or a
@@ -578,6 +774,10 @@ app.post("/api/v1/deals", (req0, res) => {
     brand: typeof d.brand === "string" && d.brand ? d.brand : null,
     imageUrl: typeof d.imageUrl === "string" && d.imageUrl ? d.imageUrl : null,
     estimated: d.estimated !== false,
+    storeDistanceMi: Number.isFinite(d.storeDistanceMi) ? Math.round(d.storeDistanceMi * 10) / 10 : null,
+    storeCity: typeof d.storeCity === "string" && d.storeCity ? d.storeCity : null,
+    storeLat: Number.isFinite(d.storeLat) ? d.storeLat : null,
+    storeLng: Number.isFinite(d.storeLng) ? d.storeLng : null,
   }));
   dealsCacheAt = new Date().toISOString().slice(0, 10);
   payloadCache = null;

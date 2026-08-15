@@ -52,6 +52,34 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
     val syncBaseUrl: String
         get() = settings.getString(KEY_SYNC_URL, com.thrive.app.BuildConfig.DEFAULT_SYNC_URL).orEmpty().trimEnd('/')
 
+    /** Approximate location the user opted into sharing, if any. */
+    val sharedLocation: Pair<Double, Double>?
+        get() {
+            val lat = settings.getString(KEY_LOC_LAT, null)?.toDoubleOrNull() ?: return null
+            val lng = settings.getString(KEY_LOC_LNG, null)?.toDoubleOrNull() ?: return null
+            return lat to lng
+        }
+
+    /** Persist a shared approximate location and refresh the feed with it. */
+    suspend fun setLocation(lat: Double, lng: Double) {
+        settings.putString(KEY_LOC_LAT, lat.toString())
+        settings.putString(KEY_LOC_LNG, lng.toString())
+        _syncState.update {
+            it.copy(locationEnabled = true, locationLat = lat, locationLng = lng)
+        }
+        syncNow(force = true)
+    }
+
+    /** Drop the shared location (user revoked) and refresh back to unranked. */
+    suspend fun clearLocation() {
+        settings.remove(KEY_LOC_LAT)
+        settings.remove(KEY_LOC_LNG)
+        _syncState.update {
+            it.copy(locationEnabled = false, locationLat = null, locationLng = null, nearbyStores = emptyList())
+        }
+        syncNow(force = true)
+    }
+
     /**
      * Pulls the latest feed from the configured Thrive sync API. Non-fatal by
      * design: any failure leaves the bundled/previous data in place.
@@ -67,7 +95,15 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         }
         runCatching {
             val etag = settings.getString(KEY_SYNC_ETAG, null)
-            val result = ApiClient.get("$base/api/v1/sync", if (force) null else etag)
+            val loc = sharedLocation
+            val url = if (loc != null) {
+                // Round to ~6 decimals (~0.1 m) — plenty for store distance, keeps
+                // URLs short and the server-side location cache bucketing stable.
+                "$base/api/v1/sync?lat=${(Math.round(loc.first * 1e6) / 1e6)}&lng=${(Math.round(loc.second * 1e6) / 1e6)}"
+            } else {
+                "$base/api/v1/sync"
+            }
+            val result = ApiClient.get(url, if (force) null else etag)
             when {
                 result.code == 304 -> {
                     // Nothing changed server-side; keep current data.
@@ -97,6 +133,10 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                             source = payload.source,
                             update = payload.update,
                             feedOrigin = if (couponsFromServer) "live" else "bundled",
+                            locationEnabled = payload.location != null || it.locationEnabled,
+                            locationLat = payload.location?.lat ?: it.locationLat,
+                            locationLng = payload.location?.lng ?: it.locationLng,
+                            nearbyStores = payload.location?.nearbyStores ?: it.nearbyStores,
                         )
                     }
                 }
@@ -207,6 +247,8 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         private const val KEY_FAV_RECIPES = "fav_recipes"
         private const val KEY_SYNC_URL = "sync_base_url"
         private const val KEY_SYNC_ETAG = "sync_etag"
+        private const val KEY_LOC_LAT = "loc_lat"
+        private const val KEY_LOC_LNG = "loc_lng"
         const val SYNC_URL_KEY = KEY_SYNC_URL
     }
 }

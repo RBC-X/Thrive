@@ -941,6 +941,10 @@ private fun TripPlanView(vm: BudgetViewModel, plan: TripPlan, onBack: () -> Unit
 private fun StoreGroupCard(group: com.thrive.app.ai.StoreGroup) {
     val accents = LocalThriveColors.current
     val found = group.items.count { it.dealFound }
+
+    /** Compact mile label: "0.8 mi" under 10, whole miles above. */
+    fun formatMi(mi: Double): String =
+        if (mi < 10) "${(Math.round(mi * 10) / 10.0)} mi" else "${Math.round(mi)} mi"
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 4.dp)
@@ -953,10 +957,24 @@ private fun StoreGroupCard(group: com.thrive.app.ai.StoreGroup) {
             com.thrive.app.ui.components.StoreAvatar(group.store, size = 26.dp)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = group.store,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = group.store,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (group.storeDistanceMi != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "~${formatMi(group.storeDistanceMi)}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = accents.deal,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                    }
+                }
                 Text(
                     text = "${group.items.size} item${if (group.items.size == 1) "" else "s"} · $found with deals",
                     style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),

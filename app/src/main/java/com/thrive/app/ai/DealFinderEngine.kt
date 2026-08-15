@@ -23,6 +23,7 @@ data class ResolvedItem(
     val dealImageUrl: String? = null,
     val dealEstimated: Boolean = true,
     val dealCategory: String? = null,
+    val dealDistanceMi: Double? = null, // distance to nearest branch (location-aware sync)
 )
 
 /** A deal candidate with its effective price expressed in the item's own unit scale. */
@@ -44,6 +45,7 @@ data class StoreGroup(
     val store: String,
     val items: List<ResolvedItem>,
     val subtotal: Double,
+    val storeDistanceMi: Double? = null, // nearest-branch distance when location shared
 )
 
 /** The complete deal-finding result for a shopping trip. */
@@ -229,6 +231,7 @@ object DealFinderEngine {
                     dealImageUrl = d.imageUrl,
                     dealEstimated = d.estimated,
                     dealCategory = d.category,
+                    dealDistanceMi = d.storeDistanceMi,
                 )
             } else {
                 ResolvedItem(item, "Any store", item.estPrice, false, 0.0)
@@ -252,6 +255,7 @@ object DealFinderEngine {
                     store = store,
                     items = itemsInStore,
                     subtotal = itemsInStore.sumOf { it.price * it.item.quantity },
+                    storeDistanceMi = itemsInStore.mapNotNull { it.dealDistanceMi }.minOrNull(),
                 )
             }
             .sortedByDescending { it.subtotal }

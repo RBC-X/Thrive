@@ -105,6 +105,14 @@ class KrogerLiveSource {
     this._token = null;
     this._tokenAt = 0;
     this._location = null;
+    this._locationKey = null;
+    this._locationAt = 0;
+    this._storeGeo = null;
+  }
+
+  /** Bucket for a user coordinate pair (≈1/100° ≈ 1 km) so nearby users share one lookup. */
+  static _bucket(lat, lng) {
+    return `${Math.round(lat * 100)},${Math.round(lng * 100)}`;
   }
 
   get enabled() {
@@ -131,23 +139,42 @@ class KrogerLiveSource {
     return this._token;
   }
 
-  /** Nearest store to the configured zip (products need a locationId for prices). */
-  async _locationId() {
-    if (this._location) return this._location;
+  /**
+   * Nearest store to the user (lat/lng when provided, else the configured zip).
+   * Products need a locationId for prices, and the resolved store's coordinates
+   * let the server report an honest "nearest store" distance per deal.
+   * Cached per location bucket for 30 minutes.
+   */
+  async _locationId(lat, lng) {
+    const key = lat != null && lng != null ? KrogerLiveSource._bucket(lat, lng) : "zip";
+    if (this._location && this._locationKey === key && Date.now() - this._locationAt < 30 * 60 * 1000) {
+      return this._location;
+    }
     const token = await this._accessToken();
+    const where = lat != null && lng != null
+      ? `filter.latLong.near=${encodeURIComponent(`${lat},${lng}`)}`
+      : `filter.zipCode.near=${encodeURIComponent(this.zip)}`;
     const res = await fetch(
-      `https://api.kroger.com/v1/locations?filter.zipCode.near=${encodeURIComponent(this.zip)}&filter.limit=1`,
+      `https://api.kroger.com/v1/locations?${where}&filter.limit=1`,
       { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) throw new Error(`kroger locations ${res.status}`);
     const json = await res.json();
-    this._location = (json.data && json.data[0] && json.data[0].locationId) || null;
+    const store = json.data && json.data[0];
+    this._location = (store && store.locationId) || null;
+    this._locationKey = key;
+    this._locationAt = Date.now();
+    const g = store && store.geoLocation;
+    this._storeGeo = g && Number(g.latitude) && Number(g.longitude)
+      ? { lat: Number(g.latitude), lng: Number(g.longitude) }
+      : null;
     return this._location;
   }
 
-  async deals() {
+  /** True when a live-price fetch for the given area is already in flight. */
+  async deals(lat, lng) {
     const token = await this._accessToken();
-    const loc = await this._locationId();
+    const loc = await this._locationId(lat, lng);
     if (!loc) return [];
     const terms = this.terms.length ? this.terms : defaultSearchTerms();
     const out = [];
@@ -192,6 +219,8 @@ class KrogerLiveSource {
           brand: it.brand || null,
           imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,
           estimated: false, // live price from the Kroger API for the resolved store
+          storeLat: this._storeGeo ? this._storeGeo.lat : null,
+          storeLng: this._storeGeo ? this._storeGeo.lng : null,
         });
       }
     }

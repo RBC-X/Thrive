@@ -131,6 +131,8 @@ data class Deal(
     val brand: String? = null,    // brand of the product on offer
     val imageUrl: String? = null, // real product photo (verified) — null = clean fallback tile
     val estimated: Boolean = true,// price is an estimate from a curated feed, not live retail
+    val storeDistanceMi: Double? = null, // distance to nearest branch (only when location shared)
+    val storeCity: String? = null, // city of the nearest branch (location-aware sync)
 )
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,24 @@ data class SyncPayload(
     val recipes: List<Recipe> = emptyList(),
     val catalog: List<CatalogItem> = emptyList(),
     val update: UpdateInfo? = null,
+    val location: PayloadLocation? = null,
+)
+
+/** Echo of the user's shared location + nearby store chains (sync with lat/lng). */
+@Serializable
+data class PayloadLocation(
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+    val nearbyStores: List<NearbyStore> = emptyList(),
+)
+
+@Serializable
+data class NearbyStore(
+    val store: String = "",
+    val city: String = "",
+    val distMi: Double = 0.0,
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
 )
 
 /** Latest release advertised by the sync server (in-app update card). */
@@ -45,11 +63,17 @@ data class SyncState(
      * whether the deals shown are live or bundled estimates.
      */
     val feedOrigin: String = "bundled",
+    val locationEnabled: Boolean = false, // user shared approximate location
+    val locationLat: Double? = null,
+    val locationLng: Double? = null,
+    val nearbyStores: List<NearbyStore> = emptyList(),
 ) {
     val isLive: Boolean get() = status == SyncStatus.OK
     val isWorking: Boolean get() = status == SyncStatus.SYNCING
     /** True when the coupon list on screen actually came from the server. */
     val hasLiveFeed: Boolean get() = status == SyncStatus.OK && feedOrigin == "live"
+    /** True when location is shared AND the feed ranked deals by distance. */
+    val hasNearby: Boolean get() = locationEnabled && locationLat != null && locationLng != null
 }
 
 /** True when the server advertises a newer release than the installed build. */

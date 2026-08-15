@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test test/backend.test.js && node test_kroger.js"
+    "test": "node --test test/backend.test.js test/location.test.js && node test_kroger.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

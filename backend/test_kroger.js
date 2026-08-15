@@ -42,7 +42,9 @@ global.fetch = async (url, opts) => {
     return krogerJson({ access_token: "tok-123", expires_in: 1800 });
   }
   if (String(url).includes("/locations")) {
-    return krogerJson({ data: [{ locationId: "LOC00001" }] });
+    return krogerJson({
+      data: [{ locationId: "LOC00001", geoLocation: { latitude: 39.1, longitude: -84.51 } }],
+    });
   }
   if (String(url).includes("/products")) {
     return krogerJson({
@@ -125,6 +127,32 @@ async function main() {
     oauth && String(oauth.opts.headers.Authorization).startsWith("Basic "),
     oauth && oauth.opts.headers.Authorization
   );
+
+  // ---- Location-aware pricing -------------------------------------------------
+  const src2 = new KrogerLiveSource();
+  const locCalls = [];
+  const before = calls.length;
+  const locDeals = await src2.deals(39.1, -84.51);
+  const newCalls = calls.slice(before);
+  const locReq = newCalls.find((c) => String(c.url).includes("/locations"));
+  check(
+    "store resolution uses the user's coordinates (latLong.near)",
+    locReq && String(locReq.url).includes("filter.latLong.near=39.1%2C-84.51"),
+    locReq && locReq.url
+  );
+  check("location-aware fetch still returns products", locDeals.length === 3, `got ${locDeals.length}`);
+  const located = locDeals.find((d) => d.productName === "Milk 1 Gallon");
+  check(
+    "deals carry the resolved store's exact coordinates",
+    located && located.storeLat === 39.1 && located.storeLng === -84.51,
+    JSON.stringify({ lat: located && located.storeLat, lng: located && located.storeLng })
+  );
+  check("store coordinates only present for located requests", locDeals.every((d) => d.storeLat != null));
+  // Per-location cache: a second call with the same coords must not re-fetch locations.
+  const before2 = calls.length;
+  await src2.deals(39.1, -84.51);
+  const repeat = calls.slice(before2).filter((c) => String(c.url).includes("/locations"));
+  check("per-location lookup cached (no repeat locations call)", repeat.length === 0, `got ${repeat.length}`);
 
   console.log(failures === 0 ? "\nAll Kroger tests passed." : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);

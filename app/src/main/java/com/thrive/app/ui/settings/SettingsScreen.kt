@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -45,6 +46,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,6 +115,9 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
     var checkingUpdates by remember { mutableStateOf(false) }
     var updateCheckMsg by remember { mutableStateOf<String?>(null) }
     var restoreCode by remember { mutableStateOf("") }
+    var locMessage by remember { mutableStateOf<String?>(null) }
+    var locWorking by remember { mutableStateOf(false) }
+    var locDenied by remember { mutableStateOf(false) }
     var publicServer by remember { mutableStateOf<String?>(null) }
     var discoveringServer by remember { mutableStateOf(false) }
     var serverMsg by remember { mutableStateOf<String?>(null) }
@@ -122,12 +127,69 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
     // plain HTTP non-loopback URL the card below is honest: backup is off.
     val backupPermitted = BackupPolicy.isPermitted(syncUrl, BuildConfig.DEBUG)
 
+    val scope = rememberCoroutineScope()
+
     val notificationPermission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
                 Toast.makeText(context, "Update notifications on", Toast.LENGTH_SHORT).show()
             }
         }
+
+    // Nearby deals: approximate location is asked in context (never at launch),
+    // the app is fully usable after denial, and Settings offers re-enable.
+    val locationPermission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                scope.launch {
+                    locWorking = true
+                    locMessage = "Finding your nearest stores…"
+                    val loc = com.thrive.app.data.LocationProvider.lastKnownLocation(context)
+                    locWorking = false
+                    if (loc != null) {
+                        locMessage = null
+                        repo.setLocation(loc.first, loc.second)
+                        locDenied = false
+                        Toast.makeText(context, "Nearby deals on — deals ranked by distance", Toast.LENGTH_LONG).show()
+                    } else {
+                        locMessage = "Can't get a location fix yet — deals are shown unranked. Try again in a moment."
+                    }
+                }
+            } else {
+                locDenied = true
+                locMessage = "Location off — Thrive shows all deals, not ranked by distance."
+            }
+        }
+
+    fun enableNearby() {
+        if (locWorking) return
+        if (!com.thrive.app.data.LocationProvider.hasPermission(context)) {
+            locDenied = false
+            locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        } else {
+            scope.launch {
+                locWorking = true
+                locMessage = "Finding your nearest stores…"
+                val loc = com.thrive.app.data.LocationProvider.lastKnownLocation(context)
+                locWorking = false
+                if (loc != null) {
+                    locMessage = null
+                    repo.setLocation(loc.first, loc.second)
+                    Toast.makeText(context, "Nearby deals on — deals ranked by distance", Toast.LENGTH_LONG).show()
+                } else {
+                    locMessage = "Can't get a location fix yet — deals are shown unranked. Try again in a moment."
+                }
+            }
+        }
+    }
+
+    fun openAppSettings() {
+        val intent = android.content.Intent(
+            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.fromParts("package", context.packageName, null)
+        )
+        context.startActivity(intent)
+    }
     fun requestNotifications() {
         if (Build.VERSION.SDK_INT >= 33) {
             val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
@@ -135,8 +197,6 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
             if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
-
-    val scope = rememberCoroutineScope()
 
     // One-tap connect: read the operator's public backup server from the
     // latest GitHub release (tools/tunnel.sh publishes it there). Users never
@@ -267,6 +327,94 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
                     text = "Offline-first: until a sync succeeds (or if the server is unreachable), Thrive uses its bundled feed with no feature loss.",
                     style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
+            }
+        }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Text("Nearby deals", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Share your ${com.thrive.app.data.LocationProvider.ACCURACY_LABEL} so Thrive " +
+                        "ranks deals by the nearest store and shows how far each one is. It only goes " +
+                        "to the sync server you chose above, and you can turn it off any time.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                )
+                Spacer(Modifier.height(8.dp))
+                val locOn = syncStatus.hasNearby || repo.sharedLocation != null
+                if (locOn) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = accents.leaf,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Location on — deals ranked by distance",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = accents.leaf,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                    }
+                    if (syncStatus.nearbyStores.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Nearest stores: " + syncStatus.nearbyStores.joinToString(" · ") {
+                                "${it.store} ${com.thrive.app.util.Money.fmt(it.distMi).replace("$", "")} mi"
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { scope.launch { repo.clearLocation() } }) {
+                        Text("Turn off nearby deals", color = Color(0xFFB33A1F))
+                    }
+                } else if (locDenied && !com.thrive.app.data.LocationProvider.hasPermission(context)) {
+                    Text(
+                        text = "Location is off in system settings — deals aren't ranked by distance.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFFB33A1F),
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        Button(
+                            onClick = { openAppSettings() },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        ) {
+                            Text("Open app settings")
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        TextButton(onClick = { enableNearby() }) {
+                            Text("Try again")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { enableNearby() },
+                        enabled = !locWorking,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
+                    ) {
+                        Icon(Icons.Rounded.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (locWorking) "Finding nearest stores…" else "Use approximate location")
+                    }
+                }
+                if (locMessage != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = locMessage!!,
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                }
             }
         }
 
