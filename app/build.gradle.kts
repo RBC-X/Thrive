@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "1.3.7"
+        versionCode = 29
+        versionName = "1.3.8"
     }
 
     signingConfigs {
@@ -118,6 +118,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // Store logos are served as SVG by Wikimedia's Special:FilePath — Coil needs
+    // the SVG decoder artifact to render them (without it every logo is blank).
+    implementation("io.coil-kt:coil-svg:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     testImplementation("junit:junit:4.13.2")

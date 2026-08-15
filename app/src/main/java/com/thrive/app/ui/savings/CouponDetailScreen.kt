@@ -96,6 +96,7 @@ fun CouponDetailScreen(
                     category = coupon.category,
                     imageUrl = coupon.imageUrl,
                     logoUrl = coupon.storeLogoUrl,
+                    store = coupon.store,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(230.dp),
@@ -433,6 +434,7 @@ private fun SimilarDealCard(deal: Coupon, onClick: () -> Unit) {
             category = deal.category,
             imageUrl = deal.imageUrl,
             logoUrl = deal.storeLogoUrl,
+            store = deal.store,
             corner = 12.dp,
             modifier = Modifier.fillMaxWidth().height(84.dp),
             iconSize = 24.dp,

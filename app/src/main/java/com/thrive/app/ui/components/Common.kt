@@ -1,5 +1,6 @@
 package com.thrive.app.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,15 +37,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import com.thrive.app.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -279,24 +286,76 @@ fun FoodImage(
                 .size(iconSize),
         )
         if (!imageUrl.isNullOrBlank()) {
-            val ctx = LocalContext.current
-            AsyncImage(
-                model = ImageRequest.Builder(ctx)
-                    .data(imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            var failed by remember(imageUrl) { mutableStateOf(false) }
+            if (!failed) {
+                val ctx = LocalContext.current
+                AsyncImage(
+                    model = ImageRequest.Builder(ctx)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    onError = { failed = true },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
 
 /**
+ * Bundled store logos (res/drawable-nodpi) — every retail chain the catalog
+ * covers ships with its logo baked into the APK, so the logo shows instantly
+ * and offline, never depending on the network. Maps a store name to its
+ * drawable; null when the store isn't in the bundled set.
+ */
+object StoreLogos {
+    fun drawable(store: String): Int? = when (store.lowercase()) {
+        "aldi" -> R.drawable.store_logo_aldi
+        "amazon" -> R.drawable.store_logo_amazon
+        "apple" -> R.drawable.store_logo_apple
+        "best buy" -> R.drawable.store_logo_best_buy
+        "chick-fil-a" -> R.drawable.store_logo_chick_fil_a
+        "chipotle" -> R.drawable.store_logo_chipotle
+        "costco" -> R.drawable.store_logo_costco
+        "cvs" -> R.drawable.store_logo_cvs
+        "dollar general" -> R.drawable.store_logo_dollar_general
+        "dollar tree" -> R.drawable.store_logo_dollar_tree
+        "domino's" -> R.drawable.store_logo_dominos
+        "ebay" -> R.drawable.store_logo_ebay
+        "harbor freight" -> R.drawable.store_logo_harbor_freight
+        "home depot" -> R.drawable.store_logo_home_depot
+        "ikea" -> R.drawable.store_logo_ikea
+        "kroger" -> R.drawable.store_logo_kroger
+        "lowe's" -> R.drawable.store_logo_lowes
+        "mcdonald's" -> R.drawable.store_logo_mcdonalds
+        "newegg" -> R.drawable.store_logo_newegg
+        "office depot" -> R.drawable.store_logo_office_depot
+        "olive garden" -> R.drawable.store_logo_olive_garden
+        "panera" -> R.drawable.store_logo_panera
+        "pizza hut" -> R.drawable.store_logo_pizza_hut
+        "sam's club" -> R.drawable.store_logo_sams_club
+        "sephora" -> R.drawable.store_logo_sephora
+        "staples" -> R.drawable.store_logo_staples
+        "starbucks" -> R.drawable.store_logo_starbucks
+        "subway" -> R.drawable.store_logo_subway
+        "taco bell" -> R.drawable.store_logo_taco_bell
+        "target" -> R.drawable.store_logo_target
+        "trader joe's" -> R.drawable.store_logo_trader_joes
+        "ulta" -> R.drawable.store_logo_ulta
+        "walgreens" -> R.drawable.store_logo_walgreens
+        "walmart" -> R.drawable.store_logo_walmart
+        "whole foods" -> R.drawable.store_logo_whole_foods
+        else -> null
+    }
+}
+
+/**
  * Product image panel: the real product photo when one is verified; otherwise
- * the store's logo (a verified brand mark, never a random photo); otherwise a
- * clean branded gradient tile with the category icon.
+ * the store's bundled logo (always renders, even offline); otherwise the
+ * remote logo URL; otherwise a clean branded gradient tile with the category
+ * icon. A failed load steps down to the next tier — never a blank box.
  */
 @Composable
 fun ProductImage(
@@ -304,6 +363,7 @@ fun ProductImage(
     category: String,
     imageUrl: String? = null,
     logoUrl: String? = null,
+    store: String? = null,
     modifier: Modifier = Modifier,
     corner: Dp = 0.dp,
     iconSize: Dp = 36.dp,
@@ -322,18 +382,39 @@ fun ProductImage(
                 .align(Alignment.Center)
                 .size(iconSize),
         )
-        val show = imageUrl ?: logoUrl
-        if (!show.isNullOrBlank()) {
-            val ctx = LocalContext.current
-            AsyncImage(
-                model = ImageRequest.Builder(ctx)
-                    .data(show)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = if (imageUrl.isNullOrBlank()) ContentScale.Fit else ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+        var photoFailed by remember(imageUrl) { mutableStateOf(false) }
+        var logoFailed by remember(logoUrl) { mutableStateOf(false) }
+        val bundledLogo = store?.let { StoreLogos.drawable(it) }
+        val showRemote = when {
+            !imageUrl.isNullOrBlank() && !photoFailed -> imageUrl
+            bundledLogo == null && !logoUrl.isNullOrBlank() && !logoFailed -> logoUrl
+            else -> null
+        }
+        when {
+            !showRemote.isNullOrBlank() -> {
+                val isPhoto = showRemote == imageUrl
+                val ctx = LocalContext.current
+                AsyncImage(
+                    model = ImageRequest.Builder(ctx)
+                        .data(showRemote)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = if (isPhoto) ContentScale.Crop else ContentScale.Fit,
+                    onError = { if (isPhoto) photoFailed = true else logoFailed = true },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            bundledLogo != null -> {
+                Image(
+                    painter = painterResource(bundledLogo),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(6.dp),
+                )
+            }
         }
     }
 }

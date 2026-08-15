@@ -1,5 +1,10 @@
 {
   "notes": {
+    "1.3.8": [
+      "Images fixed across the app: every store logo is now bundled inside the app, so logos always show instantly — even offline",
+      "Real store logos added for 12 chains that had none (Kroger, Chipotle, Taco Bell, Home Depot, Newegg and more)",
+      "If an image ever fails to load, the card shows the store logo or a clean category tile — never a blank box"
+    ],
     "1.3.7": [
       "Smarter search: matches product, store, category, or brand (\"kirkland\" finds every Kirkland Signature deal), and results are ranked by how much you save",
       "New Stores tab: every deal grouped by store, nearest stores first when you share your location, expand any store to see its full list",

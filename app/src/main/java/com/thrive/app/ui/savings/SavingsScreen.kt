@@ -274,6 +274,7 @@ private fun MiniDealCard(coupon: Coupon, onClick: () -> Unit) {
                 category = coupon.category,
                 imageUrl = coupon.imageUrl,
                 logoUrl = coupon.storeLogoUrl,
+                store = coupon.store,
                 corner = 12.dp,
                 modifier = Modifier.size(110.dp),
                 iconSize = 24.dp,
@@ -378,6 +379,7 @@ private fun StoreHeader(section: StoreSection, isOpen: Boolean, onClick: () -> U
             category = "Grocery",
             imageUrl = null,
             logoUrl = section.coupons.firstOrNull()?.storeLogoUrl,
+            store = section.store,
             corner = 12.dp,
             modifier = Modifier.size(44.dp),
             iconSize = 20.dp,
@@ -860,6 +862,7 @@ fun DealCard(
                 category = coupon.category,
                 imageUrl = coupon.imageUrl,
                 logoUrl = coupon.storeLogoUrl,
+                store = coupon.store,
                 corner = 16.dp,
                 modifier = Modifier
                     .size(104.dp),
