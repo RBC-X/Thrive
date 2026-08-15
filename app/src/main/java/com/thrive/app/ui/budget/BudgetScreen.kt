@@ -1,7 +1,7 @@
 package com.thrive.app.ui.budget
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -527,7 +527,7 @@ private fun ShoppingItemRow(
                 style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
             )
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onRemove) {
             Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
         QuantityStepper(
@@ -1125,7 +1125,7 @@ private fun ResolvedItemRow(resolved: ResolvedItem, onToggle: () -> Unit) {
                         modifier = Modifier.clickable {
                             runCatching {
                                 context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, android.net.Uri.parse(resolved.dealUrl))
+                                    Intent(Intent.ACTION_VIEW, resolved.dealUrl.toUri())
                                 )
                             }
                         },

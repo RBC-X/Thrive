@@ -142,28 +142,11 @@ data class SavingsUiState(
      * Deterministic "deal of the day" so the feed always has a hero: the
      * strongest deal (big cut, real dollar savings, little time left, fresh)
      * rotating daily among the top three — a genuinely great offer, never a
-     * random catalog index.
+     * random catalog index. Index is clamped so a small (or single-item)
+     * catalog never throws — see [pickDailyPick].
      */
     val dailyPick: Coupon?
-        get() {
-            if (available.isEmpty()) return null
-            val day = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-            fun strength(c: Coupon): Double {
-                var s = c.discountPercent.toDouble()
-                s += ((c.priceBefore - c.priceAfter) / 10.0).coerceAtMost(20.0)
-                if (c.endsInDays <= 3) s += 18
-                else if (c.endsInDays <= 7) s += 9
-                if (c.isNew) s += 6
-                return s
-            }
-            val ranked = available.sortedWith(
-                compareByDescending<Coupon> { strength(it) }
-                    .thenBy { kotlin.math.abs((it.id + day.toString()).hashCode()) }
-            )
-            // Clamp so a small (or single-item) catalog never throws — the hero
-            // is the strongest offer when fewer than three exist.
-            return ranked[minOf(day % 3, ranked.size - 1)]
-        }
+        get() = pickDailyPick(available, Calendar.getInstance().get(Calendar.DAY_OF_YEAR))
 
     /**
      * User-relevant savings claim: only deals the user actually saved (favorited)
@@ -176,6 +159,30 @@ data class SavingsUiState(
             if (fav.isEmpty()) return null
             return (fav.sumOf { it.priceBefore - it.priceAfter }) to fav.size
         }
+}
+
+/**
+ * Pure "deal of the day" selection so the feed hero is deterministic and
+ * provably safe for any catalog size: null on empty, the single item when the
+ * feed has one, otherwise a member of the strongest offers rotating by day.
+ */
+internal fun pickDailyPick(available: List<Coupon>, day: Int): Coupon? {
+    if (available.isEmpty()) return null
+    fun strength(c: Coupon): Double {
+        var s = c.discountPercent.toDouble()
+        s += ((c.priceBefore - c.priceAfter) / 10.0).coerceAtMost(20.0)
+        if (c.endsInDays <= 3) s += 18
+        else if (c.endsInDays <= 7) s += 9
+        if (c.isNew) s += 6
+        return s
+    }
+    val ranked = available.sortedWith(
+        compareByDescending<Coupon> { strength(it) }
+            .thenBy { kotlin.math.abs((it.id + day.toString()).hashCode()) }
+    )
+    // Clamp so a small (or single-item) catalog never throws — the hero is the
+    // strongest offer when fewer than three exist.
+    return ranked[minOf(day % 3, ranked.size - 1)]
 }
 
 class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {

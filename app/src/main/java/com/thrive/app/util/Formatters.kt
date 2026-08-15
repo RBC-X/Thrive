@@ -1,18 +1,50 @@
 package com.thrive.app.util
 
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+/**
+ * User-facing display formatting. Display values follow the user's locale
+ * (so a comma-decimal locale reads "$1,50" and grouping reads naturally);
+ * machine values, URLs, and stored/protocol fields must never go through
+ * these — they use explicit Locale.US/ROOT formatting at the call site.
+ */
 object Money {
-    fun fmt(value: Double): String {
+    /** User-facing price with a locale-aware decimal separator and grouping. */
+    fun fmt(value: Double, locale: Locale = Locale.getDefault()): String {
         val v = if (value < 0) 0.0 else value
-        return String.format(Locale.US, "$%.2f", v)
+        val nf = NumberFormat.getNumberInstance(locale).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        return "$" + nf.format(v)
     }
 
-    fun fmtCompact(value: Double): String = String.format(Locale.US, "$%.0f", value)
+    /** User-facing whole-dollar price ("$5") with locale-aware grouping. */
+    fun fmtCompact(value: Double, locale: Locale = Locale.getDefault()): String {
+        val v = if (value < 0) 0.0 else value
+        return "$" + NumberFormat.getIntegerInstance(locale).format(Math.round(v))
+    }
+}
+
+/** User-facing distances (miles) with a locale-aware decimal separator. */
+object Distances {
+    fun mi(mi: Double, locale: Locale = Locale.getDefault()): String {
+        val nf = NumberFormat.getNumberInstance(locale).apply {
+            if (mi < 10) {
+                minimumFractionDigits = 1
+                maximumFractionDigits = 1
+            } else {
+                minimumFractionDigits = 0
+                maximumFractionDigits = 0
+            }
+        }
+        return nf.format(mi) + " mi"
+    }
 }
 
 object Dates {

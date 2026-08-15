@@ -11,6 +11,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -124,7 +126,8 @@ class DownloadReceiver : BroadcastReceiver() {
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             PackageManager.GET_SIGNING_CERTIFICATES
         } else {
-            @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
+            @Suppress("DEPRECATION")
+            PackageManager.GET_SIGNATURES
         }
         val archive = pm.getPackageArchiveInfo(file.absolutePath, flags)
             ?: throw DownloadException("Not a valid APK")
@@ -149,7 +152,8 @@ class DownloadReceiver : BroadcastReceiver() {
         val signatures: List<Signature> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             info.signingInfo?.apkContentsSigners?.toList() ?: emptyList()
         } else {
-            @Suppress("DEPRECATION") info.signatures?.toList() ?: emptyList()
+            @Suppress("DEPRECATION")
+            info.signatures?.toList() ?: emptyList()
         }
         return signatures.map { sha256Hex(it.toByteArray()) }
     }
@@ -192,7 +196,7 @@ class DownloadReceiver : BroadcastReceiver() {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
         fun canRequestInstalls(context: Context): Boolean =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
+            context.packageManager.canRequestPackageInstalls()
 
         /**
          * Launches the system installer, or persists the request and opens the
@@ -201,14 +205,14 @@ class DownloadReceiver : BroadcastReceiver() {
          */
         private fun install(context: Context, file: File, url: String, version: String): Boolean {
             if (!canRequestInstalls(context)) {
-                prefs(context).edit()
-                    .putString(KEY_URL, url)
-                    .putString(KEY_VERSION, version)
-                    .putString(KEY_FILE, file.absolutePath)
-                    .apply()
+                prefs(context).edit {
+                    putString(KEY_URL, url)
+                    putString(KEY_VERSION, version)
+                    putString(KEY_FILE, file.absolutePath)
+                }
                 val settings = Intent(
                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:${context.packageName}"),
+                    "package:${context.packageName}".toUri(),
                 ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 runCatching { context.startActivity(settings) }
                 return false
@@ -232,11 +236,11 @@ class DownloadReceiver : BroadcastReceiver() {
             val filePath = p.getString(KEY_FILE, null) ?: return false
             val file = File(filePath)
             if (!file.exists()) {
-                p.edit().clear().apply() // download never persisted; periodic check re-offers
+                p.edit { clear() } // download never persisted; periodic check re-offers
                 return false
             }
             if (!canRequestInstalls(context)) return false // keep waiting
-            p.edit().clear().apply()
+            p.edit { clear() }
             val version = p.getString(KEY_VERSION, "") ?: ""
             return install(context, file, url, version)
         }

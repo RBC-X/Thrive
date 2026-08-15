@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,7 +70,12 @@ fun RecipeDetailScreen(
     onAddToShoppingList: () -> Unit,
 ) {
     val state by recipesVm.state.collectAsState()
-    val recipe = state.recipes.firstOrNull { it.id == recipeId } ?: return
+    val recipe = state.recipes.firstOrNull { it.id == recipeId }
+    if (recipe == null) {
+        // Honest state for a missing/deleted recipe — never a blank screen.
+        MissingRecipe(onBack = onBack)
+        return
+    }
     val isFavorite = recipe.id in state.favorites
     val context = LocalContext.current
 
@@ -339,5 +345,29 @@ private fun StepRow(index: Int, step: String, checked: Boolean, onToggle: () -> 
             ),
             modifier = Modifier.padding(top = 2.dp),
         )
+    }
+}
+
+/** Honest state when a recipe no longer exists in the feed. */
+@Composable
+private fun MissingRecipe(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "This recipe is no longer available",
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "It left the collection — pick another meal from the Recipes tab.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+        )
+        Spacer(Modifier.height(20.dp))
+        TextButton(onClick = onBack) {
+            Text("Back to recipes")
+        }
     }
 }

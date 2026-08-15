@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,6 +52,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -368,7 +371,7 @@ private fun PlanWeekCta(enabled: Boolean, loading: Boolean, fromPantry: Boolean,
 private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val accents = LocalThriveColors.current
-    var people by remember { mutableStateOf(4) }
+    var people by remember { mutableIntStateOf(4) }
     var budgetText by remember { mutableStateOf("75") }
     var focus by remember { mutableStateOf("balanced") }
     val quickBudgets = listOf(50.0, 75.0, 100.0, 125.0)
@@ -556,7 +559,7 @@ private fun UseItUpStrip(items: List<PantryItem>, onRemove: (PantryItem) -> Unit
                             fontWeight = FontWeight.Bold,
                         ),
                     )
-                    IconButton(onClick = { onRemove(item) }, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = { onRemove(item) }) {
                         Icon(Icons.Rounded.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                     }
                 }
@@ -825,7 +828,7 @@ private fun SuggestionCard(suggestion: MealSuggestion, onClick: () -> Unit, onDi
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+            IconButton(onClick = onDismiss) {
                 Icon(Icons.Rounded.Close, contentDescription = "Dismiss", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             }
         }
@@ -942,7 +945,7 @@ private fun PantryItemRow(
                 }
             }
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(30.dp)) {
+        IconButton(onClick = onRemove) {
             Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(4.dp))
@@ -1003,7 +1006,7 @@ private fun AddItemSheet(vm: PantryViewModel, onDismiss: () -> Unit) {
     val catalog = vm.catalog
     var query by remember { mutableStateOf("") }
     var selectedName by remember { mutableStateOf<String?>(null) }
-    var qty by remember { mutableStateOf(1) }
+    var qty by remember { mutableIntStateOf(1) }
     var location by remember { mutableStateOf("Fridge") }
     var expiryDays by remember { mutableStateOf<Int?>(null) }
 
@@ -1118,7 +1121,14 @@ private fun SelectedItemConfig(
     onBack: () -> Unit,
 ) {
     val accents = LocalThriveColors.current
-    Column(Modifier.fillMaxWidth()) {
+    // Scrollable so the confirm button stays reachable at large font scales
+    // (the sheet clamps its height, and an un-scrollable config would clip the
+    // action below the fold).
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = name.replaceFirstChar { it.uppercase() },

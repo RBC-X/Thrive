@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.thrive.app.MainActivity
 import com.thrive.app.data.remote.UpdateInfo
 
 /** Posts the "update available" notification and points it at the downloader. */
@@ -23,17 +24,22 @@ object UpdateNotifier {
     const val EXTRA_SIZE = "extra_apk_size"
 
     fun ensureChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "App updates",
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply { description = "New Thrive releases" }
-            manager.createNotificationChannel(channel)
-        }
+        // minSdk is 26, so the notification channel API is always available.
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "App updates",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply { description = "New Thrive releases" }
+        manager.createNotificationChannel(channel)
     }
 
+    /**
+     * Body tap opens the app (where the in-app update dialog appears); the
+     * "Update now" action button routes to the [DownloadReceiver] broadcast,
+     * which is the lint-sanctioned shape: receivers belong on actions, the
+     * body opens a destination.
+     */
     fun notifyAvailable(context: Context, update: UpdateInfo) {
         ensureChannel(context)
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -43,23 +49,40 @@ object UpdateNotifier {
             return
         }
 
-        val tap = Intent(context, DownloadReceiver::class.java).apply {
+        // Body tap: open the app with the update details so the in-app dialog
+        // shows "Update now" — no surprise background download.
+        val openApp = Intent(context, MainActivity::class.java).apply {
+            putExtra(EXTRA_URL, update.apkUrl)
+            putExtra(EXTRA_VERSION, update.versionName)
+            putExtra(EXTRA_SIZE, update.apkSizeBytes)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        val contentPending = PendingIntent.getActivity(
+            context,
+            0,
+            openApp,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        // Action button: start the download + install flow directly.
+        val download = Intent(context, DownloadReceiver::class.java).apply {
             putExtra(EXTRA_URL, update.apkUrl)
             putExtra(EXTRA_VERSION, update.versionName)
             putExtra(EXTRA_SIZE, update.apkSizeBytes)
         }
-        val pending = PendingIntent.getBroadcast(
+        val downloadPending = PendingIntent.getBroadcast(
             context,
-            0,
-            tap,
+            1,
+            download,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("Thrive update available")
-            .setContentText("Version ${update.versionName} — tap to download and install")
-            .setContentIntent(pending)
+            .setContentText("Version ${update.versionName} — tap to see what's new")
+            .setContentIntent(contentPending)
+            .addAction(0, "Update now", downloadPending)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -99,7 +122,7 @@ object UpdateNotifier {
             }
             val pending = PendingIntent.getBroadcast(
                 context,
-                1,
+                2,
                 retry,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )

@@ -171,9 +171,17 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
 
     fun clearPlanForEdit() = _state.update { it.copy(plan = null) }
 
+    private var planJob: Job? = null
+
+    /**
+     * Computes the trip plan. A previous in-flight computation is cancelled so
+     * a rapid double-tap can't let an older, slower result overwrite the newer
+     * one (stale plan replacing the fresh answer).
+     */
     fun findDeals() {
+        planJob?.cancel()
         _state.update { it.copy(isPlanning = true, plan = null) }
-        viewModelScope.launch {
+        planJob = viewModelScope.launch {
             val s = _state.value
             val plan = withContext(Dispatchers.Default) {
                 engine.plan(s.items, repo.deals, s.budget, s.people)

@@ -11,19 +11,44 @@ import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.model.Recipe
 import com.thrive.app.data.model.ShoppingItem
 import com.thrive.app.data.remote.ApiClient
+import com.thrive.app.data.remote.HttpResult
 import com.thrive.app.data.remote.SyncPayload
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.data.remote.SyncStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
+/** Network boundary for the sync feed — swapped for a fake in repository tests. */
+fun interface SyncFetcher {
+    suspend fun get(url: String, ifNoneMatch: String?): HttpResult
+}
+
+/** Real implementation of [SyncFetcher] backed by [ApiClient]. */
+object ApiClientFetcher : SyncFetcher {
+    override suspend fun get(url: String, ifNoneMatch: String?): HttpResult =
+        ApiClient.get(url, ifNoneMatch)
+}
+
 /** Single source of truth for bundled content, remote sync, and user state. */
-class ThriveRepository(context: Context, private val settings: SettingsStore) {
+class ThriveRepository(
+    context: Context,
+    private val settings: SettingsStore,
+    private val fetcher: SyncFetcher = ApiClientFetcher,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) {
 
     private val appContext = context.applicationContext
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -36,8 +61,10 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
     // Remote data replaces the bundled feed after a successful sync; the
     // bundled datasets remain the offline fallback until then (and forever if
     // no server is configured/reachable). The last-good live feed is persisted
-    // so a process restart (or a 304 "nothing changed" answer) keeps showing
-    // the live catalog instead of silently falling back to bundled.
+    // ATOMICALLY alongside its ETag and a cache schema version, so a process
+    // restart (or a 304 "nothing changed" answer) keeps showing the live
+    // catalog instead of silently falling back to bundled — and a persisted
+    // ETag is never sent before the payload it belongs to is restored.
     private val cacheFile = java.io.File(appContext.filesDir, "sync_payload.json")
 
     @Volatile private var remoteCoupons: List<Coupon>? = null
@@ -45,28 +72,66 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
     @Volatile private var remoteDeals: List<Deal>? = null
     @Volatile private var remoteCatalog: List<CatalogItem>? = null
 
+    // Sync is serialized so rapid refreshes and simultaneous initial/manual
+    // syncs can't interleave reads/writes or double-fire the 304 retry.
+    private val syncMutex = Mutex()
+
+    private var hydrationJob: Job? = null
+
     init {
-        restoreCachedPayload()
+        // Hydrate the persisted live feed off the main thread so startup never
+        // blocks on reading/parsing the cached payload.
+        hydrationJob = scope.launch { restoreCachedPayload() }
     }
 
-    /** Loads the last successfully-synced payload from disk (empty cache = no-op). */
+    /** Test hook: wait until the persisted cache has been restored. */
+    internal suspend fun awaitHydration() {
+        hydrationJob?.join()
+    }
+
+    /**
+     * Loads the last successfully-synced payload from disk. The cached ETag
+     * travels with the payload so they can never disagree; a corrupt,
+     * truncated, or schema-incompatible cache is deleted and the ETag cleared
+     * so the next sync does an unconditional refresh instead of dead-ending
+     * on a 304 with nothing to show.
+     */
     private fun restoreCachedPayload() {
         try {
             if (!cacheFile.exists()) return
-            val payload = json.decodeFromString(SyncPayload.serializer(), cacheFile.readText())
-            if (payload.coupons.isNotEmpty()) remoteCoupons = payload.coupons
-            if (payload.recipes.isNotEmpty()) remoteRecipes = payload.recipes
-            if (payload.deals.isNotEmpty()) remoteDeals = payload.deals
-            if (payload.catalog.isNotEmpty()) remoteCatalog = payload.catalog
+            val cached = json.decodeFromString(SyncCacheFile.serializer(), cacheFile.readText())
+            if (cached.version != SYNC_CACHE_VERSION) {
+                cacheFile.delete()
+                settings.remove(KEY_SYNC_ETAG)
+                return
+            }
+            cached.etag?.let { settings.putString(KEY_SYNC_ETAG, it) }
+            if (cached.payload.coupons.isNotEmpty()) remoteCoupons = cached.payload.coupons
+            if (cached.payload.recipes.isNotEmpty()) remoteRecipes = cached.payload.recipes
+            if (cached.payload.deals.isNotEmpty()) remoteDeals = cached.payload.deals
+            if (cached.payload.catalog.isNotEmpty()) remoteCatalog = cached.payload.catalog
         } catch (_: Exception) {
-            cacheFile.delete() // corrupt cache — never block startup
+            // Corrupt cache — never block startup. Drop the payload and its
+            // ETag so the next sync fetches unconditionally.
+            cacheFile.delete()
+            settings.remove(KEY_SYNC_ETAG)
         }
     }
 
-    /** Persists the last-good live payload so restarts keep the live feed. */
-    private fun cachePayload(payload: SyncPayload) {
+    /** Persists the last-good live payload + ETag atomically (temp + rename). */
+    private fun cachePayload(payload: SyncPayload, etag: String?) {
         try {
-            cacheFile.writeText(json.encodeToString(SyncPayload.serializer(), payload))
+            val parent = cacheFile.parentFile
+            val tmp = java.io.File(parent, cacheFile.name + ".tmp")
+            val encoded = json.encodeToString(
+                SyncCacheFile.serializer(),
+                SyncCacheFile(SYNC_CACHE_VERSION, etag, payload),
+            )
+            tmp.writeText(encoded)
+            if (!tmp.renameTo(cacheFile)) {
+                tmp.delete()
+                cacheFile.writeText(encoded) // non-atomic last resort (e.g. locked dir)
+            }
         } catch (_: Exception) {
             /* cache is best-effort */
         }
@@ -113,9 +178,18 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
 
     /**
      * Pulls the latest feed from the configured Thrive sync API. Non-fatal by
-     * design: any failure leaves the bundled/previous data in place.
+     * design: any failure leaves the bundled/previous data in place. Serialized
+     * by a mutex so concurrent calls can't interleave.
      */
     suspend fun syncNow(force: Boolean = false) {
+        syncMutex.withLock { doSync(force) }
+    }
+
+    private suspend fun doSync(force: Boolean) {
+        // Never send a persisted ETag before the payload it belongs to has been
+        // restored — otherwise a 304 on a cold start dead-ends on bundled data.
+        awaitHydration()
+
         _syncState.update { it.copy(status = SyncStatus.SYNCING, error = null) }
         val base = syncBaseUrl
         if (base.isBlank()) {
@@ -125,35 +199,38 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
             return
         }
         runCatching {
-            val etag = settings.getString(KEY_SYNC_ETAG, null)
-            val loc = sharedLocation
-            val url = if (loc != null) {
-                // Round to ~6 decimals (~0.1 m) — plenty for store distance, keeps
-                // URLs short and the server-side location cache bucketing stable.
-                "$base/api/v1/sync?lat=${(Math.round(loc.first * 1e6) / 1e6)}&lng=${(Math.round(loc.second * 1e6) / 1e6)}"
-            } else {
-                "$base/api/v1/sync"
+            var result = fetch(base, force)
+            if (result.code == 304 && remoteCoupons == null) {
+                // Cold start with a persisted ETag but no usable cached payload:
+                // the server says nothing changed, but we have nothing to show.
+                // Retry once WITHOUT If-None-Match so the live feed loads.
+                result = fetch(base, force = true)
             }
-            val result = ApiClient.get(url, if (force) null else etag)
             when {
                 result.code == 304 -> {
                     if (remoteCoupons == null) {
-                        // A fresh process with no in-memory live data: the ETag
-                        // says nothing changed, but we have nothing to show.
-                        // Force a full fetch once so the live feed actually loads.
-                        syncNow(force = true)
-                        return
-                    }
-                    // Nothing changed server-side; keep current data.
-                    _syncState.update {
-                        it.copy(
-                            status = SyncStatus.OK,
-                            lastSyncedAt = System.currentTimeMillis(),
-                            // Keep whatever origin the current coupons came from:
-                            // 304 means nothing changed, so the on-screen set is
-                            // still live if it was live before.
-                            feedOrigin = "live",
-                        )
+                        // Server kept answering 304 with no usable local payload
+                        // — the conditional request cannot be satisfied. Show
+                        // bundled data honestly labeled, and surface the state.
+                        _syncState.update {
+                            it.copy(
+                                status = SyncStatus.ERROR,
+                                error = "Server reported no changes but no cached feed exists",
+                                feedOrigin = "bundled",
+                            )
+                        }
+                    } else {
+                        // Nothing changed server-side; keep current data.
+                        _syncState.update {
+                            it.copy(
+                                status = SyncStatus.OK,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                // Keep whatever origin the current coupons came
+                                // from: 304 means nothing changed, so the
+                                // on-screen set is still live if it was live.
+                                feedOrigin = "live",
+                            )
+                        }
                     }
                 }
                 result.code in 200..299 -> {
@@ -163,15 +240,19 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                     remoteRecipes = payload.recipes.ifEmpty { remoteRecipes }
                     remoteDeals = payload.deals.ifEmpty { remoteDeals }
                     remoteCatalog = payload.catalog.ifEmpty { remoteCatalog }
-                    cachePayload(payload)
-                    result.etag?.let { settings.putString(KEY_SYNC_ETAG, it) }
+                    val etag = result.etag
+                    etag?.let { settings.putString(KEY_SYNC_ETAG, it) }
+                    cachePayload(payload, etag ?: settings.getString(KEY_SYNC_ETAG, null))
                     _syncState.update {
                         it.copy(
                             status = SyncStatus.OK,
                             lastSyncedAt = System.currentTimeMillis(),
                             source = payload.source,
                             update = payload.update,
-                            feedOrigin = if (couponsFromServer) "live" else "bundled",
+                            // Label what's actually on screen: live when the
+                            // server sent coupons OR we kept last-good live
+                            // data; bundled otherwise.
+                            feedOrigin = if (couponsFromServer || remoteCoupons != null) "live" else "bundled",
                             locationEnabled = payload.location != null || it.locationEnabled,
                             locationLat = payload.location?.lat ?: it.locationLat,
                             locationLng = payload.location?.lng ?: it.locationLng,
@@ -190,6 +271,19 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
                 )
             }
         }
+    }
+
+    private suspend fun fetch(base: String, force: Boolean): HttpResult {
+        val etag = settings.getString(KEY_SYNC_ETAG, null)
+        val loc = sharedLocation
+        val url = if (loc != null) {
+            // Round to ~6 decimals (~0.1 m) — plenty for store distance, keeps
+            // URLs short and the server-side location cache bucketing stable.
+            "$base/api/v1/sync?lat=${(Math.round(loc.first * 1e6) / 1e6)}&lng=${(Math.round(loc.second * 1e6) / 1e6)}"
+        } else {
+            "$base/api/v1/sync"
+        }
+        return fetcher.get(url, if (force) null else etag)
     }
 
     // ---- Pantry ----
@@ -291,3 +385,14 @@ class ThriveRepository(context: Context, private val settings: SettingsStore) {
         const val SYNC_URL_KEY = KEY_SYNC_URL
     }
 }
+
+/** Bump to invalidate previously cached payloads after a format change. */
+private const val SYNC_CACHE_VERSION = 2
+
+/** On-disk shape of the sync cache: payload + its ETag + a schema version. */
+@Serializable
+private data class SyncCacheFile(
+    val version: Int = SYNC_CACHE_VERSION,
+    val etag: String? = null,
+    val payload: SyncPayload = SyncPayload(),
+)

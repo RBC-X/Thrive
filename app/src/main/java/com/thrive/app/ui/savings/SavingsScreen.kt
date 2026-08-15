@@ -70,7 +70,7 @@ import com.thrive.app.ui.components.StrikePrice
 import com.thrive.app.ui.components.StoreAvatar
 import com.thrive.app.ui.theme.DealCoral
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.ui.platform.LocalContext
 import com.thrive.app.BuildConfig
 import com.thrive.app.data.remote.UpdateInfo
@@ -89,47 +89,65 @@ fun SavingsScreen(
     val state by vm.state.collectAsState()
     var expandedStores by rememberSaveable { mutableStateOf(setOf<String>()) }
 
+    // The derived feed views sort/filter the full catalog (4,000+ offers), so
+    // they're computed once per input change instead of on every access — the
+    // LazyColumn and its children would otherwise re-run the sort repeatedly
+    // on the main thread during each recomposition.
+    val filtered = remember(state.coupons, state.category, state.query, state.mode) { state.filtered }
+    val storeSections = remember(state.coupons, state.category, state.query, state.mode) { state.storeSections }
+    val categories = remember(state.coupons) { state.categories }
+    val newThisWeek = remember(state.coupons) { state.newThisWeek }
+    val dailyPick = remember(state.coupons) { state.dailyPick }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp),
     ) {
-        item { SavingsHeader(state, onOpenSettings = onOpenSettings, onRefresh = vm::refreshNow) }
+        item {
+            SavingsHeader(
+                state = state,
+                verifiedCount = filtered.size,
+                hiddenCount = state.hiddenUnverified,
+                onOpenSettings = onOpenSettings,
+                onRefresh = vm::refreshNow,
+            )
+        }
         state.sync.update?.let { update ->
             if (state.sync.isLive && isNewerVersion(update.versionName, BuildConfig.VERSION_NAME)) {
                 item { UpdateBanner(update) }
             }
         }
         if (state.mode == "Deals") {
-            state.dailyPick?.let { pick ->
+            dailyPick?.let { pick ->
                 item { DailyPickHero(pick, onClick = { onOpenCoupon(pick.id) }) }
             }
-            item { SavingsSummaryStrip(state) }
+            item { SavingsSummaryStrip(state, filtered) }
         } else {
             item { StoresIntro(state) }
         }
-        if (state.mode == "Deals" && state.query.isBlank() && state.newThisWeek.isNotEmpty()) {
+        if (state.mode == "Deals" && state.query.isBlank() && newThisWeek.isNotEmpty()) {
             item { SectionHeader("New this week", "Fresh offers, while they last") }
             item {
                 NewThisWeekShelf(
-                    deals = state.newThisWeek,
+                    deals = newThisWeek,
                     onOpen = { onOpenCoupon(it.id) },
                 )
             }
         }
         item { SearchField(query = state.query, onQuery = vm::setQuery) }
         item { ModeTabs(mode = state.mode, onSelect = vm::setMode) }
-        item { CategoryChips(state.category, state.categories, vm::selectCategory) }
+        item { CategoryChips(state.category, categories, vm::selectCategory) }
         if (state.mode == "Deals") {
             item {
                 Text(
-                    text = if (state.filtered.isEmpty()) "No deals match" else "${state.filtered.size} deals",
+                    text = if (filtered.isEmpty()) "No deals match" else "${filtered.size} deals",
                     style = MaterialTheme.typography.labelMedium.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
             }
-            if (state.filtered.isEmpty()) {
+            if (filtered.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
                         Text("Try a different search or category.",
@@ -138,7 +156,7 @@ fun SavingsScreen(
                     }
                 }
             }
-            items(state.filtered, key = { it.id }) { coupon ->
+            items(filtered, key = { it.id }) { coupon ->
                 DealCard(
                     coupon = coupon,
                     isFavorite = coupon.id in state.favorites,
@@ -148,7 +166,7 @@ fun SavingsScreen(
             }
         } else {
             StoresList(
-                sections = state.storeSections,
+                sections = storeSections,
                 favorites = state.favorites,
                 expandedStores = expandedStores,
                 onToggleStore = { store ->
@@ -435,8 +453,7 @@ private fun StoreHeader(section: StoreSection, isOpen: Boolean, onClick: () -> U
     }
 }
 
-private fun formatMi(mi: Double): String =
-    if (mi < 10) String.format("%.1f mi", mi) else String.format("%.0f mi", mi)
+private fun formatMi(mi: Double): String = com.thrive.app.util.Distances.mi(mi)
 
 @Composable
 private fun UpdateBanner(update: UpdateInfo) {
@@ -482,7 +499,7 @@ private fun UpdateBanner(update: UpdateInfo) {
         }
         TextButton(onClick = {
             if (update.apkUrl.isNotBlank()) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.apkUrl))
+                val intent = Intent(Intent.ACTION_VIEW, update.apkUrl.toUri())
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 runCatching { context.startActivity(intent) }
             }
@@ -493,7 +510,13 @@ private fun UpdateBanner(update: UpdateInfo) {
 }
 
 @Composable
-private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onRefresh: () -> Unit) {
+private fun SavingsHeader(
+    state: SavingsUiState,
+    verifiedCount: Int,
+    hiddenCount: Int,
+    onOpenSettings: () -> Unit,
+    onRefresh: () -> Unit,
+) {
     val accents = LocalThriveColors.current
     Row(
         modifier = Modifier
@@ -536,7 +559,7 @@ private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onR
             }
             // Honest availability: only offers with a verified direct product
             // link are shown. Tell the user when some feed items were hidden.
-            if (state.hiddenUnverified > 0) {
+            if (hiddenCount > 0) {
                 Spacer(Modifier.height(6.dp))
                 Row(
                     modifier = Modifier
@@ -553,8 +576,8 @@ private fun SavingsHeader(state: SavingsUiState, onOpenSettings: () -> Unit, onR
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Showing ${state.filtered.size} verified deals — " +
-                            "${state.hiddenUnverified} offers without a verified product link are hidden.",
+                        text = "Showing $verifiedCount verified deals — " +
+                            "$hiddenCount offers without a verified product link are hidden.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
@@ -764,9 +787,9 @@ private fun DailyPickHero(coupon: Coupon, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SavingsSummaryStrip(state: SavingsUiState) {
+private fun SavingsSummaryStrip(state: SavingsUiState, filtered: List<Coupon>) {
     val accents = LocalThriveColors.current
-    if (state.filtered.isEmpty()) return
+    if (filtered.isEmpty()) return
     Row(
         modifier = Modifier
             .padding(horizontal = 20.dp, vertical = 14.dp)
@@ -790,7 +813,7 @@ private fun SavingsSummaryStrip(state: SavingsUiState) {
         val headline = if (favSavings != null)
             "Your saved deals save you up to ${Money.fmt(favSavings.first)} across ${favSavings.second} items"
         else
-            "${state.filtered.size} fresh deals today — each offer shows its own savings"
+            "${filtered.size} fresh deals today — each offer shows its own savings"
         Text(
             text = headline,
             style = MaterialTheme.typography.bodyMedium.copy(
@@ -843,7 +866,7 @@ private fun CategoryChips(selected: String, categories: List<String>, onSelect: 
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .clickable { onSelect(category) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
             ) {
                 Text(
                     text = category,
@@ -908,11 +931,11 @@ fun DealCard(
                     .size(104.dp),
                 iconSize = 28.dp,
             )
+            // Default IconButton size (48dp touch target); the heart itself
+            // stays small inside it.
             IconButton(
                 onClick = onFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(30.dp),
+                modifier = Modifier.align(Alignment.TopEnd),
             ) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,

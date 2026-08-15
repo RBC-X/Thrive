@@ -82,15 +82,14 @@ object ReEngagement {
     }
 
     fun ensureChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Deal reminders",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply { description = "A short nudge when you haven't opened Thrive in a while" }
-            manager.createNotificationChannel(channel)
-        }
+        // minSdk is 26, so the notification channel API is always available.
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Deal reminders",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply { description = "A short nudge when you haven't opened Thrive in a while" }
+        manager.createNotificationChannel(channel)
     }
 
     /** Posts the reminder; silently skips when notifications are denied. */

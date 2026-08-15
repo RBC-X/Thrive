@@ -144,9 +144,12 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
         }
     }
 
+    private var mealsJob: Job? = null
+
     fun generateMeals(focus: String = "balanced") {
+        mealsJob?.cancel()
         _state.update { it.copy(isLoadingMeals = true, suggestions = null) }
-        viewModelScope.launch {
+        mealsJob = viewModelScope.launch {
             val items = _state.value.items
             val suggestions = withContext(Dispatchers.Default) {
                 engine.suggest(items, repo.recipes, focus = focus, limit = 3)
@@ -159,7 +162,7 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
                             mealName = s.recipe.name,
                             usedItems = s.usedItems,
                             missingItems = s.missingItems.map { it.name },
-                            budgetHint = "$" + String.format("%.0f", s.recipe.costDollars) + " total",
+                            budgetHint = com.thrive.app.util.Money.fmtCompact(s.recipe.costDollars) + " total",
                         )
                     }.getOrNull()
                 } else null
@@ -174,17 +177,22 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     // ---- On-device recipe generator ("pocket AI") ----
 
     private var recipeVariant = 0
+    private var recipeJob: Job? = null
 
     /**
      * Compose a brand-new recipe from the current pantry. Runs fully on-device
      * and offline; no API key or network needed. The same pantry + variant
-     * always yields the same recipe, so it's stable and testable.
+     * always yields the same recipe, so it's stable and testable. A previous
+     * in-flight generation is cancelled so rapid "Try another" taps always end
+     * on the newest recipe, never a slower earlier one.
      */
     fun generateNewRecipe() {
+        recipeJob?.cancel()
         _state.update { it.copy(isGeneratingRecipe = true, generatedRecipe = null) }
-        viewModelScope.launch {
+        recipeJob = viewModelScope.launch {
+            val items = _state.value.items
             val result = withContext(Dispatchers.Default) {
-                RecipeMakerEngine.generate(_state.value.items, variant = recipeVariant)
+                RecipeMakerEngine.generate(items, variant = recipeVariant)
             }
             _state.update { it.copy(generatedRecipe = result, isGeneratingRecipe = false) }
         }
@@ -218,11 +226,13 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
 
     private val planner = WeeklyPlannerEngine
     private var lastPlanParams: Triple<Int, Double, String>? = null
+    private var weekPlanJob: Job? = null
 
     fun generateWeeklyPlan(people: Int, budget: Double, focus: String = "balanced") {
+        weekPlanJob?.cancel()
         lastPlanParams = Triple(people, budget, focus)
         _state.update { it.copy(isPlanningWeek = true, weeklyPlan = null) }
-        viewModelScope.launch {
+        weekPlanJob = viewModelScope.launch {
             val items = _state.value.items
             val plan = withContext(Dispatchers.Default) {
                 planner.plan(items, repo.recipes, nights = 7, budget = budget, people = people, focus = focus)

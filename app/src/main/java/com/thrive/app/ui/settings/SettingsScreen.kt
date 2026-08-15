@@ -367,7 +367,7 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text = "Nearest stores: " + syncStatus.nearbyStores.joinToString(" · ") {
-                                "${it.store} ${com.thrive.app.util.Money.fmt(it.distMi).replace("$", "")} mi"
+                                "${it.store} ${com.thrive.app.util.Distances.mi(it.distMi)}"
                             },
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

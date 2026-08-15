@@ -2,7 +2,7 @@ package com.thrive.app.ui.savings
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +82,12 @@ fun CouponDetailScreen(
     onOpenCoupon: (String) -> Unit,
 ) {
     val state by vm.state.collectAsState()
-    val coupon = state.coupons.firstOrNull { it.id == couponId } ?: return
+    val coupon = state.coupons.firstOrNull { it.id == couponId }
+    if (coupon == null) {
+        // Honest state for a missing/deleted/expired offer — never a blank screen.
+        MissingDeal(onBack = onBack)
+        return
+    }
     val isFavorite = coupon.id in state.favorites
     val context = LocalContext.current
 
@@ -385,7 +391,7 @@ private fun PrimaryDealButton(coupon: Coupon, context: Context) {
             OutlinedButton(
                 onClick = {
                     runCatching {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                     }.onFailure {
                         Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
                     }
@@ -413,7 +419,7 @@ private fun PrimaryDealButton(coupon: Coupon, context: Context) {
     Button(
         onClick = {
             runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
             }.onFailure {
                 Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
             }
@@ -467,6 +473,31 @@ private fun SimilarDealCard(deal: Coupon, onClick: () -> Unit) {
                 Spacer(Modifier.width(5.dp))
             }
             PriceTag(deal.priceAfter, size = 15)
+        }
+    }
+}
+
+/** Honest state when a deal no longer exists in the feed. */
+@Composable
+private fun MissingDeal(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "This deal is no longer available",
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "It may have expired or left the feed — the offers you see are only the ones that are really on sale right now.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        TextButton(onClick = onBack) {
+            Text("Back to deals")
         }
     }
 }

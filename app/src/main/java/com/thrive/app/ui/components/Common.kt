@@ -268,8 +268,8 @@ fun foodColors(seed: String?): Pair<Color, Color> {
 @Composable
 fun FoodImage(
     seed: String?,
-    imageUrl: String? = null,
     modifier: Modifier = Modifier,
+    imageUrl: String? = null,
     corner: Dp = 0.dp,
     iconSize: Dp = 30.dp,
 ) {
@@ -363,10 +363,10 @@ object StoreLogos {
 fun ProductImage(
     seed: String?,
     category: String,
+    modifier: Modifier = Modifier,
     imageUrl: String? = null,
     logoUrl: String? = null,
     store: String? = null,
-    modifier: Modifier = Modifier,
     corner: Dp = 0.dp,
     iconSize: Dp = 36.dp,
 ) {
@@ -426,7 +426,7 @@ fun ProductImage(
 // ---------------------------------------------------------------------------
 
 @Composable
-fun SectionHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier, action: String? = null) {
+fun SectionHeader(title: String, modifier: Modifier = Modifier, subtitle: String? = null, action: String? = null) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -489,21 +489,29 @@ fun QuantityStepper(
 
 @Composable
 private fun StepperButton(label: String, onClick: () -> Unit, size: Dp) {
+    // 48dp touch target with the smaller visible circle centered inside it.
     Box(
         modifier = Modifier
-            .size(size)
+            .size(48.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface)
             .clickableNoRipple(onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            ),
-        )
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                ),
+            )
+        }
     }
 }
 

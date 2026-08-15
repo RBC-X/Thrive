@@ -27,55 +27,55 @@
     ],
     "1.3.5": [
       "Smarter on-device recipe AI: the new recipe is built from what's really in your pantry",
-      "Accept or decline every generated recipe \u2014 \u201cTry another\u201d rolls a different meal (skillet, sheet pan, one-pot, or slow cooker)",
-      "Accepting a recipe adds only the missing ingredients to your shopping list \u2014 anything already in your pantry is never re-added"
+      "Accept or decline every generated recipe — “Try another” rolls a different meal (skillet, sheet pan, one-pot, or slow cooker)",
+      "Accepting a recipe adds only the missing ingredients to your shopping list — anything already in your pantry is never re-added"
     ],
     "1.3.4": [
-      "Direct product links: verified deals open the exact product page, not a store search \u2014 45 grocery deals now go straight to their real product, and live Kroger deals keep their true product URLs",
-      "Unverified deals are labeled honestly: the button says \"Search [store] for this item\" and explains no verified product link exists yet \u2014 we never fabricate product links"
+      "Direct product links: verified deals open the exact product page, not a store search — 45 grocery deals now go straight to their real product, and live Kroger deals keep their true product URLs",
+      "Unverified deals are labeled honestly: the button says \"Search [store] for this item\" and explains no verified product link exists yet — we never fabricate product links"
     ],
     "1.3.3": [
-      "Real store logos on every deal \u2014 when a product photo is missing you now see the store's actual logo, never a random image",
+      "Real store logos on every deal — when a product photo is missing you now see the store's actual logo, never a random image",
       "Recipes show real food photos so you can see what you're making before you start",
-      "On-device recipe AI: turn what's in your pantry into a brand-new recipe with steps and cost \u2014 works fully offline, no API keys"
+      "On-device recipe AI: turn what's in your pantry into a brand-new recipe with steps and cost — works fully offline, no API keys"
     ],
     "1.3.2": [
-      "Deal reminders: if you haven\u2019t opened Thrive in over 42 hours, a short reminder with fresh deals brings you back (opt-in in Settings, one per absence, no spam)"
+      "Deal reminders: if you haven’t opened Thrive in over 42 hours, a short reminder with fresh deals brings you back (opt-in in Settings, one per absence, no spam)"
     ],
     "1.3.1": [
-      "Nearby deals: share your approximate location once (opt-in in Settings) and Thrive ranks every deal by the nearest store \u2014 with honest distances on the trip plan",
+      "Nearby deals: share your approximate location once (opt-in in Settings) and Thrive ranks every deal by the nearest store — with honest distances on the trip plan",
       "Live Kroger prices now come from the store nearest to you, not a fixed zip"
     ],
     "1.3.0": [
-      "Visible version badge in the header \u2014 you can see which build you\u2019re on",
+      "Visible version badge in the header — you can see which build you’re on",
       "Coupons now show real product photos matched to the item (no more random images); items without a verified photo keep a clean category tile"
     ],
     "1.2.9": [
-      "Backup is honest now: no more fake success when the server can't be reached \u2014 it only claims a restore when the server really answered",
+      "Backup is honest now: no more fake success when the server can't be reached — it only claims a restore when the server really answered",
       "Concurrent backups can't lose updates anymore (atomic writes + conflict detection)",
       "The backend can no longer be crashed by a malformed admin upload",
       "Update downloads are verified (size, package, version, signature) and resume after you grant install permission",
-      "No more surprise notification prompt on first launch \u2014 you opt in from Settings",
+      "No more surprise notification prompt on first launch — you opt in from Settings",
       "The savings banner now shows your real savings, not a catalog-wide fantasy number",
       "Debug builds, lint, and tests no longer require the release keystore"
     ],
     "1.2.8": [
-      "Backup now covers everything \u2014 saved deals, your pantry, and the shopping list all sync under one backup code",
+      "Backup now covers everything — saved deals, your pantry, and the shopping list all sync under one backup code",
       "Restore pulls all three at once, merging add-only so nothing on either device is ever deleted",
-      "Pantry and budget push automatically as you edit them \u2014 no manual step needed"
+      "Pantry and budget push automatically as you edit them — no manual step needed"
     ],
     "1.2.7": [
-      "Saved-deal backup \u2014 your coupon favorites sync free between your devices with a backup code (no account)",
-      "Live Kroger prices \u2014 plug in free Kroger developer credentials and deals update with real store prices"
+      "Saved-deal backup — your coupon favorites sync free between your devices with a backup code (no account)",
+      "Live Kroger prices — plug in free Kroger developer credentials and deals update with real store prices"
     ],
     "1.2.6": [
-      "In-app update popup \u2014 Thrive checks GitHub itself and one tap downloads + installs the new version (no server, API key, or IP needed)",
-      "Tech deals category added \u2014 99 tech coupons across Best Buy, Apple, Amazon, Walmart, Target, Newegg, eBay and more",
+      "In-app update popup — Thrive checks GitHub itself and one tap downloads + installs the new version (no server, API key, or IP needed)",
+      "Tech deals category added — 99 tech coupons across Best Buy, Apple, Amazon, Walmart, Target, Newegg, eBay and more",
       "Coupon catalog expanded to 415 offers across 8 categories from 35 retailers, with real store links on every offer",
-      "Feed freshness rotation \u2014 new coupons are marked daily, so the Savings tab always has something new"
+      "Feed freshness rotation — new coupons are marked daily, so the Savings tab always has something new"
     ],
     "1.2.5": [
-      "Weekly plan cost now adds up honestly \u2014 no more charging you twice for pantry items",
+      "Weekly plan cost now adds up honestly — no more charging you twice for pantry items",
       "Plan a week from an empty pantry (starts from scratch)",
       "Release signing credentials moved out of the build file",
       "Deal-feed admin override locked behind a token"
@@ -97,7 +97,7 @@
       "Version string on the About screen now matches the real build"
     ],
     "1.2.11": [
-      "Honest feed labeling: \u201cLive\u201d only shows when deals really came from the server",
+      "Honest feed labeling: “Live” only shows when deals really came from the server",
       "Bundled-feed notice when the live server is unreachable or sends no deals",
       "Self-healing service: backend + tunnel watchdog with boot auto-start",
       "Always-on deploy guide (backend/DEPLOY.md) + Docker setup for 24/7 hosting"
@@ -125,6 +125,16 @@
     ],
     "1.0.0": [
       "Thrive launches: Savings, Recipes, Pantry & Budget"
+    ],
+    "1.4.1": [
+      "Stability repair pass: fixed a crash when the deal feed has only one or two offers (the daily pick now selects safely on any feed size)",
+      "Fixed cold-start stale data: synced deals + ETag are now cached atomically, so a fast '304 not modified' response after restart shows your last real sync instead of bundled data — with an honest fallback if the cache is corrupt",
+      "Locale-aware prices and distances (US and comma-decimal locales), so numbers always read correctly",
+      "Update notifications route through a proper broadcast receiver and tapping them opens the update dialog; location lookup is now a one-shot, permission-aware check that never tracks you",
+      "Repaired small targets and fonts: every icon button is now a 48dp touch target, and the pantry add-item sheet no longer clips its confirm button at 2x font scale",
+      "Missing deals/recipes show an honest 'not available' state instead of a blank screen, and the 4,000+ coupon catalog sorts are memoized so search stays smooth",
+      "Added 4 instrumented UI tests (Savings, Pantry, Budget flows run on a real emulator) and 23 new unit tests — 127 unit + 24 backend tests green",
+      "Full visual QA matrix captured on a standard emulator: light, dark, 2x font, small/large phone breakpoints, and the honest offline state"
     ]
   }
 }
