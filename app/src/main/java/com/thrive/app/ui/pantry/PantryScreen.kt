@@ -25,8 +25,10 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Kitchen
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
@@ -41,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -64,6 +67,7 @@ import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.ui.components.QuantityStepper
 import com.thrive.app.ui.components.SectionHeader
+import com.thrive.app.ui.budget.BudgetViewModel
 import com.thrive.app.ui.components.SoftChip
 import com.thrive.app.ui.components.categoryIcon
 import com.thrive.app.ui.theme.LocalThriveColors
@@ -76,6 +80,7 @@ private val storageGroups = listOf("Fridge", "Freezer", "Pantry")
 @Composable
 fun PantryScreen(
     vm: PantryViewModel,
+    budgetVm: BudgetViewModel,
     onOpenMeal: (Int) -> Unit,
     onOpenWeekPlan: () -> Unit,
 ) {
@@ -83,6 +88,7 @@ fun PantryScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var showFocusSheet by remember { mutableStateOf(false) }
     var showWeekSheet by remember { mutableStateOf(false) }
+    var addedNote by remember { mutableStateOf<String?>(null) }
     val catalog = vm.catalog
 
     Box(Modifier.fillMaxSize()) {
@@ -121,6 +127,21 @@ fun PantryScreen(
                 )
             }
 
+            addedNote?.let { note ->
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = note,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
             state.generatedRecipe?.let { gen ->
                 item {
                     Spacer(Modifier.height(16.dp))
@@ -133,7 +154,19 @@ fun PantryScreen(
                     Spacer(Modifier.height(10.dp))
                 }
                 item {
-                    GeneratedRecipeCard(gen, onDismiss = { vm.clearGeneratedRecipe() })
+                    GeneratedRecipeCard(
+                        gen = gen,
+                        onDismiss = { vm.clearGeneratedRecipe() },
+                        onTryAnother = { vm.tryAnotherRecipe() },
+                        onAccept = {
+                            val toBuy = vm.acceptRecipe()
+                            toBuy.forEach { (name, category, _) ->
+                                budgetVm.addItem(name = name, category = category, quantity = 1, unit = "", estPrice = 0.0)
+                            }
+                            addedNote = if (toBuy.isEmpty()) "Saved — everything you need is already in your pantry."
+                            else "Added ${toBuy.size} missing item${if (toBuy.size == 1) "" else "s"} to your shopping list."
+                        },
+                    )
                 }
             }
 
@@ -643,7 +676,12 @@ private fun MakeNewRecipeCta(enabled: Boolean, loading: Boolean, onClick: () -> 
 }
 
 @Composable
-private fun GeneratedRecipeCard(gen: GeneratedRecipe, onDismiss: () -> Unit) {
+private fun GeneratedRecipeCard(
+    gen: GeneratedRecipe,
+    onDismiss: () -> Unit,
+    onTryAnother: () -> Unit,
+    onAccept: () -> Unit,
+) {
     val accents = LocalThriveColors.current
     Column(
         modifier = Modifier
@@ -724,6 +762,31 @@ private fun GeneratedRecipeCard(gen: GeneratedRecipe, onDismiss: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+        Spacer(Modifier.height(14.dp))
+        Button(
+            onClick = onAccept,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
+        ) {
+            Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = if (gen.missingToBuy.isEmpty()) "Looks good — keep it"
+                else "Looks good — add missing items to list",
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onTryAnother,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Try another recipe", fontWeight = FontWeight.Bold)
         }
     }
 }

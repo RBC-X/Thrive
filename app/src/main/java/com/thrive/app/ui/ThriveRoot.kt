@@ -135,6 +135,7 @@ fun ThriveRoot() {
             composable("pantry") {
                 PantryScreen(
                     pantryVm,
+                    budgetVm = budgetVm,
                     onOpenMeal = { index -> nav.navigate("meal/$index") },
                     onOpenWeekPlan = { nav.navigate("weeklyplan") },
                 )

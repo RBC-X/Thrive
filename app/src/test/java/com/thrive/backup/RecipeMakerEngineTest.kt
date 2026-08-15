@@ -58,4 +58,40 @@ class RecipeMakerEngineTest {
         val gen = RecipeMakerEngine.generate(listOf(item("Salmon"), item("Sweet potatoes"), item("Spinach")))
         assertTrue(gen.recipe.id.startsWith("gen-"))
     }
+
+    @Test
+    fun `different variants roll different recipes for try another`() {
+        val pantry = listOf(item("Chicken breast"), item("Rice"), item("Broccoli"))
+        val a = RecipeMakerEngine.generate(pantry, variant = 0)
+        val b = RecipeMakerEngine.generate(pantry, variant = 1)
+        val c = RecipeMakerEngine.generate(pantry, variant = 2)
+        // Methods/sauces rotate, so at least two of the three differ.
+        val names = setOf(a.recipe.name, b.recipe.name, c.recipe.name)
+        assertTrue("variants should vary: $names", names.size >= 2)
+        // Same variant stays stable across calls.
+        assertEquals(a.recipe.name, RecipeMakerEngine.generate(pantry, variant = 0).recipe.name)
+    }
+
+    @Test
+    fun `missing items map to concrete buyable shopping entries`() {
+        val gen = RecipeMakerEngine.generate(listOf(item("Chicken breast"))) // no starch, no veg
+        assertTrue(gen.missingItems.isNotEmpty())
+        assertTrue(gen.missingToBuy.isNotEmpty())
+        gen.missingToBuy.forEach { (name, category, label) ->
+            assertTrue(name.isNotBlank())
+            assertTrue(category.isNotBlank())
+            assertTrue(label.isNotBlank())
+        }
+        // The chicken IS in the pantry — never offered for re-purchase.
+        assertTrue(gen.missingToBuy.none { it.first.contains("chicken", ignoreCase = true) })
+    }
+
+    @Test
+    fun `complete pantry offers nothing to buy`() {
+        val gen = RecipeMakerEngine.generate(listOf(
+            item("Chicken breast"), item("Rice"), item("Broccoli"), item("Salsa"), item("Cheese"),
+        ))
+        assertEquals(emptyList<String>(), gen.missingItems)
+        assertEquals(emptyList<Triple<String, String, String>>(), gen.missingToBuy)
+    }
 }

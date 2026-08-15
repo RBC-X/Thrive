@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 data class PantryUiState(
     val items: List<PantryItem> = emptyList(),
@@ -172,19 +173,43 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
 
     // ---- On-device recipe generator ("pocket AI") ----
 
+    private var recipeVariant = 0
+
     /**
      * Compose a brand-new recipe from the current pantry. Runs fully on-device
-     * and offline; no API key or network needed. The same pantry always yields
-     * the same recipe, so it's stable and testable.
+     * and offline; no API key or network needed. The same pantry + variant
+     * always yields the same recipe, so it's stable and testable.
      */
     fun generateNewRecipe() {
         _state.update { it.copy(isGeneratingRecipe = true, generatedRecipe = null) }
         viewModelScope.launch {
             val result = withContext(Dispatchers.Default) {
-                RecipeMakerEngine.generate(_state.value.items)
+                RecipeMakerEngine.generate(_state.value.items, variant = recipeVariant)
             }
             _state.update { it.copy(generatedRecipe = result, isGeneratingRecipe = false) }
         }
+    }
+
+    /** Roll a different recipe from the same pantry (different method/sauce). */
+    fun tryAnotherRecipe() {
+        recipeVariant += 1
+        generateNewRecipe()
+    }
+
+    /**
+     * Accept the generated recipe. Returns the ingredients to buy — only the
+     * missing ones that aren't already in the pantry — and hides the card so
+     * the caller can add them to the shopping list.
+     */
+    fun acceptRecipe(): List<Triple<String, String, String>> {
+        val gen = _state.value.generatedRecipe ?: return emptyList()
+        val pantryNames = _state.value.items.map { it.name.lowercase(Locale.US).trim() }
+        val toBuy = gen.missingToBuy.filter { (name, _, _) ->
+            val n = name.lowercase(Locale.US).trim()
+            pantryNames.none { p -> p.contains(n) || n.contains(p) }
+        }
+        clearGeneratedRecipe()
+        return toBuy
     }
 
     fun clearGeneratedRecipe() = _state.update { it.copy(generatedRecipe = null) }

@@ -13,6 +13,8 @@ data class GeneratedRecipe(
     val recipe: Recipe,
     val usedItems: List<String>,
     val missingItems: List<String>,
+    /** Concrete items to add to the shopping list: (name, category, label). */
+    val missingToBuy: List<Triple<String, String, String>> = emptyList(),
     val estimatedCost: Double,
 )
 
@@ -100,11 +102,11 @@ object RecipeMakerEngine {
         s.split(" ").joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
 
     /**
-     * Generate a new dinner recipe from the pantry. Deterministic: the same
-     * pantry always yields the same recipe (seeded by sorted item names), so
-     * tests can assert structure and users get stable results per pantry.
+     * Generate a new dinner recipe from the pantry. The same pantry + variant
+     * always yields the same recipe (stable and testable); a different variant
+     * picks a different method/sauce so "Try another" gives something new.
      */
-    fun generate(items: List<PantryItem>, focus: String = "balanced"): GeneratedRecipe {
+    fun generate(items: List<PantryItem>, focus: String = "balanced", variant: Int = 0): GeneratedRecipe {
         val pantry = items.distinctBy { norm(it.name) }
         val protein = findItem(pantry, PROTEINS)
         val starch = findItem(pantry, STARCHES)
@@ -125,8 +127,9 @@ object RecipeMakerEngine {
 
         val used = listOfNotNull(protein?.first, starch?.first, veg?.first, sauce?.first, dairyName)
 
-        // Cooking method chosen deterministically from the pantry fingerprint.
-        val seedSum = pantry.sumOf { norm(it.name).hashCode().toLong() }
+        // Cooking method chosen deterministically from the pantry fingerprint
+        // plus the variant, so each "Try another" rolls a different method.
+        val seedSum = pantry.sumOf { norm(it.name).hashCode().toLong() } + variant.toLong() * 7919L
         val methodIdx = (((seedSum % 4) + 4) % 4).toInt()
         val method = when (methodIdx) {
             0 -> "skillet"
@@ -236,16 +239,21 @@ object RecipeMakerEngine {
             featured = false,
         )
 
-        val missing = listOf(
-            if (protein == null) "protein (chicken, beef, beans, or eggs)" else null,
-            if (starch == null) "a starch (rice, pasta, potatoes, or tortillas)" else null,
-            if (veg == null) "a vegetable (fresh or frozen)" else null,
-        ).filterNotNull()
+        // Concrete missing ingredients the user could actually buy — with the
+        // friendly "what to look for" label for the UI and the concrete name
+        // for one-tap shopping-list adds.
+        data class Missing(val label: String, val name: String, val category: String)
+        val missing = buildList {
+            if (protein == null) add(Missing("protein (chicken, beef, beans, or eggs)", "chicken breast", "Meat"))
+            if (starch == null) add(Missing("a starch (rice, pasta, potatoes, or tortillas)", "rice", "Grocery"))
+            if (veg == null) add(Missing("a vegetable (fresh or frozen)", "broccoli", "Produce"))
+        }
 
         return GeneratedRecipe(
             recipe = recipe,
             usedItems = used,
-            missingItems = missing,
+            missingItems = missing.map { it.label },
+            missingToBuy = missing.map { Triple(it.name, it.category, it.label) },
             estimatedCost = totalCost,
         )
     }
