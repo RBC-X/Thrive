@@ -1,5 +1,10 @@
 {
   "notes": {
+    "1.4.0": [
+      "The pantry AI now really cooks with what you have: it matches every ingredient you own, rotates through multiple proteins/veggies/sauces, and even uses a second vegetable when you've got one",
+      "Way more recipe variety: 8 cooking methods x 8 flavor directions (64 blueprints) plus item rotation, so \"Try another\" keeps rolling genuinely new dishes instead of the same one 4 times",
+      "Honest \"Uses:\" list — only what's actually in your pantry counts, never a sauce we only suggested"
+    ],
     "1.3.9": [
       "Only real, buyable deals are available now: every deal shown has a verified direct link to the exact product page on the store's own site",
       "The live feed grew from 63 to thousands of real Kroger products with current prices, real product photos, and direct product-page links",
