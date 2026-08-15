@@ -7,6 +7,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.annotation.SuppressLint
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CompletableDeferred
@@ -36,6 +37,10 @@ object LocationProvider {
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_DENIED
 
+    // Permission is checked by hasPermission() before every call site; lint can't
+    // track the guard through this helper, so suppress here and keep the
+    // runCatching safety net for the (already-guarded) privileged calls.
+    @SuppressLint("MissingPermission")
     private fun newestCachedFix(lm: LocationManager): Location? = buildList {
         runCatching { lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let(::add) }
         runCatching { lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let(::add) }
@@ -43,7 +48,9 @@ object LocationProvider {
 
     /**
      * Best known approximate location (lat, lng), or null when unavailable.
+     * Permission is verified by [hasPermission] before any privileged call.
      */
+    @SuppressLint("MissingPermission")
     suspend fun lastKnownLocation(context: Context): Pair<Double, Double>? {
         if (!hasPermission(context)) return null
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null

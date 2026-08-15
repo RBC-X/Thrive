@@ -1,33 +1,1682 @@
 [
-  {"id":"r01","name":"Black Bean Tacos","description":"Cheesy black bean tacos with creamy avocado — dinner for four under seven bucks.","section":"under_10","mealType":"Dinner","tags":["vegetarian","mexican","quick"],"prepMinutes":10,"cookMinutes":8,"servings":4,"costDollars":6.5,"difficulty":"Easy","ingredients":[{"name":"black beans","amount":"2 cans","brand":"Bush's or store brand"},{"name":"flour tortillas","amount":"8"},{"name":"cheddar cheese","amount":"1 cup, shredded"},{"name":"avocado","amount":"1, sliced"},{"name":"salsa","amount":"1 cup"},{"name":"taco seasoning","amount":"1 packet"},{"name":"lime","amount":"1, optional"}],"steps":["Heat the beans in a small pot with the taco seasoning and 1/4 cup water over medium heat until warm, about 5 minutes. Mash lightly with a fork.","Warm the tortillas in a dry skillet for 30 seconds per side, or in the microwave between damp paper towels.","Spoon beans onto each tortilla, top with cheese, avocado slices, and a spoonful of salsa.","Squeeze lime over the top if you have it and serve immediately."],"imageSeed":"black-bean-tacos","featured":true},
-  {"id":"r02","name":"Spaghetti Aglio e Olio","description":"The Italian pantry classic — garlic, olive oil, and chili flakes over spaghetti.","section":"under_10","mealType":"Dinner","tags":["vegetarian","italian","pantry"],"prepMinutes":5,"cookMinutes":15,"servings":4,"costDollars":5.0,"difficulty":"Easy","ingredients":[{"name":"spaghetti","amount":"1 lb"},{"name":"olive oil","amount":"1/3 cup"},{"name":"garlic","amount":"6 cloves, thinly sliced"},{"name":"red pepper flakes","amount":"1/2 tsp"},{"name":"parmesan","amount":"1/2 cup, grated"},{"name":"parsley","amount":"1/4 cup, chopped","optional":true}],"steps":["Cook the spaghetti in well-salted boiling water until al dente. Reserve 1 cup of pasta water, then drain.","While the pasta cooks, warm the olive oil in a large skillet over medium heat. Add the garlic and red pepper flakes and cook until the garlic is golden and fragrant, 2–3 minutes. Don't let it burn.","Add the drained spaghetti to the skillet with a splash of pasta water. Toss vigorously until the sauce coats every strand.","Off the heat, toss in the parmesan and parsley. Add pasta water a splash at a time until it's silky. Serve hot."],"imageSeed":"aglio-olio","featured":false},
-  {"id":"r03","name":"Egg Fried Rice","description":"Better than takeout and made with whatever's in the fridge.","section":"under_10","mealType":"Dinner","tags":["asian","quick","leftovers"],"prepMinutes":5,"cookMinutes":12,"servings":4,"costDollars":5.5,"difficulty":"Easy","ingredients":[{"name":"rice","amount":"4 cups cooked, cold"},{"name":"eggs","amount":"3"},{"name":"frozen peas","amount":"1 cup"},{"name":"carrots","amount":"1, diced"},{"name":"soy sauce","amount":"3 tbsp"},{"name":"green onions","amount":"3, sliced"},{"name":"vegetable oil","amount":"2 tbsp"}],"steps":["If using leftover rice, break up any clumps. Cold rice works best.","Heat the oil in a wok or large skillet over high heat. Scramble the eggs, push them to one side, then add the carrots and peas and stir-fry 2 minutes.","Add the rice and toss to combine, pressing out clumps, until the rice is hot and slightly toasted, about 4 minutes.","Drizzle the soy sauce around the edges, add the green onions, and toss. Serve hot."],"imageSeed":"fried-rice","featured":false},
-  {"id":"r04","name":"Grilled Cheese & Tomato Soup","description":"The coziest combo. Gooey sandwiches dunked in rich tomato soup.","section":"under_10","mealType":"Lunch","tags":["classic","comfort","kid-friendly"],"prepMinutes":5,"cookMinutes":12,"servings":3,"costDollars":7.0,"difficulty":"Easy","ingredients":[{"name":"bread","amount":"6 slices"},{"name":"cheddar cheese","amount":"6 slices"},{"name":"butter","amount":"3 tbsp, softened"},{"name":"canned tomatoes","amount":"1 can (28 oz)"},{"name":"heavy cream","amount":"1/4 cup"},{"name":"garlic","amount":"1 clove, optional"}],"steps":["Heat the canned tomatoes with a splash of water in a pot over medium heat for 8 minutes. Blend with an immersion blender, stir in the cream, and season with salt. Keep warm.","Butter one side of each bread slice. Build sandwiches with cheese between two buttered-out slices.","Cook in a skillet over medium-low heat, 3–4 minutes per side, until golden and the cheese melts.","Slice the sandwiches and serve with the soup for dunking."],"imageSeed":"grilled-cheese","featured":false},
-  {"id":"r05","name":"Tuna Melts","description":"Crispy tuna melts with melty cheddar — lunch in 15 minutes flat.","section":"under_10","mealType":"Lunch","tags":["quick","sandwich"],"prepMinutes":5,"cookMinutes":10,"servings":2,"costDollars":6.0,"difficulty":"Easy","ingredients":[{"name":"canned tuna","amount":"2 cans, drained"},{"name":"mayonnaise","amount":"1/3 cup"},{"name":"celery","amount":"1 stalk, minced"},{"name":"cheddar cheese","amount":"1 cup, shredded"},{"name":"bread","amount":"4 slices"},{"name":"mustard","amount":"1 tsp","optional":true}],"steps":["Preheat the broiler. Mix the tuna with mayo, celery, a squeeze of lemon if you have it, and a pinch of pepper.","Spread the tuna mix on the bread slices and top generously with cheddar.","Broil 3–5 minutes until bubbly and golden on top. Serve hot."],"imageSeed":"tuna-melt","featured":false},
-  {"id":"r06","name":"Chili Mac","description":"One skillet, ten ingredients, six bowls of chili-cheese mac.","section":"under_10","mealType":"Dinner","tags":["one-pot","comfort","kid-friendly"],"prepMinutes":10,"cookMinutes":20,"servings":6,"costDollars":8.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1 lb"},{"name":"onion","amount":"1, diced"},{"name":"elbow pasta","amount":"2 cups"},{"name":"canned tomatoes","amount":"1 can (15 oz)"},{"name":"kidney beans","amount":"1 can, drained"},{"name":"chili powder","amount":"2 tbsp"},{"name":"chicken broth","amount":"2 cups"},{"name":"cheddar cheese","amount":"1 cup, shredded"}],"steps":["Brown the beef with the onion in a large pot over medium-high heat, 5–6 minutes. Drain excess fat.","Stir in the chili powder and cook 30 seconds. Add the pasta, tomatoes, beans, and broth.","Simmer, stirring often, until the pasta is tender and the sauce thickens, 12–15 minutes.","Stir in the cheese until melted. Let rest 2 minutes, then serve."],"imageSeed":"chili-mac","featured":true},
-  {"id":"r07","name":"Chicken & Rice Bowl","description":"A bright, healthy bowl of chicken, rice, and broccoli in a soy-ginger sauce.","section":"under_20","mealType":"Dinner","tags":["healthy","asian","meal-prep"],"prepMinutes":10,"cookMinutes":15,"servings":4,"costDollars":9.0,"difficulty":"Easy","ingredients":[{"name":"chicken breast","amount":"1 lb, cubed"},{"name":"white rice","amount":"1 cup"},{"name":"broccoli","amount":"3 cups, florets"},{"name":"soy sauce","amount":"3 tbsp"},{"name":"ginger","amount":"1 tbsp, grated"},{"name":"garlic","amount":"2 cloves, minced"},{"name":"honey","amount":"1 tbsp"},{"name":"vegetable oil","amount":"1 tbsp"}],"steps":["Cook the rice according to the package. Meanwhile, whisk the soy sauce, honey, ginger, and garlic into a sauce.","Heat the oil in a large skillet over medium-high heat. Cook the chicken until golden and cooked through, 6–7 minutes.","Add the broccoli and 1/4 cup water, cover, and steam 3 minutes until bright green and crisp-tender.","Pour the sauce over everything and toss 1 minute until glossy. Serve over the rice."],"imageSeed":"chicken-rice-bowl","featured":true},
-  {"id":"r08","name":"20-Minute Beef Stir-Fry","description":"Tender beef and crisp veggies in a glossy stir-fry sauce — faster than delivery.","section":"under_20","mealType":"Dinner","tags":["asian","quick","high-protein"],"prepMinutes":10,"cookMinutes":10,"servings":4,"costDollars":12.0,"difficulty":"Medium","ingredients":[{"name":"flank steak","amount":"1 lb, thinly sliced"},{"name":"broccoli","amount":"3 cups, florets"},{"name":"bell pepper","amount":"1, sliced"},{"name":"carrots","amount":"2, julienned"},{"name":"soy sauce","amount":"1/4 cup"},{"name":"brown sugar","amount":"2 tbsp"},{"name":"cornstarch","amount":"1 tbsp"},{"name":"garlic","amount":"3 cloves, minced"},{"name":"vegetable oil","amount":"2 tbsp"}],"steps":["Whisk the soy sauce, brown sugar, cornstarch, garlic, and 1/4 cup water into a sauce.","Toss the beef with 1 tbsp of the sauce and a pinch of cornstarch.","Heat the oil in a wok over high heat. Sear the beef in a single layer until browned, 2 minutes per side; remove.","Stir-fry the vegetables 3 minutes. Return the beef, pour in the sauce, and toss until thick and glossy, 1 minute. Serve over rice."],"imageSeed":"beef-stirfry","featured":false},
-  {"id":"r09","name":"Creamy Garlic Pasta","description":"Garlicky, creamy, and done in twenty minutes. Weeknight royalty.","section":"under_20","mealType":"Dinner","tags":["vegetarian","comfort","quick"],"prepMinutes":5,"cookMinutes":15,"servings":4,"costDollars":8.0,"difficulty":"Easy","ingredients":[{"name":"penne","amount":"1 lb"},{"name":"garlic","amount":"6 cloves, minced"},{"name":"heavy cream","amount":"1 cup"},{"name":"parmesan","amount":"3/4 cup, grated"},{"name":"butter","amount":"3 tbsp"},{"name":"spinach","amount":"3 cups","optional":true}],"steps":["Cook the penne in salted water until al dente. Reserve 1/2 cup pasta water.","Melt the butter in a skillet over medium heat. Cook the garlic 1 minute until fragrant.","Add the cream and simmer 2 minutes. Stir in the parmesan until smooth.","Add the pasta and spinach (if using) and toss, loosening with pasta water. Season with pepper and serve."],"imageSeed":"creamy-garlic-pasta","featured":false},
-  {"id":"r10","name":"Lemon Butter Salmon & Rice","description":"Flaky salmon in a lemony butter sauce with fluffy rice — fancy, fast, affordable.","section":"under_20","mealType":"Dinner","tags":["healthy","seafood","quick"],"prepMinutes":8,"cookMinutes":15,"servings":4,"costDollars":13.0,"difficulty":"Easy","ingredients":[{"name":"salmon","amount":"1 lb, fillets"},{"name":"butter","amount":"4 tbsp"},{"name":"lemon","amount":"1, juiced"},{"name":"garlic","amount":"2 cloves, minced"},{"name":"white rice","amount":"1 cup"},{"name":"green beans","amount":"1 lb","optional":true}],"steps":["Start the rice. Pat the salmon dry and season with salt and pepper.","Melt 2 tbsp butter in a skillet over medium-high. Cook the salmon skin-side up 4 minutes, flip, add the remaining butter, garlic, and lemon juice.","Spoon the foaming butter over the salmon for 2 minutes until just cooked through.","Serve the salmon over rice with the pan sauce spooned on top."],"imageSeed":"lemon-salmon","featured":false},
-  {"id":"r11","name":"Sloppy Joes","description":"Messy, saucy, and beloved. Classic sloppy joes on soft buns.","section":"under_20","mealType":"Dinner","tags":["kid-friendly","classic"],"prepMinutes":5,"cookMinutes":20,"servings":5,"costDollars":10.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1.5 lb"},{"name":"onion","amount":"1, diced"},{"name":"ketchup","amount":"1 cup"},{"name":"brown sugar","amount":"2 tbsp"},{"name":"worcestershire","amount":"1 tbsp"},{"name":"mustard","amount":"1 tbsp"},{"name":"burger buns","amount":"6"}],"steps":["Brown the beef with the onion in a large skillet, 6 minutes. Drain excess fat.","Stir in the ketchup, brown sugar, worcestershire, mustard, and 1/4 cup water.","Simmer 12–15 minutes until thick and saucy. Season to taste.","Pile onto toasted buns and serve with pickles if you have them."],"imageSeed":"sloppy-joes","featured":false},
-  {"id":"r12","name":"Quesadilla Fiesta","description":"Cheesy chicken quesadillas with peppers and onion — a crowd-pleaser in 20 minutes.","section":"under_20","mealType":"Dinner","tags":["mexican","kid-friendly","quick"],"prepMinutes":8,"cookMinutes":12,"servings":4,"costDollars":8.0,"difficulty":"Easy","ingredients":[{"name":"flour tortillas","amount":"8"},{"name":"cheddar cheese","amount":"2 cups, shredded"},{"name":"chicken breast","amount":"2 cups, cooked & shredded"},{"name":"bell pepper","amount":"1, sliced"},{"name":"onion","amount":"1/2, sliced"},{"name":"sour cream","amount":"1/2 cup"},{"name":"salsa","amount":"1 cup"}],"steps":["Cook the pepper and onion in a dry skillet over medium-high heat until charred, 5 minutes. Set aside.","Heat a large skillet. Lay a tortilla in, cover with cheese, chicken, peppers, and more cheese. Top with a second tortilla.","Cook 2–3 minutes per side until golden and the cheese melts. Repeat for the remaining quesadillas.","Cut into wedges and serve with sour cream and salsa."],"imageSeed":"quesadilla","featured":false},
-  {"id":"r13","name":"One-Pan Sausage & Peppers","description":"Juicy sausage, sweet peppers, and onions roasted on one sheet pan.","section":"under_20","mealType":"Dinner","tags":["sheet-pan","italian","easy-cleanup"],"prepMinutes":10,"cookMinutes":18,"servings":4,"costDollars":11.0,"difficulty":"Easy","ingredients":[{"name":"sausage","amount":"1 lb, sliced"},{"name":"bell peppers","amount":"3, sliced"},{"name":"onion","amount":"1, sliced"},{"name":"olive oil","amount":"2 tbsp"},{"name":"italian seasoning","amount":"1 tsp"},{"name":"pasta sauce","amount":"1 jar","optional":true}],"steps":["Preheat the oven to 425°F. Toss the sausage, peppers, and onion with olive oil and seasoning on a sheet pan.","Roast 18–20 minutes, stirring once halfway, until the sausage is browned and the peppers soften.","Serve as-is, over rice, or on hoagie rolls. Optionally warm the sauce and spoon it over the top."],"imageSeed":"sausage-peppers","featured":false},
-  {"id":"r14","name":"Sheet-Pan Chicken Fajitas","description":"Everything fajita on one pan — chicken, peppers, and onions with warm tortillas.","section":"under_20","mealType":"Dinner","tags":["mexican","sheet-pan","meal-prep"],"prepMinutes":12,"cookMinutes":18,"servings":4,"costDollars":12.0,"difficulty":"Easy","ingredients":[{"name":"chicken breast","amount":"1.5 lb, sliced"},{"name":"bell peppers","amount":"3, sliced"},{"name":"onion","amount":"1, sliced"},{"name":"fajita seasoning","amount":"2 tbsp"},{"name":"olive oil","amount":"3 tbsp"},{"name":"flour tortillas","amount":"8"},{"name":"lime","amount":"1"}],"steps":["Preheat the oven to 425°F. Toss the chicken, peppers, and onion with oil and fajita seasoning on a sheet pan.","Roast 18 minutes, stirring halfway, until the chicken is cooked through and the edges char.","Warm the tortillas. Squeeze lime over the filling.","Serve family-style with tortillas, salsa, and sour cream."],"imageSeed":"chicken-fajitas","featured":false},
-  {"id":"r15","name":"Crockpot BBQ Chicken","description":"Five ingredients, zero effort. Shredded BBQ chicken for sandwiches or rice bowls.","section":"five_ingredients","mealType":"Dinner","tags":["crockpot","set-and-forget","kid-friendly"],"prepMinutes":5,"cookMinutes":240,"servings":6,"costDollars":9.0,"difficulty":"Easy","ingredients":[{"name":"chicken breast","amount":"2 lb"},{"name":"bbq sauce","amount":"2 cups"},{"name":"chicken broth","amount":"1/2 cup"},{"name":"garlic powder","amount":"1 tsp"},{"name":"burger buns","amount":"6"}],"steps":["Place the chicken in the slow cooker. Pour the BBQ sauce and broth over the top and sprinkle with garlic powder.","Cover and cook on low for 4–6 hours or high for 2–3 hours, until the chicken shreds easily.","Shred the chicken in the pot with two forks and stir into the sauce.","Pile onto buns or serve over rice. Freeze leftovers in portions."],"imageSeed":"bbq-chicken","featured":true},
-  {"id":"r16","name":"Baked Ziti","description":"Cheesy baked ziti with bubbly mozzarella — five ingredients, one baking dish.","section":"five_ingredients","mealType":"Dinner","tags":["italian","baked","kid-friendly"],"prepMinutes":10,"cookMinutes":30,"servings":6,"costDollars":9.0,"difficulty":"Easy","ingredients":[{"name":"ziti pasta","amount":"1 lb"},{"name":"pasta sauce","amount":"1 jar (24 oz)"},{"name":"ricotta","amount":"15 oz"},{"name":"mozzarella","amount":"2 cups, shredded"},{"name":"parmesan","amount":"1/2 cup, grated"}],"steps":["Cook the ziti until just shy of al dente. Drain and return to the pot.","Stir in the pasta sauce and ricotta until everything is coated.","Transfer to a 9x13 baking dish, top with mozzarella and parmesan.","Bake at 400°F for 20 minutes until bubbly and golden. Rest 5 minutes before serving."],"imageSeed":"baked-ziti","featured":false},
-  {"id":"r17","name":"Peanut Noodles","description":"Creamy peanut-sauced noodles with whatever veggies you have.","section":"five_ingredients","mealType":"Dinner","tags":["asian","vegetarian","quick"],"prepMinutes":8,"cookMinutes":12,"servings":4,"costDollars":7.0,"difficulty":"Easy","ingredients":[{"name":"spaghetti","amount":"12 oz"},{"name":"peanut butter","amount":"1/2 cup"},{"name":"soy sauce","amount":"1/4 cup"},{"name":"honey","amount":"2 tbsp"},{"name":"frozen vegetables","amount":"2 cups"}],"steps":["Cook the spaghetti. In the last 2 minutes, add the frozen vegetables to the pot. Drain, reserving 1/2 cup pasta water.","Whisk the peanut butter, soy sauce, honey, and 1/3 cup hot pasta water into a smooth sauce.","Toss the noodles and veggies with the sauce, loosening with more pasta water as needed.","Top with green onions or sesame seeds if you have them."],"imageSeed":"peanut-noodles","featured":false},
-  {"id":"r18","name":"Salsa Chicken","description":"Two ingredients, one dish: chicken baked in salsa, shredded and piled into tacos.","section":"five_ingredients","mealType":"Dinner","tags":["mexican","set-and-forget","low-effort"],"prepMinutes":5,"cookMinutes":35,"servings":4,"costDollars":8.0,"difficulty":"Easy","ingredients":[{"name":"chicken breast","amount":"1.5 lb"},{"name":"salsa","amount":"2 cups"},{"name":"taco seasoning","amount":"1 packet"},{"name":"corn tortillas","amount":"8"},{"name":"cheddar cheese","amount":"1 cup, shredded"}],"steps":["Preheat the oven to 400°F. Place the chicken in a baking dish and pour the salsa over the top. Sprinkle with the taco seasoning.","Bake 35 minutes, until the chicken is tender and shreds easily.","Shred the chicken in the dish and stir into the salsa.","Serve in warm corn tortillas with cheese, avocado, or sour cream."],"imageSeed":"salsa-chicken","featured":false},
-  {"id":"r19","name":"One-Pot Cheesy Taco Pasta","description":"All the flavors of taco night in one pot of cheesy pasta.","section":"five_ingredients","mealType":"Dinner","tags":["one-pot","mexican","kid-friendly"],"prepMinutes":5,"cookMinutes":20,"servings":6,"costDollars":9.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1 lb"},{"name":"elbow pasta","amount":"3 cups"},{"name":"taco seasoning","amount":"1 packet"},{"name":"canned tomatoes","amount":"1 can (15 oz)"},{"name":"cheddar cheese","amount":"2 cups, shredded"}],"steps":["Brown the beef in a large pot, 5 minutes. Drain excess fat.","Add the pasta, tomatoes (with their juices), taco seasoning, and 3 cups water.","Simmer, stirring often, until the pasta is tender and the liquid is absorbed, 15 minutes.","Remove from heat and stir in the cheese until melted. Top with more cheese if you dare."],"imageSeed":"taco-pasta","featured":false},
-  {"id":"r20","name":"Fluffy Pancakes","description":"Five ingredients for the fluffiest stack of pancakes — breakfast for dinner, anyone?","section":"five_ingredients","mealType":"Breakfast","tags":["breakfast","kid-friendly","budget"],"prepMinutes":5,"cookMinutes":15,"servings":4,"costDollars":4.0,"difficulty":"Easy","ingredients":[{"name":"flour","amount":"2 cups"},{"name":"baking powder","amount":"2 tsp"},{"name":"milk","amount":"1 1/2 cups"},{"name":"eggs","amount":"2"},{"name":"butter","amount":"2 tbsp, melted"}],"steps":["Whisk the flour and baking powder in a bowl. In another bowl, whisk the milk, eggs, and melted butter.","Pour the wet into the dry and stir just until combined — a few lumps are fine.","Cook 1/4-cup scoops on a buttered skillet over medium heat until bubbles form, 2 minutes, then flip and cook 1 more minute.","Serve with maple syrup. Double the batch and freeze extras for busy mornings."],"imageSeed":"pancakes","featured":false},
-  {"id":"r21","name":"Classic Spaghetti & Meatballs","description":"Tender homemade meatballs in rich marinara over spaghetti. Sunday dinner energy any night.","section":"family_favorites","mealType":"Dinner","tags":["italian","classic","make-ahead"],"prepMinutes":20,"cookMinutes":40,"servings":6,"costDollars":13.0,"difficulty":"Medium","ingredients":[{"name":"ground beef","amount":"1 lb"},{"name":"panko breadcrumbs","amount":"1/2 cup"},{"name":"parmesan","amount":"1/2 cup, grated"},{"name":"eggs","amount":"1"},{"name":"garlic","amount":"2 cloves, minced"},{"name":"pasta sauce","amount":"1 jar (24 oz)"},{"name":"spaghetti","amount":"1 lb"}],"steps":["Mix the beef, breadcrumbs, parmesan, egg, and garlic in a bowl. Roll into 1 1/2-inch meatballs.","Brown the meatballs in a large pot in batches, 2 minutes per side.","Pour the sauce into the pot with 1/2 cup water, nestle in the meatballs, and simmer 25–30 minutes.","Meanwhile cook the spaghetti. Serve the meatballs and sauce over the pasta with extra parmesan."],"imageSeed":"meatballs","featured":true},
-  {"id":"r22","name":"Homemade Mac & Cheese","description":"Creamy stovetop mac with a golden panko crunch — better than the box, barely more work.","section":"family_favorites","mealType":"Dinner","tags":["comfort","kid-friendly","classic"],"prepMinutes":10,"cookMinutes":25,"servings":6,"costDollars":10.0,"difficulty":"Easy","ingredients":[{"name":"elbow pasta","amount":"1 lb"},{"name":"butter","amount":"4 tbsp"},{"name":"flour","amount":"1/4 cup"},{"name":"milk","amount":"3 cups"},{"name":"cheddar cheese","amount":"3 cups, shredded"},{"name":"panko breadcrumbs","amount":"1/2 cup"}],"steps":["Cook the pasta until al dente. Drain and set aside.","Melt the butter in a pot, whisk in the flour, and cook 1 minute. Slowly whisk in the milk until smooth. Simmer until thickened, 4–5 minutes.","Remove from heat and stir in the cheese until fully melted. Add the pasta and stir.","Optional: top with panko and broil 2 minutes for a golden crunch."],"imageSeed":"mac-cheese","featured":false},
-  {"id":"r23","name":"Chicken Pot Pie","description":"A cozy classic with a biscuit topping — the ultimate comfort dinner.","section":"family_favorites","mealType":"Dinner","tags":["comfort","classic","winter"],"prepMinutes":20,"cookMinutes":35,"servings":6,"costDollars":14.0,"difficulty":"Medium","ingredients":[{"name":"chicken breast","amount":"2 cups, cooked & cubed"},{"name":"frozen vegetables","amount":"2 cups"},{"name":"butter","amount":"4 tbsp"},{"name":"flour","amount":"1/3 cup"},{"name":"chicken broth","amount":"2 cups"},{"name":"milk","amount":"1 cup"},{"name":"puff pastry","amount":"1 sheet, thawed"}],"steps":["Preheat the oven to 400°F. Melt the butter in a pot, whisk in the flour, and cook 1 minute.","Whisk in the broth and milk, simmering until thick and creamy, 5 minutes. Add the chicken and vegetables and season.","Pour the filling into a baking dish. Cover with the puff pastry, trimming to fit, and cut a few slits.","Bake 30–35 minutes until the pastry is golden and the filling bubbles. Rest 10 minutes before serving."],"imageSeed":"chicken-potpie","featured":false},
-  {"id":"r24","name":"Shepherd's Pie","description":"Savory ground beef and vegetables under a blanket of buttery mashed potatoes.","section":"family_favorites","mealType":"Dinner","tags":["comfort","classic","make-ahead"],"prepMinutes":20,"cookMinutes":30,"servings":6,"costDollars":13.0,"difficulty":"Medium","ingredients":[{"name":"ground beef","amount":"1.5 lb"},{"name":"onion","amount":"1, diced"},{"name":"carrots","amount":"2, diced"},{"name":"frozen peas","amount":"1 cup"},{"name":"potatoes","amount":"2 lb, peeled"},{"name":"butter","amount":"4 tbsp"},{"name":"milk","amount":"1/2 cup"},{"name":"worcestershire","amount":"1 tbsp"}],"steps":["Boil the potatoes in salted water until tender, 15 minutes. Meanwhile brown the beef with the onion and carrots, 8 minutes.","Stir the peas and worcestershire into the beef with 1/2 cup water and simmer 5 minutes. Season.","Mash the potatoes with butter and milk until creamy.","Layer the beef in a baking dish, top with the potatoes, and bake at 400°F for 25 minutes until golden on top."],"imageSeed":"shepherds-pie","featured":false},
-  {"id":"r25","name":"Meatloaf & Mashed Potatoes","description":"Glazed meatloaf with creamy mashed potatoes — the dinner your family actually requests.","section":"family_favorites","mealType":"Dinner","tags":["comfort","classic","kid-friendly"],"prepMinutes":15,"cookMinutes":55,"servings":6,"costDollars":12.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1.5 lb"},{"name":"panko breadcrumbs","amount":"1 cup"},{"name":"eggs","amount":"1"},{"name":"onion","amount":"1/2, grated"},{"name":"ketchup","amount":"1/2 cup"},{"name":"brown sugar","amount":"2 tbsp"},{"name":"potatoes","amount":"2 lb"}],"steps":["Preheat the oven to 375°F. Mix the beef, breadcrumbs, egg, onion, and half the ketchup in a bowl.","Shape into a loaf in a baking dish. Mix the remaining ketchup with the brown sugar and brush over the top.","Bake 55 minutes, until the internal temperature hits 160°F.","Boil and mash the potatoes with butter and milk while the meatloaf bakes. Slice and serve."],"imageSeed":"meatloaf","featured":false},
-  {"id":"r26","name":"Taco Night","description":"Build-your-own tacos with seasoned beef and all the fixings.","section":"family_favorites","mealType":"Dinner","tags":["mexican","build-your-own","kid-friendly"],"prepMinutes":15,"cookMinutes":15,"servings":6,"costDollars":11.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1.5 lb"},{"name":"taco seasoning","amount":"1 packet"},{"name":"corn tortillas","amount":"12"},{"name":"lettuce","amount":"2 cups, shredded"},{"name":"tomatoes","amount":"2, diced"},{"name":"cheddar cheese","amount":"1 1/2 cups, shredded"},{"name":"sour cream","amount":"1/2 cup"},{"name":"salsa","amount":"1 cup"}],"steps":["Brown the beef in a skillet, 6 minutes. Drain, add the taco seasoning and 2/3 cup water, and simmer 5 minutes until saucy.","Warm the tortillas.","Set up a toppings bar: beef, lettuce, tomatoes, cheese, sour cream, salsa.","Let everyone build their own. That's the magic."],"imageSeed":"taco-night","featured":true},
-  {"id":"r27","name":"One-Pot Jambalaya","description":"Cajun-spiced chicken and sausage rice — one pot, big flavor.","section":"one_pot","mealType":"Dinner","tags":["one-pot","cajun","spicy"],"prepMinutes":15,"cookMinutes":30,"servings":6,"costDollars":12.0,"difficulty":"Medium","ingredients":[{"name":"chicken breast","amount":"1 lb, cubed"},{"name":"sausage","amount":"8 oz, sliced"},{"name":"rice","amount":"1 1/2 cups"},{"name":"onion","amount":"1, diced"},{"name":"bell pepper","amount":"1, diced"},{"name":"canned tomatoes","amount":"1 can (15 oz)"},{"name":"chicken broth","amount":"2 cups"},{"name":"paprika","amount":"1 tbsp"},{"name":"cayenne","amount":"1/4 tsp"}],"steps":["Brown the sausage in a large pot, 4 minutes. Remove. Brown the chicken in the same pot, 5 minutes. Remove.","Cook the onion and pepper in the pot until soft, 3 minutes. Stir in the rice, paprika, and cayenne.","Add the tomatoes, broth, chicken, and sausage. Bring to a boil, then simmer covered 20 minutes until the rice is tender.","Let rest 5 minutes covered, then fluff and serve."],"imageSeed":"jambalaya","featured":false},
-  {"id":"r28","name":"Creamy Tomato Tortellini","description":"Cheese tortellini in a creamy tomato sauce — restaurant flavor, one pot, twenty minutes.","section":"one_pot","mealType":"Dinner","tags":["one-pot","italian","quick"],"prepMinutes":5,"cookMinutes":15,"servings":5,"costDollars":10.0,"difficulty":"Easy","ingredients":[{"name":"cheese tortellini","amount":"20 oz"},{"name":"pasta sauce","amount":"1 jar (24 oz)"},{"name":"heavy cream","amount":"1/2 cup"},{"name":"parmesan","amount":"1/2 cup, grated"},{"name":"spinach","amount":"2 cups","optional":true}],"steps":["Combine the tortellini, pasta sauce, cream, and 2 cups water in a large pot.","Bring to a boil, then simmer, stirring often, until the tortellini is tender and the sauce thickens, 12–15 minutes.","Stir in the parmesan and spinach (if using) until wilted.","Season with pepper and serve with extra parmesan."],"imageSeed":"tortellini","featured":false},
-  {"id":"r29","name":"One-Pot Beef Stroganoff","description":"Comforting beef and mushrooms in sour cream gravy over egg noodles — one pot to wash.","section":"one_pot","mealType":"Dinner","tags":["one-pot","comfort","classic"],"prepMinutes":10,"cookMinutes":25,"servings":5,"costDollars":12.0,"difficulty":"Easy","ingredients":[{"name":"ground beef","amount":"1 lb"},{"name":"mushrooms","amount":"8 oz, sliced"},{"name":"onion","amount":"1, diced"},{"name":"egg noodles","amount":"12 oz"},{"name":"beef broth","amount":"2 1/2 cups"},{"name":"sour cream","amount":"1 cup"},{"name":"paprika","amount":"1 tsp"}],"steps":["Brown the beef in a large pot, 5 minutes. Add the mushrooms and onion and cook 5 minutes more.","Add the noodles, broth, and paprika. Simmer, stirring often, until the noodles are tender and the liquid is mostly absorbed, 15 minutes.","Remove from heat and stir in the sour cream until creamy.","Season and serve immediately."],"imageSeed":"stroganoff","featured":false},
-  {"id":"r30","name":"Coconut Curry Chicken","description":"Comforting coconut curry with chicken and rice — mild enough for kids, bold enough for you.","section":"one_pot","mealType":"Dinner","tags":["one-pot","curry","healthy"],"prepMinutes":10,"cookMinutes":25,"servings":4,"costDollars":11.0,"difficulty":"Easy","ingredients":[{"name":"chicken breast","amount":"1 lb, cubed"},{"name":"coconut milk","amount":"1 can (13.5 oz)"},{"name":"curry paste","amount":"2 tbsp"},{"name":"onion","amount":"1, diced"},{"name":"frozen peas","amount":"1 cup"},{"name":"white rice","amount":"1 cup"},{"name":"ginger","amount":"1 tbsp, grated"}],"steps":["Start the rice. Sauté the onion in a pot with a splash of oil until soft, 3 minutes.","Add the curry paste and ginger and cook 1 minute until fragrant. Add the chicken and cook 4 minutes.","Pour in the coconut milk and 1/2 cup water. Simmer 15 minutes until the chicken is cooked through.","Stir in the peas for the last 2 minutes. Serve over the rice."],"imageSeed":"coconut-curry","featured":false},
-  {"id":"r31","name":"One-Pot Chicken Alfredo","description":"Fettuccine simmered right in a creamy garlic sauce with chicken. One pot, total comfort.","section":"one_pot","mealType":"Dinner","tags":["one-pot","comfort","kid-friendly"],"prepMinutes":8,"cookMinutes":20,"servings":5,"costDollars":11.0,"difficulty":"Easy","ingredients":[{"name":"fettuccine","amount":"12 oz"},{"name":"chicken breast","amount":"1 lb, cubed"},{"name":"garlic","amount":"3 cloves, minced"},{"name":"heavy cream","amount":"1 1/2 cups"},{"name":"chicken broth","amount":"1 1/2 cups"},{"name":"parmesan","amount":"1 cup, grated"},{"name":"butter","amount":"2 tbsp"}],"steps":["Season and brown the chicken in a large pot with the butter, 5 minutes. Add the garlic and cook 30 seconds.","Add the broth, cream, and fettuccine. Bring to a boil, then simmer, stirring often, until the pasta is tender, 12–14 minutes.","Stir in the parmesan until the sauce is thick and glossy.","Let rest 2 minutes and serve with extra parmesan."],"imageSeed":"alfredo","featured":false}
+ {
+  "id": "r01",
+  "name": "Black Bean Tacos",
+  "description": "Cheesy black bean tacos with creamy avocado — dinner for four under seven bucks.",
+  "section": "under_10",
+  "mealType": "Dinner",
+  "tags": [
+   "vegetarian",
+   "mexican",
+   "quick"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 8,
+  "servings": 4,
+  "costDollars": 6.5,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "black beans",
+    "amount": "2 cans",
+    "brand": "Bush's or store brand"
+   },
+   {
+    "name": "flour tortillas",
+    "amount": "8"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "1 cup, shredded"
+   },
+   {
+    "name": "avocado",
+    "amount": "1, sliced"
+   },
+   {
+    "name": "salsa",
+    "amount": "1 cup"
+   },
+   {
+    "name": "taco seasoning",
+    "amount": "1 packet"
+   },
+   {
+    "name": "lime",
+    "amount": "1, optional"
+   }
+  ],
+  "steps": [
+   "Heat the beans in a small pot with the taco seasoning and 1/4 cup water over medium heat until warm, about 5 minutes. Mash lightly with a fork.",
+   "Warm the tortillas in a dry skillet for 30 seconds per side, or in the microwave between damp paper towels.",
+   "Spoon beans onto each tortilla, top with cheese, avocado slices, and a spoonful of salsa.",
+   "Squeeze lime over the top if you have it and serve immediately."
+  ],
+  "imageSeed": "black-bean-tacos",
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg/500px-Black_bean_corn_tacos_at_Down_The_Rabbit_Hole_2018.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r02",
+  "name": "Spaghetti Aglio e Olio",
+  "description": "The Italian pantry classic — garlic, olive oil, and chili flakes over spaghetti.",
+  "section": "under_10",
+  "mealType": "Dinner",
+  "tags": [
+   "vegetarian",
+   "italian",
+   "pantry"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 15,
+  "servings": 4,
+  "costDollars": 5.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "spaghetti",
+    "amount": "1 lb"
+   },
+   {
+    "name": "olive oil",
+    "amount": "1/3 cup"
+   },
+   {
+    "name": "garlic",
+    "amount": "6 cloves, thinly sliced"
+   },
+   {
+    "name": "red pepper flakes",
+    "amount": "1/2 tsp"
+   },
+   {
+    "name": "parmesan",
+    "amount": "1/2 cup, grated"
+   },
+   {
+    "name": "parsley",
+    "amount": "1/4 cup, chopped",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Cook the spaghetti in well-salted boiling water until al dente. Reserve 1 cup of pasta water, then drain.",
+   "While the pasta cooks, warm the olive oil in a large skillet over medium heat. Add the garlic and red pepper flakes and cook until the garlic is golden and fragrant, 2–3 minutes. Don't let it burn.",
+   "Add the drained spaghetti to the skillet with a splash of pasta water. Toss vigorously until the sauce coats every strand.",
+   "Off the heat, toss in the parmesan and parsley. Add pasta water a splash at a time until it's silky. Serve hot."
+  ],
+  "imageSeed": "aglio-olio",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg/500px-Mussels_Spaghetti_aglio_e_olio_Vikings_Luxury_Dinner_Buffet_26_January_2025_Philippines6.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r03",
+  "name": "Egg Fried Rice",
+  "description": "Better than takeout and made with whatever's in the fridge.",
+  "section": "under_10",
+  "mealType": "Dinner",
+  "tags": [
+   "asian",
+   "quick",
+   "leftovers"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 12,
+  "servings": 4,
+  "costDollars": 5.5,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "rice",
+    "amount": "4 cups cooked, cold"
+   },
+   {
+    "name": "eggs",
+    "amount": "3"
+   },
+   {
+    "name": "frozen peas",
+    "amount": "1 cup"
+   },
+   {
+    "name": "carrots",
+    "amount": "1, diced"
+   },
+   {
+    "name": "soy sauce",
+    "amount": "3 tbsp"
+   },
+   {
+    "name": "green onions",
+    "amount": "3, sliced"
+   },
+   {
+    "name": "vegetable oil",
+    "amount": "2 tbsp"
+   }
+  ],
+  "steps": [
+   "If using leftover rice, break up any clumps. Cold rice works best.",
+   "Heat the oil in a wok or large skillet over high heat. Scramble the eggs, push them to one side, then add the carrots and peas and stir-fry 2 minutes.",
+   "Add the rice and toss to combine, pressing out clumps, until the rice is hot and slightly toasted, about 4 minutes.",
+   "Drizzle the soy sauce around the edges, add the green onions, and toss. Serve hot."
+  ],
+  "imageSeed": "fried-rice",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Egg_Fried_Rice.jpg/500px-Egg_Fried_Rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r04",
+  "name": "Grilled Cheese & Tomato Soup",
+  "description": "The coziest combo. Gooey sandwiches dunked in rich tomato soup.",
+  "section": "under_10",
+  "mealType": "Lunch",
+  "tags": [
+   "classic",
+   "comfort",
+   "kid-friendly"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 12,
+  "servings": 3,
+  "costDollars": 7.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "bread",
+    "amount": "6 slices"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "6 slices"
+   },
+   {
+    "name": "butter",
+    "amount": "3 tbsp, softened"
+   },
+   {
+    "name": "canned tomatoes",
+    "amount": "1 can (28 oz)"
+   },
+   {
+    "name": "heavy cream",
+    "amount": "1/4 cup"
+   },
+   {
+    "name": "garlic",
+    "amount": "1 clove, optional"
+   }
+  ],
+  "steps": [
+   "Heat the canned tomatoes with a splash of water in a pot over medium heat for 8 minutes. Blend with an immersion blender, stir in the cream, and season with salt. Keep warm.",
+   "Butter one side of each bread slice. Build sandwiches with cheese between two buttered-out slices.",
+   "Cook in a skillet over medium-low heat, 3–4 minutes per side, until golden and the cheese melts.",
+   "Slice the sandwiches and serve with the soup for dunking."
+  ],
+  "imageSeed": "grilled-cheese",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg/500px-Grilled_Cheese_and_Tomato_Soup_%285899244194%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r05",
+  "name": "Tuna Melts",
+  "description": "Crispy tuna melts with melty cheddar — lunch in 15 minutes flat.",
+  "section": "under_10",
+  "mealType": "Lunch",
+  "tags": [
+   "quick",
+   "sandwich"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 10,
+  "servings": 2,
+  "costDollars": 6.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "canned tuna",
+    "amount": "2 cans, drained"
+   },
+   {
+    "name": "mayonnaise",
+    "amount": "1/3 cup"
+   },
+   {
+    "name": "celery",
+    "amount": "1 stalk, minced"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "1 cup, shredded"
+   },
+   {
+    "name": "bread",
+    "amount": "4 slices"
+   },
+   {
+    "name": "mustard",
+    "amount": "1 tsp",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Preheat the broiler. Mix the tuna with mayo, celery, a squeeze of lemon if you have it, and a pinch of pepper.",
+   "Spread the tuna mix on the bread slices and top generously with cheddar.",
+   "Broil 3–5 minutes until bubbly and golden on top. Serve hot."
+  ],
+  "imageSeed": "tuna-melt",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Tuna_Melts_My_Heart.jpg/500px-Tuna_Melts_My_Heart.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r06",
+  "name": "Chili Mac",
+  "description": "One skillet, ten ingredients, six bowls of chili-cheese mac.",
+  "section": "under_10",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "comfort",
+   "kid-friendly"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 20,
+  "servings": 6,
+  "costDollars": 8.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1 lb"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "elbow pasta",
+    "amount": "2 cups"
+   },
+   {
+    "name": "canned tomatoes",
+    "amount": "1 can (15 oz)"
+   },
+   {
+    "name": "kidney beans",
+    "amount": "1 can, drained"
+   },
+   {
+    "name": "chili powder",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "chicken broth",
+    "amount": "2 cups"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "1 cup, shredded"
+   }
+  ],
+  "steps": [
+   "Brown the beef with the onion in a large pot over medium-high heat, 5–6 minutes. Drain excess fat.",
+   "Stir in the chili powder and cook 30 seconds. Add the pasta, tomatoes, beans, and broth.",
+   "Simmer, stirring often, until the pasta is tender and the sauce thickens, 12–15 minutes.",
+   "Stir in the cheese until melted. Let rest 2 minutes, then serve."
+  ],
+  "imageSeed": "chili-mac",
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Chili_Mac_3_%2837562806074%29.jpg/500px-Chili_Mac_3_%2837562806074%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r07",
+  "name": "Chicken & Rice Bowl",
+  "description": "A bright, healthy bowl of chicken, rice, and broccoli in a soy-ginger sauce.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "healthy",
+   "asian",
+   "meal-prep"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 15,
+  "servings": 4,
+  "costDollars": 9.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "1 lb, cubed"
+   },
+   {
+    "name": "white rice",
+    "amount": "1 cup"
+   },
+   {
+    "name": "broccoli",
+    "amount": "3 cups, florets"
+   },
+   {
+    "name": "soy sauce",
+    "amount": "3 tbsp"
+   },
+   {
+    "name": "ginger",
+    "amount": "1 tbsp, grated"
+   },
+   {
+    "name": "garlic",
+    "amount": "2 cloves, minced"
+   },
+   {
+    "name": "honey",
+    "amount": "1 tbsp"
+   },
+   {
+    "name": "vegetable oil",
+    "amount": "1 tbsp"
+   }
+  ],
+  "steps": [
+   "Cook the rice according to the package. Meanwhile, whisk the soy sauce, honey, ginger, and garlic into a sauce.",
+   "Heat the oil in a large skillet over medium-high heat. Cook the chicken until golden and cooked through, 6–7 minutes.",
+   "Add the broccoli and 1/4 cup water, cover, and steam 3 minutes until bright green and crisp-tender.",
+   "Pour the sauce over everything and toss 1 minute until glossy. Serve over the rice."
+  ],
+  "imageSeed": "chicken-rice-bowl",
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg/500px-Butter_chicken_rice_bowl_-_chaiiwala_2024-02-10.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r08",
+  "name": "20-Minute Beef Stir-Fry",
+  "description": "Tender beef and crisp veggies in a glossy stir-fry sauce — faster than delivery.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "asian",
+   "quick",
+   "high-protein"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 10,
+  "servings": 4,
+  "costDollars": 12.0,
+  "difficulty": "Medium",
+  "ingredients": [
+   {
+    "name": "flank steak",
+    "amount": "1 lb, thinly sliced"
+   },
+   {
+    "name": "broccoli",
+    "amount": "3 cups, florets"
+   },
+   {
+    "name": "bell pepper",
+    "amount": "1, sliced"
+   },
+   {
+    "name": "carrots",
+    "amount": "2, julienned"
+   },
+   {
+    "name": "soy sauce",
+    "amount": "1/4 cup"
+   },
+   {
+    "name": "brown sugar",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "cornstarch",
+    "amount": "1 tbsp"
+   },
+   {
+    "name": "garlic",
+    "amount": "3 cloves, minced"
+   },
+   {
+    "name": "vegetable oil",
+    "amount": "2 tbsp"
+   }
+  ],
+  "steps": [
+   "Whisk the soy sauce, brown sugar, cornstarch, garlic, and 1/4 cup water into a sauce.",
+   "Toss the beef with 1 tbsp of the sauce and a pinch of cornstarch.",
+   "Heat the oil in a wok over high heat. Sear the beef in a single layer until browned, 2 minutes per side; remove.",
+   "Stir-fry the vegetables 3 minutes. Return the beef, pour in the sauce, and toss until thick and glossy, 1 minute. Serve over rice."
+  ],
+  "imageSeed": "beef-stirfry",
+  "featured": false
+ },
+ {
+  "id": "r09",
+  "name": "Creamy Garlic Pasta",
+  "description": "Garlicky, creamy, and done in twenty minutes. Weeknight royalty.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "vegetarian",
+   "comfort",
+   "quick"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 15,
+  "servings": 4,
+  "costDollars": 8.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "penne",
+    "amount": "1 lb"
+   },
+   {
+    "name": "garlic",
+    "amount": "6 cloves, minced"
+   },
+   {
+    "name": "heavy cream",
+    "amount": "1 cup"
+   },
+   {
+    "name": "parmesan",
+    "amount": "3/4 cup, grated"
+   },
+   {
+    "name": "butter",
+    "amount": "3 tbsp"
+   },
+   {
+    "name": "spinach",
+    "amount": "3 cups",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Cook the penne in salted water until al dente. Reserve 1/2 cup pasta water.",
+   "Melt the butter in a skillet over medium heat. Cook the garlic 1 minute until fragrant.",
+   "Add the cream and simmer 2 minutes. Stir in the parmesan until smooth.",
+   "Add the pasta and spinach (if using) and toss, loosening with pasta water. Season with pepper and serve."
+  ],
+  "imageSeed": "creamy-garlic-pasta",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg/500px-Creamy_Chesse_Pasta_with_Hot_Garlic_Bread.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r10",
+  "name": "Lemon Butter Salmon & Rice",
+  "description": "Flaky salmon in a lemony butter sauce with fluffy rice — fancy, fast, affordable.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "healthy",
+   "seafood",
+   "quick"
+  ],
+  "prepMinutes": 8,
+  "cookMinutes": 15,
+  "servings": 4,
+  "costDollars": 13.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "salmon",
+    "amount": "1 lb, fillets"
+   },
+   {
+    "name": "butter",
+    "amount": "4 tbsp"
+   },
+   {
+    "name": "lemon",
+    "amount": "1, juiced"
+   },
+   {
+    "name": "garlic",
+    "amount": "2 cloves, minced"
+   },
+   {
+    "name": "white rice",
+    "amount": "1 cup"
+   },
+   {
+    "name": "green beans",
+    "amount": "1 lb",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Start the rice. Pat the salmon dry and season with salt and pepper.",
+   "Melt 2 tbsp butter in a skillet over medium-high. Cook the salmon skin-side up 4 minutes, flip, add the remaining butter, garlic, and lemon juice.",
+   "Spoon the foaming butter over the salmon for 2 minutes until just cooked through.",
+   "Serve the salmon over rice with the pan sauce spooned on top."
+  ],
+  "imageSeed": "lemon-salmon",
+  "featured": false
+ },
+ {
+  "id": "r11",
+  "name": "Sloppy Joes",
+  "description": "Messy, saucy, and beloved. Classic sloppy joes on soft buns.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "kid-friendly",
+   "classic"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 20,
+  "servings": 5,
+  "costDollars": 10.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1.5 lb"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "ketchup",
+    "amount": "1 cup"
+   },
+   {
+    "name": "brown sugar",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "worcestershire",
+    "amount": "1 tbsp"
+   },
+   {
+    "name": "mustard",
+    "amount": "1 tbsp"
+   },
+   {
+    "name": "burger buns",
+    "amount": "6"
+   }
+  ],
+  "steps": [
+   "Brown the beef with the onion in a large skillet, 6 minutes. Drain excess fat.",
+   "Stir in the ketchup, brown sugar, worcestershire, mustard, and 1/4 cup water.",
+   "Simmer 12–15 minutes until thick and saucy. Season to taste.",
+   "Pile onto toasted buns and serve with pickles if you have them."
+  ],
+  "imageSeed": "sloppy-joes",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Millburn_Deli_Sloppy_Joes.jpg/500px-Millburn_Deli_Sloppy_Joes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r12",
+  "name": "Quesadilla Fiesta",
+  "description": "Cheesy chicken quesadillas with peppers and onion — a crowd-pleaser in 20 minutes.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "mexican",
+   "kid-friendly",
+   "quick"
+  ],
+  "prepMinutes": 8,
+  "cookMinutes": 12,
+  "servings": 4,
+  "costDollars": 8.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "flour tortillas",
+    "amount": "8"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "2 cups, shredded"
+   },
+   {
+    "name": "chicken breast",
+    "amount": "2 cups, cooked & shredded"
+   },
+   {
+    "name": "bell pepper",
+    "amount": "1, sliced"
+   },
+   {
+    "name": "onion",
+    "amount": "1/2, sliced"
+   },
+   {
+    "name": "sour cream",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "salsa",
+    "amount": "1 cup"
+   }
+  ],
+  "steps": [
+   "Cook the pepper and onion in a dry skillet over medium-high heat until charred, 5 minutes. Set aside.",
+   "Heat a large skillet. Lay a tortilla in, cover with cheese, chicken, peppers, and more cheese. Top with a second tortilla.",
+   "Cook 2–3 minutes per side until golden and the cheese melts. Repeat for the remaining quesadillas.",
+   "Cut into wedges and serve with sour cream and salsa."
+  ],
+  "imageSeed": "quesadilla",
+  "featured": false
+ },
+ {
+  "id": "r13",
+  "name": "One-Pan Sausage & Peppers",
+  "description": "Juicy sausage, sweet peppers, and onions roasted on one sheet pan.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "sheet-pan",
+   "italian",
+   "easy-cleanup"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 18,
+  "servings": 4,
+  "costDollars": 11.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "sausage",
+    "amount": "1 lb, sliced"
+   },
+   {
+    "name": "bell peppers",
+    "amount": "3, sliced"
+   },
+   {
+    "name": "onion",
+    "amount": "1, sliced"
+   },
+   {
+    "name": "olive oil",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "italian seasoning",
+    "amount": "1 tsp"
+   },
+   {
+    "name": "pasta sauce",
+    "amount": "1 jar",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Preheat the oven to 425°F. Toss the sausage, peppers, and onion with olive oil and seasoning on a sheet pan.",
+   "Roast 18–20 minutes, stirring once halfway, until the sausage is browned and the peppers soften.",
+   "Serve as-is, over rice, or on hoagie rolls. Optionally warm the sauce and spoon it over the top."
+  ],
+  "imageSeed": "sausage-peppers",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Cold_chicken_sausage%2C_avocado%2C_and_bell_peppers_on_mixed_greens%2C_with_black_pepper%2C_grated_cheddar_cheese%2C_and_dressing_of_mustard%2C_olive_oil%2C_and_vinegar_-_Massachusetts.jpg/500px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r14",
+  "name": "Sheet-Pan Chicken Fajitas",
+  "description": "Everything fajita on one pan — chicken, peppers, and onions with warm tortillas.",
+  "section": "under_20",
+  "mealType": "Dinner",
+  "tags": [
+   "mexican",
+   "sheet-pan",
+   "meal-prep"
+  ],
+  "prepMinutes": 12,
+  "cookMinutes": 18,
+  "servings": 4,
+  "costDollars": 12.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "1.5 lb, sliced"
+   },
+   {
+    "name": "bell peppers",
+    "amount": "3, sliced"
+   },
+   {
+    "name": "onion",
+    "amount": "1, sliced"
+   },
+   {
+    "name": "fajita seasoning",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "olive oil",
+    "amount": "3 tbsp"
+   },
+   {
+    "name": "flour tortillas",
+    "amount": "8"
+   },
+   {
+    "name": "lime",
+    "amount": "1"
+   }
+  ],
+  "steps": [
+   "Preheat the oven to 425°F. Toss the chicken, peppers, and onion with oil and fajita seasoning on a sheet pan.",
+   "Roast 18 minutes, stirring halfway, until the chicken is cooked through and the edges char.",
+   "Warm the tortillas. Squeeze lime over the filling.",
+   "Serve family-style with tortillas, salsa, and sour cream."
+  ],
+  "imageSeed": "chicken-fajitas",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Chicken_fajitas.jpg/500px-Chicken_fajitas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r15",
+  "name": "Crockpot BBQ Chicken",
+  "description": "Five ingredients, zero effort. Shredded BBQ chicken for sandwiches or rice bowls.",
+  "section": "five_ingredients",
+  "mealType": "Dinner",
+  "tags": [
+   "crockpot",
+   "set-and-forget",
+   "kid-friendly"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 240,
+  "servings": 6,
+  "costDollars": 9.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "2 lb"
+   },
+   {
+    "name": "bbq sauce",
+    "amount": "2 cups"
+   },
+   {
+    "name": "chicken broth",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "garlic powder",
+    "amount": "1 tsp"
+   },
+   {
+    "name": "burger buns",
+    "amount": "6"
+   }
+  ],
+  "steps": [
+   "Place the chicken in the slow cooker. Pour the BBQ sauce and broth over the top and sprinkle with garlic powder.",
+   "Cover and cook on low for 4–6 hours or high for 2–3 hours, until the chicken shreds easily.",
+   "Shred the chicken in the pot with two forks and stir into the sauce.",
+   "Pile onto buns or serve over rice. Freeze leftovers in portions."
+  ],
+  "imageSeed": "bbq-chicken",
+  "featured": true
+ },
+ {
+  "id": "r16",
+  "name": "Baked Ziti",
+  "description": "Cheesy baked ziti with bubbly mozzarella — five ingredients, one baking dish.",
+  "section": "five_ingredients",
+  "mealType": "Dinner",
+  "tags": [
+   "italian",
+   "baked",
+   "kid-friendly"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 30,
+  "servings": 6,
+  "costDollars": 9.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ziti pasta",
+    "amount": "1 lb"
+   },
+   {
+    "name": "pasta sauce",
+    "amount": "1 jar (24 oz)"
+   },
+   {
+    "name": "ricotta",
+    "amount": "15 oz"
+   },
+   {
+    "name": "mozzarella",
+    "amount": "2 cups, shredded"
+   },
+   {
+    "name": "parmesan",
+    "amount": "1/2 cup, grated"
+   }
+  ],
+  "steps": [
+   "Cook the ziti until just shy of al dente. Drain and return to the pot.",
+   "Stir in the pasta sauce and ricotta until everything is coated.",
+   "Transfer to a 9x13 baking dish, top with mozzarella and parmesan.",
+   "Bake at 400°F for 20 minutes until bubbly and golden. Rest 5 minutes before serving."
+  ],
+  "imageSeed": "baked-ziti",
+  "featured": false
+ },
+ {
+  "id": "r17",
+  "name": "Peanut Noodles",
+  "description": "Creamy peanut-sauced noodles with whatever veggies you have.",
+  "section": "five_ingredients",
+  "mealType": "Dinner",
+  "tags": [
+   "asian",
+   "vegetarian",
+   "quick"
+  ],
+  "prepMinutes": 8,
+  "cookMinutes": 12,
+  "servings": 4,
+  "costDollars": 7.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "spaghetti",
+    "amount": "12 oz"
+   },
+   {
+    "name": "peanut butter",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "soy sauce",
+    "amount": "1/4 cup"
+   },
+   {
+    "name": "honey",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "frozen vegetables",
+    "amount": "2 cups"
+   }
+  ],
+  "steps": [
+   "Cook the spaghetti. In the last 2 minutes, add the frozen vegetables to the pot. Drain, reserving 1/2 cup pasta water.",
+   "Whisk the peanut butter, soy sauce, honey, and 1/3 cup hot pasta water into a smooth sauce.",
+   "Toss the noodles and veggies with the sauce, loosening with more pasta water as needed.",
+   "Top with green onions or sesame seeds if you have them."
+  ],
+  "imageSeed": "peanut-noodles",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg/500px-Chicken_and_peanuts_on_hokkien_noodles%2C_with_peanut_sauce_and_sesame_seeds_-_Massachusetts.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r18",
+  "name": "Salsa Chicken",
+  "description": "Two ingredients, one dish: chicken baked in salsa, shredded and piled into tacos.",
+  "section": "five_ingredients",
+  "mealType": "Dinner",
+  "tags": [
+   "mexican",
+   "set-and-forget",
+   "low-effort"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 35,
+  "servings": 4,
+  "costDollars": 8.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "1.5 lb"
+   },
+   {
+    "name": "salsa",
+    "amount": "2 cups"
+   },
+   {
+    "name": "taco seasoning",
+    "amount": "1 packet"
+   },
+   {
+    "name": "corn tortillas",
+    "amount": "8"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "1 cup, shredded"
+   }
+  ],
+  "steps": [
+   "Preheat the oven to 400°F. Place the chicken in a baking dish and pour the salsa over the top. Sprinkle with the taco seasoning.",
+   "Bake 35 minutes, until the chicken is tender and shreds easily.",
+   "Shred the chicken in the dish and stir into the salsa.",
+   "Serve in warm corn tortillas with cheese, avocado, or sour cream."
+  ],
+  "imageSeed": "salsa-chicken",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Chicken_with_salsa_filipino.jpg/500px-Chicken_with_salsa_filipino.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r19",
+  "name": "One-Pot Cheesy Taco Pasta",
+  "description": "All the flavors of taco night in one pot of cheesy pasta.",
+  "section": "five_ingredients",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "mexican",
+   "kid-friendly"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 20,
+  "servings": 6,
+  "costDollars": 9.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1 lb"
+   },
+   {
+    "name": "elbow pasta",
+    "amount": "3 cups"
+   },
+   {
+    "name": "taco seasoning",
+    "amount": "1 packet"
+   },
+   {
+    "name": "canned tomatoes",
+    "amount": "1 can (15 oz)"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "2 cups, shredded"
+   }
+  ],
+  "steps": [
+   "Brown the beef in a large pot, 5 minutes. Drain excess fat.",
+   "Add the pasta, tomatoes (with their juices), taco seasoning, and 3 cups water.",
+   "Simmer, stirring often, until the pasta is tender and the liquid is absorbed, 15 minutes.",
+   "Remove from heat and stir in the cheese until melted. Top with more cheese if you dare."
+  ],
+  "imageSeed": "taco-pasta",
+  "featured": false
+ },
+ {
+  "id": "r20",
+  "name": "Fluffy Pancakes",
+  "description": "Five ingredients for the fluffiest stack of pancakes — breakfast for dinner, anyone?",
+  "section": "five_ingredients",
+  "mealType": "Breakfast",
+  "tags": [
+   "breakfast",
+   "kid-friendly",
+   "budget"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 15,
+  "servings": 4,
+  "costDollars": 4.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "flour",
+    "amount": "2 cups"
+   },
+   {
+    "name": "baking powder",
+    "amount": "2 tsp"
+   },
+   {
+    "name": "milk",
+    "amount": "1 1/2 cups"
+   },
+   {
+    "name": "eggs",
+    "amount": "2"
+   },
+   {
+    "name": "butter",
+    "amount": "2 tbsp, melted"
+   }
+  ],
+  "steps": [
+   "Whisk the flour and baking powder in a bowl. In another bowl, whisk the milk, eggs, and melted butter.",
+   "Pour the wet into the dry and stir just until combined — a few lumps are fine.",
+   "Cook 1/4-cup scoops on a buttered skillet over medium heat until bubbles form, 2 minutes, then flip and cook 1 more minute.",
+   "Serve with maple syrup. Double the batch and freeze extras for busy mornings."
+  ],
+  "imageSeed": "pancakes",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg/500px-Cr%C3%A8me_Brulee_Pancakes_-_Fluffy_Fluffy_Dessert_Cafe_2025-06-10.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r21",
+  "name": "Classic Spaghetti & Meatballs",
+  "description": "Tender homemade meatballs in rich marinara over spaghetti. Sunday dinner energy any night.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "italian",
+   "classic",
+   "make-ahead"
+  ],
+  "prepMinutes": 20,
+  "cookMinutes": 40,
+  "servings": 6,
+  "costDollars": 13.0,
+  "difficulty": "Medium",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1 lb"
+   },
+   {
+    "name": "panko breadcrumbs",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "parmesan",
+    "amount": "1/2 cup, grated"
+   },
+   {
+    "name": "eggs",
+    "amount": "1"
+   },
+   {
+    "name": "garlic",
+    "amount": "2 cloves, minced"
+   },
+   {
+    "name": "pasta sauce",
+    "amount": "1 jar (24 oz)"
+   },
+   {
+    "name": "spaghetti",
+    "amount": "1 lb"
+   }
+  ],
+  "steps": [
+   "Mix the beef, breadcrumbs, parmesan, egg, and garlic in a bowl. Roll into 1 1/2-inch meatballs.",
+   "Brown the meatballs in a large pot in batches, 2 minutes per side.",
+   "Pour the sauce into the pot with 1/2 cup water, nestle in the meatballs, and simmer 25–30 minutes.",
+   "Meanwhile cook the spaghetti. Serve the meatballs and sauce over the pasta with extra parmesan."
+  ],
+  "imageSeed": "meatballs",
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg/500px-Spaghetti_%26_Meatballs_%281%29_%2838218932036%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r22",
+  "name": "Homemade Mac & Cheese",
+  "description": "Creamy stovetop mac with a golden panko crunch — better than the box, barely more work.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "comfort",
+   "kid-friendly",
+   "classic"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "servings": 6,
+  "costDollars": 10.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "elbow pasta",
+    "amount": "1 lb"
+   },
+   {
+    "name": "butter",
+    "amount": "4 tbsp"
+   },
+   {
+    "name": "flour",
+    "amount": "1/4 cup"
+   },
+   {
+    "name": "milk",
+    "amount": "3 cups"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "3 cups, shredded"
+   },
+   {
+    "name": "panko breadcrumbs",
+    "amount": "1/2 cup"
+   }
+  ],
+  "steps": [
+   "Cook the pasta until al dente. Drain and set aside.",
+   "Melt the butter in a pot, whisk in the flour, and cook 1 minute. Slowly whisk in the milk until smooth. Simmer until thickened, 4–5 minutes.",
+   "Remove from heat and stir in the cheese until fully melted. Add the pasta and stir.",
+   "Optional: top with panko and broil 2 minutes for a golden crunch."
+  ],
+  "imageSeed": "mac-cheese",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Homemade_Mac_%26_Cheese_%28436029030%29.jpg/500px-Homemade_Mac_%26_Cheese_%28436029030%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r23",
+  "name": "Chicken Pot Pie",
+  "description": "A cozy classic with a biscuit topping — the ultimate comfort dinner.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "comfort",
+   "classic",
+   "winter"
+  ],
+  "prepMinutes": 20,
+  "cookMinutes": 35,
+  "servings": 6,
+  "costDollars": 14.0,
+  "difficulty": "Medium",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "2 cups, cooked & cubed"
+   },
+   {
+    "name": "frozen vegetables",
+    "amount": "2 cups"
+   },
+   {
+    "name": "butter",
+    "amount": "4 tbsp"
+   },
+   {
+    "name": "flour",
+    "amount": "1/3 cup"
+   },
+   {
+    "name": "chicken broth",
+    "amount": "2 cups"
+   },
+   {
+    "name": "milk",
+    "amount": "1 cup"
+   },
+   {
+    "name": "puff pastry",
+    "amount": "1 sheet, thawed"
+   }
+  ],
+  "steps": [
+   "Preheat the oven to 400°F. Melt the butter in a pot, whisk in the flour, and cook 1 minute.",
+   "Whisk in the broth and milk, simmering until thick and creamy, 5 minutes. Add the chicken and vegetables and season.",
+   "Pour the filling into a baking dish. Cover with the puff pastry, trimming to fit, and cut a few slits.",
+   "Bake 30–35 minutes until the pastry is golden and the filling bubbles. Rest 10 minutes before serving."
+  ],
+  "imageSeed": "chicken-potpie",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/191-365_Chicken_Pot_Pie.jpg/500px-191-365_Chicken_Pot_Pie.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r24",
+  "name": "Shepherd's Pie",
+  "description": "Savory ground beef and vegetables under a blanket of buttery mashed potatoes.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "comfort",
+   "classic",
+   "make-ahead"
+  ],
+  "prepMinutes": 20,
+  "cookMinutes": 30,
+  "servings": 6,
+  "costDollars": 13.0,
+  "difficulty": "Medium",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1.5 lb"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "carrots",
+    "amount": "2, diced"
+   },
+   {
+    "name": "frozen peas",
+    "amount": "1 cup"
+   },
+   {
+    "name": "potatoes",
+    "amount": "2 lb, peeled"
+   },
+   {
+    "name": "butter",
+    "amount": "4 tbsp"
+   },
+   {
+    "name": "milk",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "worcestershire",
+    "amount": "1 tbsp"
+   }
+  ],
+  "steps": [
+   "Boil the potatoes in salted water until tender, 15 minutes. Meanwhile brown the beef with the onion and carrots, 8 minutes.",
+   "Stir the peas and worcestershire into the beef with 1/2 cup water and simmer 5 minutes. Season.",
+   "Mash the potatoes with butter and milk until creamy.",
+   "Layer the beef in a baking dish, top with the potatoes, and bake at 400°F for 25 minutes until golden on top."
+  ],
+  "imageSeed": "shepherds-pie",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg/500px-Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r25",
+  "name": "Meatloaf & Mashed Potatoes",
+  "description": "Glazed meatloaf with creamy mashed potatoes — the dinner your family actually requests.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "comfort",
+   "classic",
+   "kid-friendly"
+  ],
+  "prepMinutes": 15,
+  "cookMinutes": 55,
+  "servings": 6,
+  "costDollars": 12.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1.5 lb"
+   },
+   {
+    "name": "panko breadcrumbs",
+    "amount": "1 cup"
+   },
+   {
+    "name": "eggs",
+    "amount": "1"
+   },
+   {
+    "name": "onion",
+    "amount": "1/2, grated"
+   },
+   {
+    "name": "ketchup",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "brown sugar",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "potatoes",
+    "amount": "2 lb"
+   }
+  ],
+  "steps": [
+   "Preheat the oven to 375°F. Mix the beef, breadcrumbs, egg, onion, and half the ketchup in a bowl.",
+   "Shape into a loaf in a baking dish. Mix the remaining ketchup with the brown sugar and brush over the top.",
+   "Bake 55 minutes, until the internal temperature hits 160°F.",
+   "Boil and mash the potatoes with butter and milk while the meatloaf bakes. Slice and serve."
+  ],
+  "imageSeed": "meatloaf",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/2020-07-17_00_33_05_A_heated_Hungry_Man_Home-Style_Meatloaf_meal_%28Meatloaf_patties_with_mashed_potatoes%2C_gravy%2C_mixed_vegetables_and_a_brownie%29_in_Rochelle_Park%2C_Bergen_County%2C_New_Jersey.jpg/500px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r26",
+  "name": "Taco Night",
+  "description": "Build-your-own tacos with seasoned beef and all the fixings.",
+  "section": "family_favorites",
+  "mealType": "Dinner",
+  "tags": [
+   "mexican",
+   "build-your-own",
+   "kid-friendly"
+  ],
+  "prepMinutes": 15,
+  "cookMinutes": 15,
+  "servings": 6,
+  "costDollars": 11.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1.5 lb"
+   },
+   {
+    "name": "taco seasoning",
+    "amount": "1 packet"
+   },
+   {
+    "name": "corn tortillas",
+    "amount": "12"
+   },
+   {
+    "name": "lettuce",
+    "amount": "2 cups, shredded"
+   },
+   {
+    "name": "tomatoes",
+    "amount": "2, diced"
+   },
+   {
+    "name": "cheddar cheese",
+    "amount": "1 1/2 cups, shredded"
+   },
+   {
+    "name": "sour cream",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "salsa",
+    "amount": "1 cup"
+   }
+  ],
+  "steps": [
+   "Brown the beef in a skillet, 6 minutes. Drain, add the taco seasoning and 2/3 cup water, and simmer 5 minutes until saucy.",
+   "Warm the tortillas.",
+   "Set up a toppings bar: beef, lettuce, tomatoes, cheese, sour cream, salsa.",
+   "Let everyone build their own. That's the magic."
+  ],
+  "imageSeed": "taco-night",
+  "featured": true,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Fish_tacos_with_lemonade.jpg/500px-Fish_tacos_with_lemonade.jpg"
+ },
+ {
+  "id": "r27",
+  "name": "One-Pot Jambalaya",
+  "description": "Cajun-spiced chicken and sausage rice — one pot, big flavor.",
+  "section": "one_pot",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "cajun",
+   "spicy"
+  ],
+  "prepMinutes": 15,
+  "cookMinutes": 30,
+  "servings": 6,
+  "costDollars": 12.0,
+  "difficulty": "Medium",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "1 lb, cubed"
+   },
+   {
+    "name": "sausage",
+    "amount": "8 oz, sliced"
+   },
+   {
+    "name": "rice",
+    "amount": "1 1/2 cups"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "bell pepper",
+    "amount": "1, diced"
+   },
+   {
+    "name": "canned tomatoes",
+    "amount": "1 can (15 oz)"
+   },
+   {
+    "name": "chicken broth",
+    "amount": "2 cups"
+   },
+   {
+    "name": "paprika",
+    "amount": "1 tbsp"
+   },
+   {
+    "name": "cayenne",
+    "amount": "1/4 tsp"
+   }
+  ],
+  "steps": [
+   "Brown the sausage in a large pot, 4 minutes. Remove. Brown the chicken in the same pot, 5 minutes. Remove.",
+   "Cook the onion and pepper in the pot until soft, 3 minutes. Stir in the rice, paprika, and cayenne.",
+   "Add the tomatoes, broth, chicken, and sausage. Bring to a boil, then simmer covered 20 minutes until the rice is tender.",
+   "Let rest 5 minutes covered, then fluff and serve."
+  ],
+  "imageSeed": "jambalaya",
+  "featured": false
+ },
+ {
+  "id": "r28",
+  "name": "Creamy Tomato Tortellini",
+  "description": "Cheese tortellini in a creamy tomato sauce — restaurant flavor, one pot, twenty minutes.",
+  "section": "one_pot",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "italian",
+   "quick"
+  ],
+  "prepMinutes": 5,
+  "cookMinutes": 15,
+  "servings": 5,
+  "costDollars": 10.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "cheese tortellini",
+    "amount": "20 oz"
+   },
+   {
+    "name": "pasta sauce",
+    "amount": "1 jar (24 oz)"
+   },
+   {
+    "name": "heavy cream",
+    "amount": "1/2 cup"
+   },
+   {
+    "name": "parmesan",
+    "amount": "1/2 cup, grated"
+   },
+   {
+    "name": "spinach",
+    "amount": "2 cups",
+    "optional": true
+   }
+  ],
+  "steps": [
+   "Combine the tortellini, pasta sauce, cream, and 2 cups water in a large pot.",
+   "Bring to a boil, then simmer, stirring often, until the tortellini is tender and the sauce thickens, 12–15 minutes.",
+   "Stir in the parmesan and spinach (if using) until wilted.",
+   "Season with pepper and serve with extra parmesan."
+  ],
+  "imageSeed": "tortellini",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg/500px-Beef_Tortellini_with_Cream_of_Tomato_Sauce_%282557806474%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r29",
+  "name": "One-Pot Beef Stroganoff",
+  "description": "Comforting beef and mushrooms in sour cream gravy over egg noodles — one pot to wash.",
+  "section": "one_pot",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "comfort",
+   "classic"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "servings": 5,
+  "costDollars": 12.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "ground beef",
+    "amount": "1 lb"
+   },
+   {
+    "name": "mushrooms",
+    "amount": "8 oz, sliced"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "egg noodles",
+    "amount": "12 oz"
+   },
+   {
+    "name": "beef broth",
+    "amount": "2 1/2 cups"
+   },
+   {
+    "name": "sour cream",
+    "amount": "1 cup"
+   },
+   {
+    "name": "paprika",
+    "amount": "1 tsp"
+   }
+  ],
+  "steps": [
+   "Brown the beef in a large pot, 5 minutes. Add the mushrooms and onion and cook 5 minutes more.",
+   "Add the noodles, broth, and paprika. Simmer, stirring often, until the noodles are tender and the liquid is mostly absorbed, 15 minutes.",
+   "Remove from heat and stir in the sour cream until creamy.",
+   "Season and serve immediately."
+  ],
+  "imageSeed": "stroganoff",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Beef_Stroganoff-01.jpg/500px-Beef_Stroganoff-01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r30",
+  "name": "Coconut Curry Chicken",
+  "description": "Comforting coconut curry with chicken and rice — mild enough for kids, bold enough for you.",
+  "section": "one_pot",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "curry",
+   "healthy"
+  ],
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "servings": 4,
+  "costDollars": 11.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "chicken breast",
+    "amount": "1 lb, cubed"
+   },
+   {
+    "name": "coconut milk",
+    "amount": "1 can (13.5 oz)"
+   },
+   {
+    "name": "curry paste",
+    "amount": "2 tbsp"
+   },
+   {
+    "name": "onion",
+    "amount": "1, diced"
+   },
+   {
+    "name": "frozen peas",
+    "amount": "1 cup"
+   },
+   {
+    "name": "white rice",
+    "amount": "1 cup"
+   },
+   {
+    "name": "ginger",
+    "amount": "1 tbsp, grated"
+   }
+  ],
+  "steps": [
+   "Start the rice. Sauté the onion in a pot with a splash of oil until soft, 3 minutes.",
+   "Add the curry paste and ginger and cook 1 minute until fragrant. Add the chicken and cook 4 minutes.",
+   "Pour in the coconut milk and 1/2 cup water. Simmer 15 minutes until the chicken is cooked through.",
+   "Stir in the peas for the last 2 minutes. Serve over the rice."
+  ],
+  "imageSeed": "coconut-curry",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Aappam_with_chicken_curry_with_coconut_milk.jpg/500px-Aappam_with_chicken_curry_with_coconut_milk.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ },
+ {
+  "id": "r31",
+  "name": "One-Pot Chicken Alfredo",
+  "description": "Fettuccine simmered right in a creamy garlic sauce with chicken. One pot, total comfort.",
+  "section": "one_pot",
+  "mealType": "Dinner",
+  "tags": [
+   "one-pot",
+   "comfort",
+   "kid-friendly"
+  ],
+  "prepMinutes": 8,
+  "cookMinutes": 20,
+  "servings": 5,
+  "costDollars": 11.0,
+  "difficulty": "Easy",
+  "ingredients": [
+   {
+    "name": "fettuccine",
+    "amount": "12 oz"
+   },
+   {
+    "name": "chicken breast",
+    "amount": "1 lb, cubed"
+   },
+   {
+    "name": "garlic",
+    "amount": "3 cloves, minced"
+   },
+   {
+    "name": "heavy cream",
+    "amount": "1 1/2 cups"
+   },
+   {
+    "name": "chicken broth",
+    "amount": "1 1/2 cups"
+   },
+   {
+    "name": "parmesan",
+    "amount": "1 cup, grated"
+   },
+   {
+    "name": "butter",
+    "amount": "2 tbsp"
+   }
+  ],
+  "steps": [
+   "Season and brown the chicken in a large pot with the butter, 5 minutes. Add the garlic and cook 30 seconds.",
+   "Add the broth, cream, and fettuccine. Bring to a boil, then simmer, stirring often, until the pasta is tender, 12–14 minutes.",
+   "Stir in the parmesan until the sauce is thick and glossy.",
+   "Let rest 2 minutes and serve with extra parmesan."
+  ],
+  "imageSeed": "alfredo",
+  "featured": false,
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Chicken-alfredo.jpg/500px-Chicken-alfredo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+ }
 ]

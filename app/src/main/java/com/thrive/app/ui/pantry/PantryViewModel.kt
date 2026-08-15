@@ -5,8 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.thrive.app.ai.AiAdvisor
 import com.thrive.app.ai.AiService
+import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.ai.PantryMealEngine
+import com.thrive.app.ai.RecipeMakerEngine
 import com.thrive.app.ai.WeeklyPlan
 import com.thrive.app.ai.WeeklyPlannerEngine
 import com.thrive.app.data.ThriveRepository
@@ -30,6 +32,8 @@ data class PantryUiState(
     val isLoadingMeals: Boolean = false,
     val weeklyPlan: WeeklyPlan? = null,
     val isPlanningWeek: Boolean = false,
+    val generatedRecipe: GeneratedRecipe? = null,
+    val isGeneratingRecipe: Boolean = false,
     val aiEnabled: Boolean = false,
 ) {
     val expiringSoon: List<PantryItem>
@@ -165,6 +169,25 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     }
 
     fun clearSuggestions() = _state.update { it.copy(suggestions = null) }
+
+    // ---- On-device recipe generator ("pocket AI") ----
+
+    /**
+     * Compose a brand-new recipe from the current pantry. Runs fully on-device
+     * and offline; no API key or network needed. The same pantry always yields
+     * the same recipe, so it's stable and testable.
+     */
+    fun generateNewRecipe() {
+        _state.update { it.copy(isGeneratingRecipe = true, generatedRecipe = null) }
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.Default) {
+                RecipeMakerEngine.generate(_state.value.items)
+            }
+            _state.update { it.copy(generatedRecipe = result, isGeneratingRecipe = false) }
+        }
+    }
+
+    fun clearGeneratedRecipe() = _state.update { it.copy(generatedRecipe = null) }
 
     // ---- Weekly planner ----
 

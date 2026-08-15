@@ -559,6 +559,7 @@ fun DealCard(
                 seed = coupon.imageSeed,
                 category = coupon.category,
                 imageUrl = coupon.imageUrl,
+                logoUrl = coupon.storeLogoUrl,
                 corner = 16.dp,
                 modifier = Modifier
                     .size(104.dp),

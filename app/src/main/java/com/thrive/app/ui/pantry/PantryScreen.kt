@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.ui.components.QuantityStepper
@@ -110,6 +111,30 @@ fun PantryScreen(
                     fromPantry = state.items.isNotEmpty(),
                     onClick = { showWeekSheet = true },
                 )
+            }
+
+            item {
+                MakeNewRecipeCta(
+                    enabled = state.items.isNotEmpty() && !state.isGeneratingRecipe,
+                    loading = state.isGeneratingRecipe,
+                    onClick = { vm.generateNewRecipe() },
+                )
+            }
+
+            state.generatedRecipe?.let { gen ->
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    SectionHeader(
+                        title = "Your new recipe",
+                        subtitle = "Created on-device from your pantry — works offline",
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        action = "Hide",
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                item {
+                    GeneratedRecipeCard(gen, onDismiss = { vm.clearGeneratedRecipe() })
+                }
             }
 
             state.weeklyPlan?.let { plan ->
@@ -556,6 +581,147 @@ private fun MakeMealCta(enabled: Boolean, loading: Boolean, onClick: () -> Unit)
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MakeNewRecipeCta(enabled: Boolean, loading: Boolean, onClick: () -> Unit) {
+    val accents = LocalThriveColors.current
+    val gradient = Brush.linearGradient(listOf(accents.leaf, Color(0xFF2FA87B)))
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 2.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(gradient)
+            .clickable(enabled = enabled) { onClick() }
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (loading) Icons.Rounded.Restaurant else Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = if (loading) "Writing a brand-new recipe…" else "Make me a NEW recipe",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+                Text(
+                    text = if (enabled) "On-device AI writes a fresh dinner from your pantry"
+                    else "Add a few items to get started",
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.85f)),
+                )
+            }
+            if (!loading) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GeneratedRecipeCard(gen: GeneratedRecipe, onDismiss: () -> Unit) {
+    val accents = LocalThriveColors.current
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                SoftChip(
+                    text = "✦ On-device AI",
+                    bg = accents.leafSoft,
+                    fg = accents.leaf,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = gen.recipe.name,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Rounded.Close, contentDescription = "Hide recipe")
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = gen.recipe.description,
+            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SoftChip(
+                text = "${gen.recipe.totalMinutes} min",
+                bg = MaterialTheme.colorScheme.surfaceVariant,
+                fg = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SoftChip(
+                text = Money.fmt(gen.recipe.costDollars),
+                bg = accents.dealSoft,
+                fg = accents.deal,
+            )
+            SoftChip(
+                text = "${gen.recipe.servings} servings",
+                bg = MaterialTheme.colorScheme.surfaceVariant,
+                fg = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Uses: ${gen.usedItems.joinToString(", ")}",
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+        )
+        if (gen.missingItems.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "You'd need: ${gen.missingItems.joinToString(", ")}",
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "How to make it",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+        )
+        Spacer(Modifier.height(6.dp))
+        gen.recipe.steps.forEachIndexed { i, step ->
+            Row(Modifier.padding(vertical = 3.dp)) {
+                Text(
+                    text = "${i + 1}.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = accents.deal),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = step,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }

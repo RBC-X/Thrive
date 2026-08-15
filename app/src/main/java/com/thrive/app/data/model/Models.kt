@@ -22,7 +22,8 @@ data class Coupon(
     val isNew: Boolean = false,
     val terms: String = "",
     val imageSeed: String? = null,
-    val imageUrl: String? = null,      // real product photo (verified) — null = clean fallback tile
+    val imageUrl: String? = null,      // real product photo (verified) — null = fall back to store logo
+    val storeLogoUrl: String? = null,  // verified store logo — shown when no product photo exists
     val urlVerified: Boolean = false,  // true only when url points at the exact product/offer
     val estimated: Boolean = true,     // prices are estimates from a curated feed, not live retail
 ) {
@@ -62,6 +63,7 @@ data class Recipe(
     val ingredients: List<Ingredient>,
     val steps: List<String>,
     val imageSeed: String? = null,
+    val imageUrl: String? = null,  // real food photo (verified) — null = clean branded tile
     val featured: Boolean = false,
 ) {
     val totalMinutes: Int get() = prepMinutes + cookMinutes

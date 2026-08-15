@@ -180,6 +180,7 @@ private fun FeaturedRecipeCard(recipe: Recipe, onClick: () -> Unit) {
     ) {
         FoodImage(
             seed = recipe.imageSeed,
+            imageUrl = recipe.imageUrl,
             modifier = Modifier.fillMaxSize(),
             corner = 24.dp,
             iconSize = 44.dp,
@@ -239,6 +240,7 @@ private fun RecipeCard(
         Box {
             FoodImage(
                 seed = recipe.imageSeed,
+                imageUrl = recipe.imageUrl,
                 corner = 20.dp,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -310,6 +312,7 @@ private fun RecipeRow(
     ) {
         FoodImage(
             seed = recipe.imageSeed,
+            imageUrl = recipe.imageUrl,
             corner = 14.dp,
             modifier = Modifier.size(64.dp),
             iconSize = 20.dp,

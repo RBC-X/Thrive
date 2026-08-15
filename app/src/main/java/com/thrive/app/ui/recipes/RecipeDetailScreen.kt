@@ -84,6 +84,7 @@ fun RecipeDetailScreen(
             Box {
                 FoodImage(
                     seed = recipe.imageSeed,
+                    imageUrl = recipe.imageUrl,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(230.dp),

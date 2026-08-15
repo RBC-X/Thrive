@@ -294,14 +294,16 @@ fun FoodImage(
 }
 
 /**
- * Product image panel: the real product photo when one is verified, otherwise
- * a clean branded gradient tile with the category icon. Never a random photo.
+ * Product image panel: the real product photo when one is verified; otherwise
+ * the store's logo (a verified brand mark, never a random photo); otherwise a
+ * clean branded gradient tile with the category icon.
  */
 @Composable
 fun ProductImage(
     seed: String?,
     category: String,
     imageUrl: String? = null,
+    logoUrl: String? = null,
     modifier: Modifier = Modifier,
     corner: Dp = 0.dp,
     iconSize: Dp = 36.dp,
@@ -320,15 +322,16 @@ fun ProductImage(
                 .align(Alignment.Center)
                 .size(iconSize),
         )
-        if (!imageUrl.isNullOrBlank()) {
+        val show = imageUrl ?: logoUrl
+        if (!show.isNullOrBlank()) {
             val ctx = LocalContext.current
             AsyncImage(
                 model = ImageRequest.Builder(ctx)
-                    .data(imageUrl)
+                    .data(show)
                     .crossfade(true)
                     .build(),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = if (imageUrl.isNullOrBlank()) ContentScale.Fit else ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
         }
