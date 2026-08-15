@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -361,8 +362,9 @@ private fun PrimaryDealButton(coupon: Coupon, context: Context) {
         return
     }
     // Honest link labeling: only claim the button opens the exact product/offer
-    // when urlVerified is true. Store-level links open the retailer but never
-    // pretend to be the item.
+    // when urlVerified is true. Unverified deals never fabricate a product link —
+    // we open a store-level search so the user can find the real item, and say
+    // exactly that.
     if (!coupon.urlVerified) {
         Column {
             OutlinedButton(
@@ -376,16 +378,16 @@ private fun PrimaryDealButton(coupon: Coupon, context: Context) {
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(18.dp),
             ) {
-                Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Open ${coupon.store} site",
+                    text = "Search ${coupon.store} for this item",
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                 )
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Item link not verified — check the ad in store or on their site.",
+                text = "No verified product link — opens ${coupon.store}'s search so you can find the exact item.",
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
