@@ -73,7 +73,14 @@ test("health is up and lists sources", async () => {
 test("sync returns the full payload with an ETag and 304s on match", async () => {
   const r1 = await req("GET", "/api/v1/sync");
   assert.equal(r1.status, 200);
-  assert.ok(r1.json.coupons.length > 100, "coupons present");
+  // Every served coupon carries a VERIFIED direct product link — the app's
+  // "direct link or don't show it" rule starts at the server, so the payload
+  // never includes search-page stand-ins.
+  assert.ok(r1.json.coupons.length > 10, "verified coupons present");
+  for (const c of r1.json.coupons) {
+    assert.equal(c.urlVerified, true, `coupon ${c.id} must be urlVerified`);
+    assert.ok(c.url && c.url.startsWith("https://"), `coupon ${c.id} must keep an https url`);
+  }
   assert.ok(Array.isArray(r1.json.deals));
   assert.ok(Array.isArray(r1.json.recipes));
   assert.ok(Array.isArray(r1.json.catalog));

@@ -48,18 +48,19 @@ data class SavingsUiState(
     val googleIdToken: String? = null,
 ) {
     /**
-     * Offers that are both genuinely on sale (a real "was" price above the
-     * current price) AND have a real destination link. Every bundled coupon
-     * is on sale with a live retailer link (an exact product page when
-     * urlVerified, otherwise the retailer's own search for that exact item),
-     * so the whole catalog is reachable. A product that is merely on file at
-     * regular price — or has no destination at all — is never shown as a deal.
+     * Offers that are genuinely on sale (a real "was" price above the current
+     * price) AND carry a VERIFIED direct link to the exact product page. A
+     * store search URL is NOT a product link — a coupon that only has a search
+     * destination is hidden rather than shown with a fake "go to product"
+     * button. This is the "direct link or don't show it" rule: diversity of
+     * stores and products comes from the items that really resolve, and
+     * everything else is honestly hidden (counted in [hiddenUnverified]).
      */
     val available: List<Coupon> get() = coupons.filter {
-        !it.url.isNullOrBlank() && (it.priceBefore > it.priceAfter)
+        it.urlVerified && !it.url.isNullOrBlank() && (it.priceBefore > it.priceAfter)
     }
 
-    /** How many feed offers are hidden because they have no usable link. */
+    /** How many feed offers are hidden (no verified direct product link). */
     val hiddenUnverified: Int get() = coupons.size - available.size
 
     val categories: List<String>

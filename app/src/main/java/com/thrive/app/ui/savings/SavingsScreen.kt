@@ -558,10 +558,10 @@ private fun SavingsHeader(
                 Spacer(Modifier.height(6.dp))
                 BundledFeedNotice(state.sync)
             }
-            // Honest availability: every deal shown has a live link — an exact
-            // product page where verified, otherwise the retailer's own search
-            // for that exact item (the detail screen labels which one). Tell
-            // the user when offers with no usable link were hidden.
+            // Honest availability: every deal shown carries a VERIFIED direct
+            // product link. Offers that only have a store search page (no exact
+            // product page) are hidden, and the user is told exactly that — the
+            // app never shows a deal it can't take you straight to.
             if (hiddenCount > 0) {
                 Spacer(Modifier.height(6.dp))
                 Row(
@@ -579,8 +579,9 @@ private fun SavingsHeader(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Showing $verifiedCount deals with live links — " +
-                            "$hiddenCount offers with no usable link are hidden.",
+                        text = "Showing $verifiedCount deals — every one opens the exact " +
+                            "product page. $hiddenCount offers without a direct product link " +
+                            "are hidden (no search-page stand-ins).",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
@@ -816,7 +817,7 @@ private fun SavingsSummaryStrip(state: SavingsUiState, filtered: List<Coupon>) {
         val headline = if (favSavings != null)
             "Your saved deals save you up to ${Money.fmt(favSavings.first)} across ${favSavings.second} items"
         else
-            "${filtered.size} fresh deals today — each offer shows its own savings"
+            "${filtered.size} fresh deals today — every one opens the exact product page"
         Text(
             text = headline,
             style = MaterialTheme.typography.bodyMedium.copy(

@@ -158,14 +158,13 @@ function dealToCoupon(d) {
  * simply makes the live catalog the first thing a synced phone sees.
  */
 function couponsFor(deals) {
-  // The full bundled catalog (5,000+ offers across 45 retailers, daily-rotated
-  // new/expiry flags) is the floor of the Savings feed. Live verified deals
-  // from retailer APIs are prepended — never a replacement — so a synced phone
-  // keeps every category (Grocery, Tech, Beauty, …) at full strength instead
-  // of shrinking to whatever the live cache happens to hold. Every offer in
-  // both halves already obeys the house rules: real discount (priceBefore >
-  // priceAfter) and a real destination URL; the app re-checks both.
-  const bundled = rotateCoupons(daySeed()).filter((c) => c && c.url);
+  // The Savings feed serves ONLY offers with a VERIFIED direct product link —
+  // a URL that lands on the exact product page. Bundled offers that only have
+  // a store search page are not served (the app would have to hide them
+  // anyway; keeping them out of the payload keeps it lean and honest). The
+  // bundled catalog is daily-rotated so the same verified products feel fresh;
+  // live verified retailer deals are prepended, never a replacement.
+  const bundled = rotateCoupons(daySeed()).filter((c) => c && c.url && c.urlVerified);
   const live = Array.isArray(deals)
     ? deals
         .filter((d) => d && d.urlVerified)
@@ -174,7 +173,7 @@ function couponsFor(deals) {
     : [];
   if (!live.length) return bundled;
   // Live ids override their bundled twins (a fresher price beats the snapshot);
-  // everything else keeps the bundled entry, so no offer is ever dropped.
+  // everything else keeps the bundled entry, so no verified offer is dropped.
   const liveIds = new Set(live.map((c) => c.id).filter(Boolean));
   return [...live, ...bundled.filter((c) => !liveIds.has(c.id))];
 }
