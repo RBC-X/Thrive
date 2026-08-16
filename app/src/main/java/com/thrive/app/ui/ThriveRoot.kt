@@ -141,7 +141,7 @@ fun ThriveRoot() {
                 )
             }
             composable("budget") { BudgetScreen(budgetVm, onOpenSettings = { nav.navigate("settings") }) }
-            composable("settings") { SettingsScreen(repo, savingsVm, onBack = { nav.popBackStack() }) }
+            composable("settings") { SettingsScreen(repo, savingsVm, budgetVm, onBack = { nav.popBackStack() }) }
             composable("coupon/{couponId}") { entry ->
                 val id = entry.arguments?.getString("couponId") ?: ""
                 CouponDetailScreen(

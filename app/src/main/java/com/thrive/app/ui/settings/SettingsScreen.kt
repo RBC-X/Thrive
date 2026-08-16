@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.thrive.app.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LocationOn
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -77,6 +81,7 @@ import com.thrive.app.ui.theme.ThriveFont
 import com.thrive.app.update.GithubUpdateChecker
 import com.thrive.app.update.UpdateBus
 import com.thrive.app.util.Clipboard
+import com.thrive.app.util.Money
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,7 +97,12 @@ private fun syncStatusLabel(sync: SyncState, message: String?): String {
 }
 
 @Composable
-fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: SavingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(
+    repo: com.thrive.app.data.ThriveRepository,
+    savingsVm: SavingsViewModel,
+    budgetVm: com.thrive.app.ui.budget.BudgetViewModel,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val app = context.applicationContext as com.thrive.app.ThriveApp
     val settings = app.settings
@@ -125,6 +135,11 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
     var publicServer by remember { mutableStateOf<String?>(null) }
     var discoveringServer by remember { mutableStateOf(false) }
     var serverMsg by remember { mutableStateOf<String?>(null) }
+    // Grocery budget editing: shown as a card with an edit dialog, always
+    // available so the user can change their trip budget any time (not only
+    // during first-time onboarding).
+    val budgetState by budgetVm.state.collectAsState()
+    var showBudgetEdit by remember { mutableStateOf(false) }
     val accents = LocalThriveColors.current
 
     // Backup only sends the code over HTTPS (or loopback in debug builds). On a
@@ -708,6 +723,53 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Grocery budget", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { showBudgetEdit = true }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accents.berrySoft),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.Edit, contentDescription = null, tint = accents.berry, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = if (budgetState.budget > 0)
+                                "${Money.fmt(budgetState.budget)} for ${budgetState.people} ${if (budgetState.people == 1) "person" else "people"}"
+                            else
+                                "No budget set yet",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                        Text(
+                            text = "Change your shopping budget or people count any time — your list and " +
+                                "trip plan update to match.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Icon(Icons.Rounded.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Updates", style = MaterialTheme.typography.titleMedium)
@@ -861,4 +923,156 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
             }
         }
     }
+
+    if (showBudgetEdit) {
+        BudgetEditDialog(
+            budget = budgetState.budget,
+            people = budgetState.people,
+            onDismiss = { showBudgetEdit = false },
+            onSave = { newBudget, newPeople ->
+                budgetVm.setBudget(newBudget)
+                budgetVm.setPeople(newPeople)
+                // A changed budget invalidates any computed trip plan so the
+                // user re-runs "Find me the best deals" against the new numbers.
+                budgetVm.clearPlanForEdit()
+                showBudgetEdit = false
+                Toast.makeText(context, "Budget updated — your list and plan adjust", Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Grocery budget editing (Settings → Grocery budget)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun BudgetEditDialog(
+    budget: Double,
+    people: Int,
+    onDismiss: () -> Unit,
+    onSave: (Double, Int) -> Unit,
+) {
+    val accents = LocalThriveColors.current
+    var budgetText by remember { mutableStateOf(if (budget > 0) Money.fmt(budget).removePrefix("$") else "") }
+    var peopleCount by remember { mutableStateOf(people.coerceIn(1, 12)) }
+    val quickAmounts = listOf(40.0, 75.0, 100.0, 150.0)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(26.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                text = "Grocery budget",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = ThriveFont,
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "How much can you spend per shopping trip?",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = budgetText,
+                    onValueChange = { input ->
+                        val cleaned = input.filter { it.isDigit() || it == '.' }
+                        if (cleaned.length <= 6) budgetText = cleaned
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("e.g. 75") },
+                    leadingIcon = { Text("$", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                    ),
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    quickAmounts.forEach { amount ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (budgetText.toDoubleOrNull() == amount) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .clickable { budgetText = if (amount % 1.0 == 0.0) amount.toInt().toString() else amount.toString() }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                text = Money.fmtCompact(amount),
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    color = if (budgetText.toDoubleOrNull() == amount) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = "How many people are you shopping for?",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { peopleCount = (peopleCount - 1).coerceAtLeast(1) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        Text("−", style = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary))
+                    }
+                    Text(
+                        text = "$peopleCount",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontFamily = ThriveFont,
+                            fontWeight = FontWeight.ExtraBold,
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { peopleCount = (peopleCount + 1).coerceAtMost(12) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        Text("+", style = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val value = budgetText.toDoubleOrNull()
+                    if (value != null && value > 0) onSave(value, peopleCount)
+                },
+                enabled = (budgetText.toDoubleOrNull() ?: 0.0) > 0,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
+            ) {
+                Text("Save budget", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
