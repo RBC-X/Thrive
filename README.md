@@ -46,6 +46,9 @@ node server.js            # http://localhost:4000
 - `GET /api/v1/deals|/coupons|/recipes|/catalog` — individual feeds
 - `POST /api/v1/deals` — admin override, guarded by `THRIVE_ADMIN_TOKEN` (disabled by default), strict schema validation
 - `GET/PUT /api/v1/backup/:code` — anonymous cross-device state backup with optimistic concurrency (If-Match/ETag) and atomic writes
+- `POST /api/v1/auth/google` + `GET/PUT /api/v1/account/backup` — **Google Sign-In backup**: the app signs in with Google, the backend verifies the ID token (Google's public tokeninfo endpoint — no secret on the server) and stores favorites/pantry/budget under a stable key derived from the account, so signing into the same Google account on any device brings everything with it. Backed by the same atomic + optimistic-concurrency machinery as code backups.
+
+**Google Sign-In setup (one-time):** in Google Cloud Console create an OAuth **Web application** client, copy its Client ID, and either add `GOOGLE_CLIENT_ID=...` to `local.properties` (app builds) or set `THRIVE_GOOGLE_CLIENT_ID` (app builds) and `THRIVE_GOOGLE_CLIENT_ID` on the backend for audience enforcement. Without a client ID the app hides the Google card and keeps working with code backups; with one, Settings shows **Sign in with Google** and the legacy code section stays for migration. To configure Google Sign-In on Android you must also register the app's SHA-1 signing fingerprint in the same OAuth client.
 
 **Security policy:** the release build ships with **no default sync server** and backup/update traffic is restricted to **HTTPS** (cleartext is a debug-only developer convenience). A phone user must configure a real public HTTPS endpoint (e.g. a cloudflare tunnel) in **Settings → Sync server**; until one is set, the app honestly reports backup as unavailable. The in-app update channel is fully independent — it reads GitHub releases over HTTPS and needs no server at all.
 

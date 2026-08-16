@@ -657,12 +657,13 @@ function sanitizeBudget(raw) {
   };
 }
 
-app.get("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
-  const code = String(req0.params.code || "").toLowerCase();
-  if (!BACKUP_CODE_RE.test(code)) {
-    return res.status(400).json({ error: "invalid backup code" });
-  }
-  const { payload, revision } = await readBackupFile(code);
+// ---------------------------------------------------------------------------
+// Backup route internals (shared by code-keyed and Google-account backups).
+// ---------------------------------------------------------------------------
+
+/** GET handler body shared by /api/v1/backup/:code and account backups. */
+async function serveBackupGet(req0, res, key) {
+  const { payload, revision } = await readBackupFile(key);
   const body = payload
     ? {
         favorites: Array.isArray(payload.favorites) ? payload.favorites : [],
@@ -674,17 +675,15 @@ app.get("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
     : EMPTY_BACKUP;
   if (respondWithEtag(req0, res, body)) return;
   res.json(body);
-}));
+}
 
-// Optimistic concurrency for backups: every PUT must carry If-Match with the
-// revision from the last GET (or "*" to create). On conflict (409) the client
-// re-pulls, re-merges, and retries — two devices can never silently overwrite
-// each other. Writes are serialized per code and landed atomically.
-app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
-  const code = String(req0.params.code || "").toLowerCase();
-  if (!BACKUP_CODE_RE.test(code)) {
-    return res.status(400).json({ error: "invalid backup code" });
-  }
+/**
+ * PUT handler body shared by /api/v1/backup/:code and account backups. Uses
+ * the same optimistic concurrency (If-Match revision), per-key serialization,
+ * and atomic rename as the code routes; the Google-account variant simply
+ * passes the derived account key.
+ */
+async function serveBackupPut(req0, res, key) {
   const body = req0.body && typeof req0.body === "object" && !Array.isArray(req0.body) ? req0.body : {};
   const hasFavorites = Array.isArray(body.favorites);
   const hasPantry = Array.isArray(body.pantry);
@@ -697,8 +696,8 @@ app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
     return res.status(428).json({ error: "If-Match header required (use \"*\" to create)" });
   }
 
-  const payload = await serializeBackup(code, async () => {
-    const current = await readBackupFile(code);
+  const payload = await serializeBackup(key, async () => {
+    const current = await readBackupFile(key);
     if (ifMatch === "*") {
       if (current.revision !== null) {
         const err = new Error("backup already exists — re-pull with the current revision");
@@ -731,7 +730,7 @@ app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
       updatedAt: new Date().toISOString(),
       revision: crypto.randomBytes(8).toString("hex"),
     };
-    await writeBackupAtomic(code, stored);
+    await writeBackupAtomic(key, stored);
     return stored;
   });
 
@@ -743,6 +742,137 @@ app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
     updatedAt: payload.updatedAt,
     revision: payload.revision,
   });
+}
+
+app.get("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
+  const code = String(req0.params.code || "").toLowerCase();
+  if (!BACKUP_CODE_RE.test(code)) {
+    return res.status(400).json({ error: "invalid backup code" });
+  }
+  return serveBackupGet(req0, res, code);
+}));
+
+// Optimistic concurrency for backups: every PUT must carry If-Match with the
+// revision from the last GET (or "*" to create). On conflict (409) the client
+// re-pulls, re-merges, and retries — two devices can never silently overwrite
+// each other. Writes are serialized per code and landed atomically.
+app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
+  const code = String(req0.params.code || "").toLowerCase();
+  if (!BACKUP_CODE_RE.test(code)) {
+    return res.status(400).json({ error: "invalid backup code" });
+  }
+  return serveBackupPut(req0, res, code);
+}));
+
+// ---------------------------------------------------------------------------
+// Google Sign-In backup (favorites + pantry + budget under a Google account)
+// ---------------------------------------------------------------------------
+// The app signs in with Google and sends the ID token here; the server
+// verifies it with Google's public tokeninfo endpoint (no API key or secret
+// needed server-side) and derives a stable, opaque storage key from the
+// account's `sub`. State is then stored/read under that key using the exact
+// same atomic + optimistic-concurrency machinery as code backups, so the
+// feature is never weaker than the code path. The ID token is never stored
+// and never appears in URLs or logs.
+//
+// THRIVE_GOOGLE_CLIENT_ID: the OAuth "Web" client ID this backend accepts
+// (audience check). When unset the server accepts any valid Google ID token
+// — fine for a private tunnel, but set it in production so only your app's
+// token audience is accepted.
+
+const GOOGLE_CLIENT_ID = process.env.THRIVE_GOOGLE_CLIENT_ID || null;
+
+// Test-only: when set, token verification is short-circuited to a fake account
+// so the whole flow (auth, account-keyed backup, concurrency) can be tested
+// without network access to Google. Never set in production.
+const GOOGLE_TEST_SUB = process.env.THRIVE_GOOGLE_TEST_SUB || null;
+
+/**
+ * Verifies a Google ID token with Google's tokeninfo endpoint and returns the
+ * verified account { sub, name, email, picture }. Throws with err.status 401
+ * on any invalid/expired/tampered token; the caller maps that to a 401.
+ */
+async function verifyGoogleIdToken(idToken) {
+  if (GOOGLE_TEST_SUB) {
+    return { sub: GOOGLE_TEST_SUB, name: "Test User", email: "test@example.com", picture: null };
+  }
+  if (typeof idToken !== "string" || idToken.length < 20 || idToken.length > 4096) {
+    const err = new Error("missing or malformed idToken");
+    err.status = 401;
+    throw err;
+  }
+  const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
+  const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!resp.ok) {
+    const err = new Error("Google rejected the id token");
+    err.status = 401;
+    throw err;
+  }
+  const info = await resp.json();
+  if (!info || typeof info.sub !== "string" || info.sub.length === 0 || info.sub.length > 64) {
+    const err = new Error("tokeninfo returned no valid subject");
+    err.status = 401;
+    throw err;
+  }
+  if (GOOGLE_CLIENT_ID && info.aud !== GOOGLE_CLIENT_ID) {
+    const err = new Error("id token audience does not match this server's client id");
+    err.status = 401;
+    throw err;
+  }
+  return {
+    sub: info.sub,
+    name: typeof info.name === "string" ? info.name : null,
+    email: typeof info.email === "string" ? info.email : null,
+    picture: typeof info.picture === "string" ? info.picture : null,
+  };
+}
+
+/** Stable opaque storage key for a Google account (never the raw sub). */
+function googleAccountKey(sub) {
+  return "g" + crypto.createHash("sha256").update("thrive:" + sub).digest("hex").slice(0, 15);
+}
+
+/** Extracts + verifies the Bearer Google ID token from a request. */
+async function googleAccountFrom(req) {
+  const header = req.get("authorization") || "";
+  const m = header.match(/^Bearer\s+(.+)$/i);
+  if (!m) {
+    const err = new Error("Authorization: Bearer <google id token> required");
+    err.status = 401;
+    throw err;
+  }
+  const account = await verifyGoogleIdToken(m[1].trim());
+  return account;
+}
+
+// Returns the account profile + storage key so the app can show who is signed
+// in and keep the same key across devices.
+app.post("/api/v1/auth/google", asyncRoute(async (req0, res) => {
+  const idToken = req0.body && typeof req0.body.idToken === "string" ? req0.body.idToken : "";
+  if (idToken.length < 20 || idToken.length > 4096) {
+    const err = new Error("missing or malformed idToken");
+    err.status = 401;
+    throw err;
+  }
+  const account = await verifyGoogleIdToken(idToken);
+  res.json({
+    ok: true,
+    sub: account.sub,
+    name: account.name,
+    email: account.email,
+    picture: account.picture,
+    accountKey: googleAccountKey(account.sub),
+  });
+}));
+
+app.get("/api/v1/account/backup", asyncRoute(async (req0, res) => {
+  const account = await googleAccountFrom(req0);
+  return serveBackupGet(req0, res, googleAccountKey(account.sub));
+}));
+
+app.put("/api/v1/account/backup", asyncRoute(async (req0, res) => {
+  const account = await googleAccountFrom(req0);
+  return serveBackupPut(req0, res, googleAccountKey(account.sub));
 }));
 
 // Manual override: POST a deals array to preview a custom feed. The server may

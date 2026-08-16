@@ -1,5 +1,31 @@
 {
   "notes": {
+    "1.4.4": [
+      "Google Sign-In backup: sign in with your Google account in Settings and your saved deals, pantry, and shopping list follow you to any device — no backup code to remember (the code section stays for migrating older backups)",
+      "Backend verifies Google ID tokens and stores your state under your account with the same atomic, conflict-safe write protocol as code backups",
+      "Editable grocery budget: change your trip budget and people count any time from Settings → Grocery budget"
+    ],
+    "1.4.3": [
+      "Catalog grew to 45 retailers — added regional grocery chains (Publix, H-E-B, Safeway, Albertsons, Wegmans, Food Lion, Meijer, Giant, Stop & Shop, Winn-Dixie) so deals come from the stores that are actually near you",
+      "Only real deals are shown: every offer in Savings is genuinely on sale or carries a coupon — products merely on file at regular price are never presented as deals (live feed and bundled catalog both enforce this)",
+      "Real generative AI recipes: when you add an AI key in Settings, a genuine LLM reads your exact pantry and writes a fresh dish for it; without a key the on-device engine (144 blueprints) keeps working fully offline",
+      "Recipe photos audited one by one — the unrelated image on Tuna Melts was replaced with a real tuna melt photo, all 31 recipes now show their actual dish"
+    ],
+    "1.4.2": [
+      "On-device AI is now a genuine chef: 144 recipe blueprints (12 cooking methods x 12 flavor directions), token-based ingredient matching (\"boneless skinless chicken breast\" matches \"chicken breast\"), and every pantry item woven in — with a real food photo on the generated dish",
+      "Recipe photos fixed: every recipe in the app now shows a real photo of the dish (browser-grade image loading), and the 7 recipes that had none got real Wikimedia photos",
+      "Thousands of coupons now visible: the full 4,235-offer catalog with direct links (exact product pages marked verified; retailer search links labeled honestly)"
+    ],
+    "1.4.1": [
+      "Stability repair pass: fixed a crash when the deal feed has only one or two offers (the daily pick now selects safely on any feed size)",
+      "Fixed cold-start stale data: synced deals + ETag are now cached atomically, so a fast '304 not modified' response after restart shows your last real sync instead of bundled data — with an honest fallback if the cache is corrupt",
+      "Locale-aware prices and distances (US and comma-decimal locales), so numbers always read correctly",
+      "Update notifications route through a proper broadcast receiver and tapping them opens the update dialog; location lookup is now a one-shot, permission-aware check that never tracks you",
+      "Repaired small targets and fonts: every icon button is now a 48dp touch target, and the pantry add-item sheet no longer clips its confirm button at 2x font scale",
+      "Missing deals/recipes show an honest 'not available' state instead of a blank screen, and the 4,000+ coupon catalog sorts are memoized so search stays smooth",
+      "Added 4 instrumented UI tests (Savings, Pantry, Budget flows run on a real emulator) and 23 new unit tests — 127 unit + 24 backend tests green",
+      "Full visual QA matrix captured on a standard emulator: light, dark, 2x font, small/large phone breakpoints, and the honest offline state"
+    ],
     "1.4.0": [
       "The pantry AI now really cooks with what you have: it matches every ingredient you own, rotates through multiple proteins/veggies/sauces, and even uses a second vegetable when you've got one",
       "Way more recipe variety: 8 cooking methods x 8 flavor directions (64 blueprints) plus item rotation, so \"Try another\" keeps rolling genuinely new dishes instead of the same one 4 times",
@@ -50,6 +76,16 @@
       "Visible version badge in the header — you can see which build you’re on",
       "Coupons now show real product photos matched to the item (no more random images); items without a verified photo keep a clean category tile"
     ],
+    "1.2.11": [
+      "Honest feed labeling: “Live” only shows when deals really came from the server",
+      "Bundled-feed notice when the live server is unreachable or sends no deals",
+      "Self-healing service: backend + tunnel watchdog with boot auto-start",
+      "Always-on deploy guide (backend/DEPLOY.md) + Docker setup for 24/7 hosting"
+    ],
+    "1.2.10": [
+      "One-tap connect to the public backup server (no URL or IP to type)",
+      "Settings discovers the live server from the update channel"
+    ],
     "1.2.9": [
       "Backup is honest now: no more fake success when the server can't be reached — it only claims a restore when the server really answered",
       "Concurrent backups can't lose updates anymore (atomic writes + conflict detection)",
@@ -96,16 +132,6 @@
       "HTTPS update channel via cloudflared - no more 'file might be harmful'",
       "Version string on the About screen now matches the real build"
     ],
-    "1.2.11": [
-      "Honest feed labeling: “Live” only shows when deals really came from the server",
-      "Bundled-feed notice when the live server is unreachable or sends no deals",
-      "Self-healing service: backend + tunnel watchdog with boot auto-start",
-      "Always-on deploy guide (backend/DEPLOY.md) + Docker setup for 24/7 hosting"
-    ],
-    "1.2.10": [
-      "One-tap connect to the public backup server (no URL or IP to type)",
-      "Settings discovers the live server from the update channel"
-    ],
     "1.2.1": [
       "Update card only appears when a genuinely newer build is served"
     ],
@@ -125,27 +151,6 @@
     ],
     "1.0.0": [
       "Thrive launches: Savings, Recipes, Pantry & Budget"
-    ],
-    "1.4.1": [
-      "Stability repair pass: fixed a crash when the deal feed has only one or two offers (the daily pick now selects safely on any feed size)",
-      "Fixed cold-start stale data: synced deals + ETag are now cached atomically, so a fast '304 not modified' response after restart shows your last real sync instead of bundled data — with an honest fallback if the cache is corrupt",
-      "Locale-aware prices and distances (US and comma-decimal locales), so numbers always read correctly",
-      "Update notifications route through a proper broadcast receiver and tapping them opens the update dialog; location lookup is now a one-shot, permission-aware check that never tracks you",
-      "Repaired small targets and fonts: every icon button is now a 48dp touch target, and the pantry add-item sheet no longer clips its confirm button at 2x font scale",
-      "Missing deals/recipes show an honest 'not available' state instead of a blank screen, and the 4,000+ coupon catalog sorts are memoized so search stays smooth",
-      "Added 4 instrumented UI tests (Savings, Pantry, Budget flows run on a real emulator) and 23 new unit tests — 127 unit + 24 backend tests green",
-      "Full visual QA matrix captured on a standard emulator: light, dark, 2x font, small/large phone breakpoints, and the honest offline state"
-    ],
-    "1.4.2": [
-      "On-device AI is now a genuine chef: 144 recipe blueprints (12 cooking methods x 12 flavor directions), token-based ingredient matching (\"boneless skinless chicken breast\" matches \"chicken breast\"), and every pantry item woven in — with a real food photo on the generated dish",
-      "Recipe photos fixed: every recipe in the app now shows a real photo of the dish (browser-grade image loading), and the 7 recipes that had none got real Wikimedia photos",
-      "Thousands of coupons now visible: the full 4,235-offer catalog with direct links (exact product pages marked verified; retailer search links labeled honestly)"
-    ],
-    "1.4.3": [
-      "Catalog grew to 45 retailers — added regional grocery chains (Publix, H-E-B, Safeway, Albertsons, Wegmans, Food Lion, Meijer, Giant, Stop & Shop, Winn-Dixie) so deals come from the stores that are actually near you",
-      "Only real deals are shown: every offer in Savings is genuinely on sale or carries a coupon — products merely on file at regular price are never presented as deals (live feed and bundled catalog both enforce this)",
-      "Real generative AI recipes: when you add an AI key in Settings, a genuine LLM reads your exact pantry and writes a fresh dish for it; without a key the on-device engine (144 blueprints) keeps working fully offline",
-      "Recipe photos audited one by one — the unrelated image on Tuna Melts was replaced with a real tuna melt photo, all 31 recipes now show their actual dish"
     ]
   }
 }

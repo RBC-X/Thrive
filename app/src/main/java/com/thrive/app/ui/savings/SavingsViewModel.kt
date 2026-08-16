@@ -6,6 +6,7 @@ import com.thrive.app.ThriveApp
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.Coupon
 import com.thrive.app.data.remote.BackupCode
+import com.thrive.app.data.remote.BackupMerge
 import com.thrive.app.data.remote.BackupSnapshot
 import com.thrive.app.data.remote.PullResult
 import com.thrive.app.data.remote.PushResult
@@ -41,6 +42,10 @@ data class SavingsUiState(
     val sync: SyncState = SyncState(),
     val backupCode: String = "",
     val backupMsg: String? = null,
+    // Google Sign-In: the ID token from the latest Google sign-in, held only
+    // in memory (never persisted) so account backups can authenticate. The
+    // signed-in profile itself is persisted via GoogleAccountStore.
+    val googleIdToken: String? = null,
 ) {
     /**
      * Offers that are both genuinely on sale (a real "was" price above the
@@ -338,6 +343,96 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
                 is RestoreResult.Failed -> {
                     _state.update { it.copy(backupMsg = result.reason) }
                 }
+            }
+        }
+    }
+
+    // ---- Google Sign-In backup ----
+
+    private val googleBackup = com.thrive.app.data.remote.GoogleBackup(app.settings) { repo.syncBaseUrl }
+
+    /** Signed-in Google account, or null. Exposed so Settings can show who's signed in. */
+    fun googleAccount(): com.thrive.app.data.remote.GoogleAccountInfo = googleBackup.account()
+
+    /** True when the build is configured for Google Sign-In AND the user signed in. */
+    fun googleSignedIn(): Boolean = googleBackup.isSignedIn()
+
+    fun googleSignOut() {
+        googleBackup.signOut()
+        _state.update { it.copy(backupMsg = "Signed out of Google backup — your saved data stays on the server.") }
+    }
+
+    /**
+     * Completes a Google sign-in: exchanges the ID token with the backend for
+     * the account identity, pulls the account's saved state, merges it
+     * add-only with this device, and pushes the union back. Signing into the
+     * same Google account on another device brings everything with it.
+     */
+    fun googleCompleteSignIn(idToken: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(backupMsg = "Signing in…", googleIdToken = idToken) }
+            when (val exchanged = runCatching { googleBackup.exchange(idToken) }.getOrElse {
+                com.thrive.app.data.remote.GoogleAuthResult.Failed("Couldn't reach the backup server — check your connection.")
+            }) {
+                is com.thrive.app.data.remote.GoogleAuthResult.Ok -> {
+                    val remote = runCatching { googleBackup.pull(idToken) }.getOrDefault(
+                        com.thrive.app.data.remote.PullResult.NetworkFailure
+                    )
+                    val local = BackupSnapshot(
+                        favorites = repo.favoriteCouponIds(),
+                        pantry = repo.loadPantry(),
+                        budget = repo.loadBudget(),
+                    )
+                    val merged = when (remote) {
+                        is PullResult.Found -> BackupSnapshot(
+                            favorites = local.favorites + remote.snapshot.favorites,
+                            pantry = BackupMerge.pantry(local.pantry, remote.snapshot.pantry),
+                            budget = when {
+                                local.budget == null && remote.snapshot.budget == null -> null
+                                local.budget == null -> remote.snapshot.budget
+                                remote.snapshot.budget == null -> local.budget
+                                else -> BackupMerge.budget(local.budget, remote.snapshot.budget)
+                            },
+                        )
+                        else -> local
+                    }
+                    // Persist the merged state locally, then push the union so
+                    // the server has everything from every signed-in device.
+                    repo.saveCouponFavorites(merged.favorites)
+                    repo.savePantry(merged.pantry)
+                    merged.budget?.let { repo.saveBudget(it) }
+                    _state.update {
+                        it.copy(
+                            favorites = merged.favorites,
+                            backupMsg = "Signed in as ${exchanged.account.name.ifBlank { exchanged.account.email }}.",
+                        )
+                    }
+                    _restored.tryEmit(merged)
+                    runCatching { googleBackup.push(idToken, merged) }
+                }
+                is com.thrive.app.data.remote.GoogleAuthResult.Failed -> {
+                    _state.update { it.copy(backupMsg = exchanged.reason) }
+                }
+            }
+        }
+    }
+
+    /** Manual "Back up now" when signed in with Google — pushes every section. */
+    fun googleBackupNow() {
+        viewModelScope.launch {
+            val idToken = _state.value.googleIdToken ?: return@launch
+            _state.update { it.copy(backupMsg = "Backing up…") }
+            val snapshot = BackupSnapshot(
+                favorites = repo.favoriteCouponIds(),
+                pantry = repo.loadPantry(),
+                budget = repo.loadBudget(),
+            )
+            when (val result = runCatching { googleBackup.push(idToken, snapshot) }.getOrDefault(PushResult.NetworkFailure)) {
+                is PushResult.Ok -> _state.update { it.copy(backupMsg = "Saved to your Google account.") }
+                is PushResult.Unauthorized -> _state.update { it.copy(backupMsg = "Google session expired — sign in again.") }
+                is PushResult.NetworkFailure -> _state.update { it.copy(backupMsg = "Couldn't reach the backup server — check your connection.") }
+                is PushResult.HttpError -> _state.update { it.copy(backupMsg = "Backup server error (${result.code}).") }
+                else -> _state.update { it.copy(backupMsg = "Backup failed — nothing was changed.") }
             }
         }
     }

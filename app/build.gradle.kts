@@ -33,6 +33,14 @@ android {
         versionCode = 34
         versionName = "1.4.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Google Sign-In web client ID (OAuth "Web application" client). Set it
+        // in local.properties as GOOGLE_CLIENT_ID=... or as the environment
+        // variable THRIVE_GOOGLE_CLIENT_ID. Empty means Google Sign-In is hidden
+        // and the app keeps working with code backups / no backup.
+        val googleClientId = (project.findProperty("GOOGLE_CLIENT_ID") as String?)
+            ?: System.getenv("THRIVE_GOOGLE_CLIENT_ID")
+            ?: ""
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${googleClientId}\"")
     }
 
     signingConfigs {
@@ -132,6 +140,10 @@ dependencies {
     // the SVG decoder artifact to render them (without it every logo is blank).
     implementation("io.coil-kt:coil-svg:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    // Google Sign-In: the app signs into a Google account and sends its ID
+    // token to the Thrive backend, which verifies it and stores the user's
+    // saved deals / pantry / budget under that account (no backup code needed).
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")

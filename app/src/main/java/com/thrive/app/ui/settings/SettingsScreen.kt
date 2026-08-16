@@ -7,7 +7,11 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.thrive.app.BuildConfig
+import com.thrive.app.data.remote.googleSignInConfigured
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -135,6 +139,37 @@ fun SettingsScreen(
     var publicServer by remember { mutableStateOf<String?>(null) }
     var discoveringServer by remember { mutableStateOf(false) }
     var serverMsg by remember { mutableStateOf<String?>(null) }
+    // Google Sign-In backup: a card above the legacy code section. Hidden when
+    // the build has no client ID configured. The signed-in account comes from
+    // the savings VM (persisted); the ID token lives only in the VM.
+    val googleConfigured = googleSignInConfigured()
+    val googleAccount = savingsVm.googleAccount()
+    val googleSignedIn = savingsVm.googleSignedIn()
+    val googleSignInClient = remember {
+        if (googleConfigured) {
+            val opts = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(BuildConfig.GOOGLE_CLIENT_ID)
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, opts)
+        } else null
+    }
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data ?: return@rememberLauncherForActivityResult
+        try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
+            val idToken: String? = account.idToken
+            if (idToken.isNullOrBlank()) {
+                savingsVm.setBackupMsg("Google sign-in returned no ID token — try again.")
+            } else {
+                savingsVm.googleCompleteSignIn(idToken)
+            }
+        } catch (e: ApiException) {
+            savingsVm.setBackupMsg("Google sign-in was cancelled or failed.")
+        }
+    }
     // Grocery budget editing: shown as a card with an edit dialog, always
     // available so the user can change their trip budget any time (not only
     // during first-time onboarding).
@@ -480,9 +515,14 @@ fun SettingsScreen(
                 Text("Backup & sync", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Your saved deals, pantry, and shopping list sync free between your own " +
-                        "devices with a backup code — no account or email. Backup requires a " +
-                        "secure (HTTPS) sync server.",
+                    text = if (googleConfigured)
+                        "Sign in with Google to carry your saved deals, pantry, and shopping list " +
+                            "to any device — or use a backup code to move between devices without " +
+                            "an account. Both need a secure (HTTPS) sync server."
+                    else
+                        "Your saved deals, pantry, and shopping list sync free between your own " +
+                            "devices with a backup code — no account or email. Backup requires a " +
+                            "secure (HTTPS) sync server.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
                 if (!backupPermitted) {
@@ -500,6 +540,102 @@ fun SettingsScreen(
                             fontWeight = FontWeight.SemiBold,
                         ),
                     )
+                }
+            }
+        }
+
+        if (googleConfigured) {
+            item {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (googleSignedIn) accents.leafSoft.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+                            )
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (googleSignedIn) accents.leafSoft else accents.berrySoft),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = if (googleSignedIn) "✓" else "G",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = if (googleSignedIn) accents.leaf else accents.berry,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = if (googleSignedIn)
+                                    (googleAccount.name.ifBlank { googleAccount.email }.ifBlank { "Google account" })
+                                else
+                                    "Sign in with Google",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            )
+                            Text(
+                                text = if (googleSignedIn)
+                                    "Your saved deals, pantry, and list live in this account — " +
+                                        "sign in on any device to bring them with you."
+                                else
+                                    "Back up your saved deals, pantry, and shopping list to your " +
+                                        "Google account — no code to remember, and it follows you " +
+                                        "to any device you sign into.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    if (googleSignedIn) {
+                        Row {
+                            Button(
+                                enabled = backupPermitted,
+                                onClick = { savingsVm.googleBackupNow() },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Back up now")
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            OutlinedButton(
+                                onClick = { savingsVm.googleSignOut() },
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("Sign out")
+                            }
+                        }
+                    } else {
+                        Button(
+                            enabled = backupPermitted && googleSignInClient != null,
+                            onClick = { googleSignInClient?.signInIntent?.let { googleSignInLauncher.launch(it) } },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = accents.berry),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Continue with Google", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                        }
+                        if (!backupPermitted) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Connect a secure (HTTPS) sync server above to turn on Google backup.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
         }
