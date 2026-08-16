@@ -72,6 +72,16 @@ fun ThriveRoot() {
     // server responds, and nothing breaks if it can't be reached.
     LaunchedEffect(repo) { repo.syncNow(force = false) }
 
+    // Always-up-to-date deals while the app stays open: re-sync every 30
+    // minutes so a long session keeps showing the newest coupons and live
+    // prices. A quiet sync is cheap (the server answers 304 when unchanged).
+    LaunchedEffect(repo) {
+        while (true) {
+            kotlinx.coroutines.delay(30 * 60 * 1000L)
+            repo.syncNow(force = false)
+        }
+    }
+
     val savingsVm: SavingsViewModel = viewModel(factory = viewModelFactory { initializer { SavingsViewModel(app, repo) } })
     val recipesVm: RecipesViewModel = viewModel(factory = viewModelFactory { initializer { RecipesViewModel(repo) } })
     val pantryVm: PantryViewModel = viewModel(factory = viewModelFactory { initializer { PantryViewModel(app, repo) } })

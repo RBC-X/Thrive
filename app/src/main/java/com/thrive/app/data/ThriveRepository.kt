@@ -231,6 +231,7 @@ class ThriveRepository(
                                 feedOrigin = "live",
                             )
                         }
+                        settings.putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
                     }
                 }
                 result.code in 200..299 -> {
@@ -243,6 +244,7 @@ class ThriveRepository(
                     val etag = result.etag
                     etag?.let { settings.putString(KEY_SYNC_ETAG, it) }
                     cachePayload(payload, etag ?: settings.getString(KEY_SYNC_ETAG, null))
+                    settings.putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
                     _syncState.update {
                         it.copy(
                             status = SyncStatus.OK,
@@ -380,9 +382,13 @@ class ThriveRepository(
         private const val KEY_FAV_RECIPES = "fav_recipes"
         private const val KEY_SYNC_URL = "sync_base_url"
         private const val KEY_SYNC_ETAG = "sync_etag"
+        private const val KEY_LAST_SYNC_AT = "last_sync_at"
         private const val KEY_LOC_LAT = "loc_lat"
         private const val KEY_LOC_LNG = "loc_lng"
         const val SYNC_URL_KEY = KEY_SYNC_URL
+
+        /** Millis when the last successful sync landed (persisted). */
+        fun lastSyncAt(settings: SettingsStore): Long = settings.getLong(KEY_LAST_SYNC_AT, 0L)
     }
 }
 

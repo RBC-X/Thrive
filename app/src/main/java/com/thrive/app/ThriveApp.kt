@@ -5,6 +5,7 @@ import android.content.Context
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.thrive.app.data.local.SettingsStore
+import com.thrive.app.update.DealSyncWorker
 import com.thrive.app.update.ReEngagement
 import com.thrive.app.update.UpdateNotifier
 import com.thrive.app.update.UpdateScheduler
@@ -22,6 +23,9 @@ class ThriveApp : Application(), ImageLoaderFactory {
         UpdateNotifier.ensureChannel(this)
         UpdateScheduler.schedule(this)
         ReEngagement.schedule(this)
+        // Keep the deal feed fresh in the background (30-min periodic) so new
+        // coupons and live prices arrive without any app update.
+        DealSyncWorker.schedule(this)
     }
 
     /**

@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import com.thrive.app.data.remote.UpdateInfo
 import com.thrive.app.ui.ThriveRoot
 import com.thrive.app.ui.theme.ThriveTheme
+import com.thrive.app.update.DealSyncWorker
 import com.thrive.app.update.DownloadReceiver
 import com.thrive.app.update.UpdateBus
 import com.thrive.app.update.UpdateNotifier
@@ -59,5 +60,9 @@ class MainActivity : ComponentActivity() {
         DownloadReceiver.resumePending(this)
         // Any foreground visit resets the 42h re-engagement idle timer.
         (application as ThriveApp).markAppUsed()
+        // Always-up-to-date deals: refresh the feed in the background if the
+        // last sync is older than 30 minutes — new coupons and live prices
+        // arrive without needing an app update.
+        DealSyncWorker.refreshOnResume(this)
     }
 }
