@@ -1,5 +1,12 @@
 {
   "notes": {
+    "1.5.0": [
+      "Real on-device AI: a genuine language model (Qwen2.5 0.5B, ~540 MB) runs right on your phone — reads your exact pantry and writes fresh, diverse dinners completely offline, no API keys. Download it once from Settings (On-device AI) and the pantry chef is always available",
+      "Pantry meal ideas can now 'search the web for this': each suggestion has a button that finds real online versions of that meal, clearly labeled web-discovered (never passed off as verified) with source, date, and a direct link to read before cooking",
+      "Live tech deals: a new Target live feed brings hundreds of verified, on-sale tech products with direct product links — and the on-sale/direct-link rules apply to tech just like grocery",
+      "Web discovery layer: the server can now search the web for offers, recipes, and product pages (Exa-backed), with strict rate limits, caching, and spend caps — all labeled as discovery leads, never as live prices",
+      "Deployment: named-tunnel tooling so the public sync server can keep a stable HTTPS address 24/7"
+    ],
     "1.4.4": [
       "Direct-link rule: every shown deal opens the exact product page; search-page stand-ins are hidden",
       "Resolver upgraded 724 bundled items to real Open Food Facts product pages",

@@ -17,6 +17,8 @@ import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.remote.BackupMerge
 import com.thrive.app.data.remote.PullResult
 import com.thrive.app.data.remote.StateBackup
+import com.thrive.app.data.remote.WebRecipeSearch
+import com.thrive.app.data.remote.WebSearchState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,6 +38,7 @@ data class PantryUiState(
     val isPlanningWeek: Boolean = false,
     val generatedRecipe: GeneratedRecipe? = null,
     val isGeneratingRecipe: Boolean = false,
+    val webSearch: WebSearchState = WebSearchState.Idle,
     val aiEnabled: Boolean = false,
 ) {
     val expiringSoon: List<PantryItem>
@@ -176,6 +179,28 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     }
 
     fun clearSuggestions() = _state.update { it.copy(suggestions = null) }
+
+    // ---- Web discovery for meal ideas ----
+
+    private var webSearchJob: Job? = null
+
+    /**
+     * Looks up "search the web for this" alternatives for a meal idea via the
+     * sync server's Exa-backed endpoint. Results are discovery leads, never
+     * verified claims, and every failure (no server, offline, HTTP error,
+     * malformed payload) degrades to an honest state — the local suggestion
+     * list stays untouched.
+     */
+    fun searchWebFor(mealName: String) {
+        webSearchJob?.cancel()
+        _state.update { it.copy(webSearch = WebSearchState.Loading(mealName)) }
+        webSearchJob = viewModelScope.launch {
+            val state = WebRecipeSearch.fetch(repo.syncBaseUrl, mealName)
+            _state.update { it.copy(webSearch = state) }
+        }
+    }
+
+    fun clearWebSearch() = _state.update { it.copy(webSearch = WebSearchState.Idle) }
 
     // ---- On-device recipe generator ("pocket AI") ----
 

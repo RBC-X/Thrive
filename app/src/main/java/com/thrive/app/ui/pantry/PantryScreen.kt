@@ -1,5 +1,6 @@
 package com.thrive.app.ui.pantry
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,11 +33,13 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Kitchen
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -48,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -61,13 +65,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.data.model.PantryItem
+import com.thrive.app.data.remote.WebRecipeResult
+import com.thrive.app.data.remote.WebSearchState
 import com.thrive.app.ui.components.FoodImage
 import com.thrive.app.ui.components.QuantityStepper
 import com.thrive.app.ui.components.SectionHeader
@@ -78,6 +86,7 @@ import com.thrive.app.ui.theme.LocalThriveColors
 import com.thrive.app.ui.theme.ThriveFont
 import com.thrive.app.util.Dates
 import com.thrive.app.util.Money
+import java.net.URI
 
 private val storageGroups = listOf("Fridge", "Freezer", "Pantry")
 
@@ -92,6 +101,7 @@ fun PantryScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var showFocusSheet by remember { mutableStateOf(false) }
     var showWeekSheet by remember { mutableStateOf(false) }
+    var showWebSheet by remember { mutableStateOf(false) }
     var addedNote by remember { mutableStateOf<String?>(null) }
     val catalog = vm.catalog
 
@@ -239,6 +249,10 @@ fun PantryScreen(
                         suggestion = suggestions[index],
                         onClick = { onOpenMeal(index) },
                         onDismiss = { vm.clearSuggestions() },
+                        onWebSearch = {
+                            vm.searchWebFor(suggestions[index].recipe.name)
+                            showWebSheet = true
+                        },
                     )
                 }
             }
@@ -303,6 +317,16 @@ fun PantryScreen(
     }
     if (showFocusSheet) {
         FocusSheet(vm = vm, onDismiss = { showFocusSheet = false })
+    }
+    if (showWebSheet) {
+        WebSearchSheet(
+            search = state.webSearch,
+            onRetry = { (state.webSearch as? WebSearchState.Error)?.let { vm.searchWebFor(it.query) } },
+            onDismiss = {
+                vm.clearWebSearch()
+                showWebSheet = false
+            },
+        )
     }
     if (showWeekSheet) {
         WeekPlanSheet(
@@ -820,7 +844,12 @@ private fun LoadingMealCards() {
 }
 
 @Composable
-private fun SuggestionCard(suggestion: MealSuggestion, onClick: () -> Unit, onDismiss: () -> Unit) {
+private fun SuggestionCard(
+    suggestion: MealSuggestion,
+    onClick: () -> Unit,
+    onDismiss: () -> Unit,
+    onWebSearch: () -> Unit,
+) {
     val accents = LocalThriveColors.current
     Column(
         modifier = Modifier
@@ -900,6 +929,23 @@ private fun SuggestionCard(suggestion: MealSuggestion, onClick: () -> Unit, onDi
                     )
                 }
             }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = onWebSearch,
+                modifier = Modifier.height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Find this online", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold))
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Web-discovered leads",
+                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            )
         }
     }
 }
@@ -1208,6 +1254,156 @@ private fun SelectableChip(text: String, selected: Boolean, onClick: () -> Unit)
                 color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
             ),
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Web search sheet — Exa-backed discovery for meal ideas
+// ---------------------------------------------------------------------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WebSearchSheet(
+    search: WebSearchState,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Web ideas",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            when (search) {
+                is WebSearchState.Loading -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "Searching the web for \"${search.query}\"…",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+                is WebSearchState.Error -> {
+                    Text(search.message, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(onClick = onRetry, modifier = Modifier.height(48.dp)) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Try again")
+                        }
+                        TextButton(onClick = onDismiss, modifier = Modifier.height(48.dp)) {
+                            Text("Close")
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+                is WebSearchState.Results -> {
+                    Text(
+                        text = search.label,
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "\"${search.query}\"",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (search.results.isEmpty()) {
+                        Text(
+                            text = search.note ?: "No web results for this meal — try a different name.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    } else {
+                        search.results.forEach { result ->
+                            WebResultRow(
+                                result = result,
+                                onOpen = {
+                                    runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, result.url.toUri()))
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+                WebSearchState.Idle -> { /* sheet only opens while a search is in flight or done */ }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebResultRow(result: WebRecipeResult, onOpen: () -> Unit) {
+    val accents = LocalThriveColors.current
+    val host = remember(result.url) {
+        runCatching { URI(result.url).host?.removePrefix("www.") }.getOrNull() ?: result.url
+    }
+    val date = remember(result.publishedDate) {
+        val raw = result.publishedDate?.trim()
+        if (raw.isNullOrBlank()) null
+        else if (raw.length >= 10 && raw[4] == '-' && raw[7] == '-') raw.take(10)
+        else raw.take(30)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .clickable(onClick = onOpen)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = result.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = listOfNotNull(host, date).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (result.excerpt.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = result.excerpt,
+                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            SoftChip(
+                text = "Web-discovered" + if (result.confidence > 0.5) " · strong lead" else "",
+                bg = accents.goldSoft,
+                fg = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Icon(
+            Icons.Rounded.OpenInNew,
+            contentDescription = null,
+            tint = accents.deal,
+            modifier = Modifier.size(20.dp),
         )
     }
 }
