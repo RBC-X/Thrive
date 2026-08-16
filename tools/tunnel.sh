@@ -54,7 +54,9 @@ TUNNEL_PID=$!
 
 URL=""
 for i in $(seq 1 30); do
-  URL="$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$URL_FILE" 2>/dev/null | head -1 || true)"
+  # cloudflared also logs its API host (https://api.trycloudflare.com); only a
+  # real tunnel subdomain works as a public endpoint, so exclude the api host.
+  URL="$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$URL_FILE" 2>/dev/null | grep -v 'https://api\.trycloudflare\.com' | head -1 || true)"
   [[ -n "$URL" ]] && break
   sleep 1
 done
