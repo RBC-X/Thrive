@@ -20,3 +20,16 @@
 -keep class com.google.mediapipe.tasks.** { *; }
 -dontwarn com.google.auto.value.AutoValue
 -dontwarn com.google.auto.value.AutoValue$Builder
+# Missing-class warnings for references that never execute in this app:
+#   - com.google.mediapipe.framework.image.* is only touched by multimodal
+#     (image+text) models; Thrive runs the Qwen2.5 text-only model.
+#   - proto presence/nullness helpers (ProtoPresenceBits, ProtoField, etc.)
+#     are referenced by audio/multimodal model-settings code paths the text
+#     pipeline never calls. Proven safe: the full text LLM ran on the emulator
+#     with these classes absent (they exist in no dependency on the classpath).
+-dontwarn com.google.mediapipe.framework.image.**
+-dontwarn com.google.protobuf.ProtoPresenceBits
+-dontwarn com.google.protobuf.ProtoField
+-dontwarn com.google.protobuf.ProtoPresenceCheckedField
+-dontwarn com.google.protobuf.Internal$ProtoNonnullApi
+-dontwarn com.google.protobuf.Internal$ProtoMethodMayReturnNull

@@ -30,7 +30,7 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 36
+        versionCode = 37
         versionName = "1.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Google Sign-In web client ID (OAuth "Web application" client). Set it
@@ -64,6 +64,12 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Phones are arm64/armeabi — release APKs don't need emulator ABIs.
+            // Drops x86/x86_64: much smaller update downloads and lighter native
+            // lib merging. The debug build keeps all ABIs for emulator QA.
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
