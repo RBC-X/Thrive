@@ -267,6 +267,9 @@ function mapKrogerCategory(raw) {
   if (c.includes("household") || c.includes("cleaning") || c.includes("paper")) return "Household";
   if (c.includes("health") || c.includes("pharm")) return "Health";
   if (c.includes("pantry") || c.includes("grocery")) return "Pantry";
+  // Kroger's electronics department feeds the Tech section with real products
+  // that carry direct kroger.com product pages (same verified-link rule).
+  if (c.includes("electron") || c.includes("entertainment")) return "Tech";
   return "Grocery";
 }
 
@@ -317,12 +320,238 @@ function defaultSearchTerms() {
       seen.add(key);
       terms.push(t);
     }
-    if (terms.length) return terms.slice(0, 160);
+    if (terms.length) {
+      // Reserve room for a curated tech mix so the authenticated Kroger feed
+      // also supplies the Tech section (mapped via the Electronics category).
+      return [...terms.slice(0, 145), ...KrogerLiveSource.TECH_TERMS].slice(0, 160);
+    }
   } catch (_) {
     /* fall through to the hardcoded list */
   }
   return ["milk", "eggs", "chicken", "ground beef", "pasta", "bread", "apples", "bananas"];
 }
+
+/** Curated tech terms for the Kroger feed — real products, direct pages. */
+KrogerLiveSource.TECH_TERMS = [
+  "headphones", "wireless earbuds", "bluetooth speaker", "tablet", "laptop",
+  "smartwatch", "tv", "camera", "gaming headset", "wireless charger",
+  "power bank", "usb c cable", "keyboard", "mouse", "kindle",
+];
+
+/**
+ * Live tech deals from Target's public search endpoint — no API key, no
+ * credentials. Every returned deal carries a VERIFIED direct product page
+ * (`item.enrichment.buy_url`, e.g. https://www.target.com/p/<slug>/-/A-<tcin>)
+ * and real prices (current vs regular), so the on-sale-only rule and the
+ * direct-link rule are both enforced at the source.
+ *
+ * Terms default to a broad tech catalog (headphones, laptops, TVs, smart
+ * home, accessories...) with a small bounded concurrency; configure
+ * TARGET_TERMS to change the mix. TARGET_STORE_ID selects the pricing store
+ * (default 3991 = Target HQ). The redsky key below is the public one Target's
+ * own web client ships to every browser — it is not a secret credential.
+ */
+class TargetLiveSource {
+  constructor() {
+    this.name = "target-live";
+    this.storeId = process.env.TARGET_STORE_ID || "3991";
+    this.terms = (process.env.TARGET_TERMS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    this._visitor = "9c0e9d5e-3f6a-4b2d-9f6e-0d1e2f3a4b5c";
+    this._blockedUntil = 0; // circuit breaker: back off after Akamai 403/429
+    this._lastGood = this._loadCache(); // honest fallback when throttled
+    this._lastGoodAt = 0;
+  }
+
+  static get CACHE_FILE() {
+    return path.join(__dirname, "..", "data", "target_lastgood.json");
+  }
+
+  _loadCache() {
+    try {
+      const raw = fs.readFileSync(TargetLiveSource.CACHE_FILE, "utf-8");
+      const j = JSON.parse(raw);
+      if (Array.isArray(j.deals)) {
+        this._lastGoodAt = Number(j.at) || 0;
+        return j.deals;
+      }
+    } catch (_) {
+      /* no cache yet — fine */
+    }
+    return [];
+  }
+
+  _saveCache(deals) {
+    try {
+      const tmp = TargetLiveSource.CACHE_FILE + ".tmp";
+      fs.writeFileSync(tmp, JSON.stringify({ at: Date.now(), deals }));
+      fs.renameSync(tmp, TargetLiveSource.CACHE_FILE);
+    } catch (_) {
+      /* cache is best-effort */
+    }
+  }
+
+  get enabled() {
+    return true; // keyless public endpoint — always available
+  }
+
+  /** Unescapes HTML entities Target embeds in titles (&#8482; -> ™). */
+  static _unescape(s) {
+    return String(s || "")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+      .replace(/&[a-z]+;/g, "");
+  }
+
+  /** Only genuine promos: a real discount against a known regular price. */
+  static _onSale(price) {
+    const cur = Number(price && price.current_retail);
+    const reg = Number(price && price.reg_retail);
+    const save = Number(price && price.save_percent);
+    return cur > 0 && (save > 0 || (reg > 0 && reg > cur));
+  }
+
+  /**
+   * Live tech deals with a circuit breaker: if Akamai throttles the endpoint
+   * (403/429), serve the last successfully fetched catalog (honestly marked
+   * estimated/stale) and re-arm after a cooldown instead of hammering.
+   */
+  async deals() {
+    const terms = this.terms.length ? this.terms : TargetLiveSource.DEFAULT_TERMS;
+    // Circuit breaker: back off while throttled, still serve last-good data.
+    if (Date.now() < this._blockedUntil) {
+      if (process.env.TARGET_DEBUG) console.error("[target] throttled — serving last-good cache");
+      return this._lastGood.map((d) => ({ ...d, estimated: true }));
+    }
+    const out = [];
+    const seen = new Set();
+    // Polite pacing: Akamai throttles bursts, so keep the whole refresh under
+    // ~5 requests/sec. 2 workers × min 400ms spacing ≈ 5/s worst case.
+    const CONCURRENCY = 2;
+    const MIN_SPACING_MS = 400;
+    const queue = [...terms];
+    let throttled = false;
+    const self = this;
+    const worker = async () => {
+      while (queue.length) {
+        if (throttled) return;
+        const term = queue.shift();
+        const started = Date.now();
+        try {
+          const params = new URLSearchParams({
+            key: "9f36aeafbe60771e321a7cc95a78140772ab3e96",
+            channel: "WEB",
+            count: "24",
+            default_purchasability_filter: "false",
+            keyword: term,
+            page: "1",
+            pricing_store_id: this.storeId,
+            visitor_id: this._visitor,
+          });
+          const res = await fetch(
+            `https://redsky.target.com/redsky_aggregations/v1/web/plp_search_v2?${params}`,
+            {
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                Accept: "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+                Referer: "https://www.target.com/",
+              },
+              signal: AbortSignal.timeout(10000),
+            }
+          );
+          if (res.status === 403 || res.status === 429) {
+            throttled = true; // trip the breaker for everyone
+            self._blockedUntil = Date.now() + 45 * 60 * 1000;
+            if (process.env.TARGET_DEBUG) console.error(`[target] throttled (${res.status}) — retrying after cooldown`);
+            return;
+          }
+          if (!res.ok) continue;
+          const json = await res.json();
+          const products =
+            json.data && json.data.search && Array.isArray(json.data.search.products)
+              ? json.data.search.products
+              : [];
+          for (const p of products) {
+            const tcin = p && p.tcin;
+            const item = (p && p.item) || {};
+            const price = p.price || {};
+            if (!tcin || seen.has(tcin)) continue;
+            const buyUrl = item.enrichment && item.enrichment.buy_url;
+            const title = TargetLiveSource._unescape(item.product_description && item.product_description.title);
+            if (!buyUrl || !title || !TargetLiveSource._onSale(price)) continue;
+            // Must be purchasable online for an honest "buy this deal" link.
+            const fulfillment = item.fulfillment || {};
+            if (item.available_to_purchase_online === false || fulfillment.available_to_purchase_online === false) continue;
+            seen.add(tcin);
+            const cur = Number(price.current_retail) || 0;
+            const reg = Number(price.reg_retail) || 0;
+            const save = Number(price.save_percent) || 0;
+            const img = item.enrichment.image_info && item.enrichment.image_info.primary_image
+              ? String(item.enrichment.image_info.primary_image.url).replace(/^\/\//, "https://")
+              : null;
+            out.push({
+              id: `target-${tcin}`,
+              store: "Target",
+              productName: title,
+              category: "Tech",
+              price: Math.round(cur * 100) / 100,
+              regularPrice: reg > cur ? Math.round(reg * 100) / 100 : null,
+              unitPrice: "",
+              savingsPercent: save > 0 ? Math.round(save) : reg > cur ? Math.round((1 - cur / reg) * 100) : 0,
+              keywords: term.toLowerCase().split(/\s+/),
+              endsInDays: 7,
+              url: buyUrl,
+              urlVerified: true, // buy_url is the exact product page
+              size: null,
+              brand: null,
+              imageUrl: img,
+              estimated: false, // live price from Target's API
+              storeLat: null,
+              storeLng: null,
+            });
+          }
+        } catch (e) {
+          /* a single term failing never kills the feed */
+          if (process.env.TARGET_DEBUG) console.error(`[target term:${term}] ${e.message}`);
+        } finally {
+          // Polite pacing: never fire more than ~5 requests/sec per worker.
+          const elapsed = Date.now() - started;
+          if (elapsed < MIN_SPACING_MS) await new Promise((r) => setTimeout(r, MIN_SPACING_MS - elapsed));
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    if (out.length) {
+      // Fresh success clears the breaker and refreshes the fallback cache.
+      this._blockedUntil = 0;
+      this._lastGood = out;
+      this._lastGoodAt = Date.now();
+      this._saveCache(out);
+      return out;
+    }
+    // Everything failed (throttled or transient): fall back to last-good,
+    // honestly labeled as estimated so the app never calls it "live".
+    return this._lastGood.map((d) => ({ ...d, estimated: true }));
+  }
+}
+
+TargetLiveSource.DEFAULT_TERMS = [
+  "headphones", "wireless earbuds", "bluetooth speaker", "soundbar",
+  "laptop", "chromebook", "tablet", "smart tv", "monitor",
+  "smartwatch", "fitness tracker", "iphone case", "samsung galaxy", "phone case",
+  "wireless charger", "power bank", "usb c cable", "keyboard", "mouse",
+  "router", "wifi extender", "gaming console", "gaming headset", "controller",
+  "kindle", "camera", "drone", "echo", "google nest", "security camera",
+  "external hard drive", "ssd", "memory card", "printer", "portable projector",
+];
 
 /**
  * Adapter point for a real partner API (Kroger Connect, Walmart Affiliate,
@@ -369,4 +598,4 @@ class PartnerApiSource {
   }
 }
 
-module.exports = { DailyRotationSource, PartnerApiSource, KrogerLiveSource };
+module.exports = { DailyRotationSource, PartnerApiSource, KrogerLiveSource, TargetLiveSource };

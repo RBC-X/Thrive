@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
+        android:largeHeap="true"
         android:name=".ThriveApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

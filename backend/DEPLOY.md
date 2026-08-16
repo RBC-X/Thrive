@@ -134,6 +134,33 @@ Caveat: your PC must be on for the app to show live prices. When it's off,
 the app honestly shows the bundled feed (v1.2.11+ shows a "bundled feed"
 notice) — the app itself never breaks.
 
+### Making the URL permanent: Cloudflare named tunnel (recommended)
+
+The quick tunnel in Option C gives a new random URL every restart, which is
+why the watchdog re-publishes it. For a **stable hostname that never changes**
+(so the app's one-tap connect works forever), set up a free Cloudflare named
+tunnel. It needs a free Cloudflare account and a domain you control:
+
+```bash
+bash tools/tunnel_named.sh login     # browser auth — opens Cloudflare login
+THRIVE_HOSTNAME=sync.YOURDOMAIN.com bash tools/tunnel_named.sh setup
+bash tools/tunnel_named.sh publish   # verify + publish the stable URL to GitHub
+bash tools/tunnel_named.sh service install   # auto-start on boot (Windows service)
+# plus the backend watchdog so Node also survives crashes/reboots:
+THRIVE_HOSTNAME=sync.YOURDOMAIN.com bash tools/thrive_service.sh &
+```
+
+After this, the URL in the release's `thrive-sync-url.txt` asset is permanent
+— the app's "Connect to public backup server" button points at it forever,
+and live prices work whenever this PC is on.
+
+### True 24/7 independent of your PC
+
+Named tunnel or not, this PC must be powered on. Only Option A (a small VPS)
+or a free-tier platform (Option B) keeps live prices and backup running when
+your PC is off. The app degrades honestly (bundled feed + "bundled feed"
+notice) in every case, so no user is ever misled.
+
 ---
 
 ## Keeping the Kroger credential safe

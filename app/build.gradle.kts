@@ -144,6 +144,11 @@ dependencies {
     // token to the Thrive backend, which verifies it and stores the user's
     // saved deals / pantry / budget under that account (no backup code needed).
     implementation("com.google.android.gms:play-services-auth:21.2.0")
+    // On-device LLM inference (MediaPipe LLM Inference API) — runs a small
+    // Qwen2.5 model fully on the phone, no API keys, no internet needed once
+    // the model file is downloaded. Pantry recipe generation uses it when the
+    // model is present and falls back to the deterministic engine otherwise.
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")

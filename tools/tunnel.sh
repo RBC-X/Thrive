@@ -88,6 +88,8 @@ if [[ "$PUBLISH" == "publish" ]]; then
     echo "  WARNING: no GitHub release found — skipping publish (tunnel still works locally)." >&2
   else
     echo "$URL" > /tmp/thrive-sync-url.txt
+    # Keep a local copy so release/ship flows can attach the current URL.
+    echo "$URL" > "$ROOT/backend/public_url.txt"
     if gh release upload "$TAG" /tmp/thrive-sync-url.txt --clobber -R "$REPO" 2>&1; then
       echo "  published: https://github.com/$REPO/releases/download/$TAG/thrive-sync-url.txt -> $URL"
     else

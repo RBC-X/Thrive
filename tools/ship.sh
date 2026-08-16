@@ -113,6 +113,16 @@ gh release create "v$NEW_NAME" "$APK" \
   --repo "$REPO" \
   --title "Thrive $NEW_NAME" \
   --notes "$NOTES"
+# Attach the published public sync URL (named tunnel or last quick tunnel) so
+# the release's one-tap connect always has the current endpoint.
+if [[ -f "$ROOT/backend/public_url.txt" ]]; then
+  cp "$ROOT/backend/public_url.txt" /tmp/thrive-sync-url.txt
+  gh release upload "v$NEW_NAME" /tmp/thrive-sync-url.txt --clobber -R "$REPO" >/dev/null 2>&1 \
+    && echo "  attached thrive-sync-url.txt ($(cat /tmp/thrive-sync-url.txt))"
+elif [[ -f /tmp/thrive-sync-url.txt ]] && [[ -s /tmp/thrive-sync-url.txt ]]; then
+  gh release upload "v$NEW_NAME" /tmp/thrive-sync-url.txt --clobber -R "$REPO" >/dev/null 2>&1 \
+    && echo "  attached thrive-sync-url.txt ($(cat /tmp/thrive-sync-url.txt))"
+fi
 # gh creates the tag on GitHub; fetch it locally so we can verify provenance.
 git fetch --tags origin --quiet
 echo ""

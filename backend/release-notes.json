@@ -152,6 +152,12 @@
     ],
     "1.0.0": [
       "Thrive launches: Savings, Recipes, Pantry & Budget"
+    ],
+    "1.4.5": [
+      "On-device AI is a real language model: download Qwen2.5 (546 MB, no account, no keys) in Settings and pantry recipes are written by an actual LLM on your phone, fully offline",
+      "Live Tech section: a keyless Target feed adds hundreds of on-sale tech deals with direct product-page links (headphones, laptops, TVs, smart home, gaming) with an honest last-good cache when the retailer throttles",
+      "Named Cloudflare tunnel support: one stable HTTPS hostname forever for the one-tap public connect (tools/tunnel_named.sh) plus a boot-service install",
+      "Optional web discovery via Exa search (server-side, key in backend only): guarded /api/v1/search/{offers,recipes,product} endpoints return labeled web-discovered leads with rate limits, caching, spend caps, and honest empty states — never treated as verified prices"
     ]
   }
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.thrive.app.ai.OnDeviceLlm
 import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.update.DealSyncWorker
 import com.thrive.app.update.ReEngagement
@@ -16,6 +17,9 @@ class ThriveApp : Application(), ImageLoaderFactory {
 
     lateinit var settings: SettingsStore
         private set
+
+    /** On-device LLM (Qwen2.5-0.5B) — genuine AI for pantry recipes, no keys. */
+    val onDeviceLlm: OnDeviceLlm by lazy { OnDeviceLlm(this) }
 
     override fun onCreate() {
         super.onCreate()

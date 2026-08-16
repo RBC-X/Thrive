@@ -57,7 +57,8 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     private val engine = PantryMealEngine
     private val ai = AiService((app as com.thrive.app.ThriveApp).settings)
     private val advisor = AiAdvisor(ai)
-    private val aiMaker = AiRecipeMaker(ai)
+    private val onDevice = (app as com.thrive.app.ThriveApp).onDeviceLlm
+    private val aiMaker = AiRecipeMaker(ai, onDevice)
 
     val catalog: List<com.thrive.app.data.model.CatalogItem> by lazy { repo.catalog }
 

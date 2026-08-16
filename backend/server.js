@@ -8,7 +8,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
-const { DailyRotationSource, PartnerApiSource, KrogerLiveSource } = require("./src/sources");
+const { DailyRotationSource, PartnerApiSource, KrogerLiveSource, TargetLiveSource } = require("./src/sources");
+const { ExaService } = require("./src/exaService");
 
 const app = express();
 app.use(cors());
@@ -110,7 +111,7 @@ function rotateCoupons(day) {
   });
 }
 
-const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource()].filter((s) => s.enabled !== false);
+const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource(), new TargetLiveSource()].filter((s) => s.enabled !== false);
 
 /**
  * Converts a live Deal (e.g. a Kroger product with a verified product-page
@@ -500,6 +501,54 @@ app.get("/api/v1/coupons", asyncRoute(async (req0, res) => {
   if (limit !== null) out = out.slice(0, limit);
   if (respondWithEtag(req0, res, out)) return;
   res.json({ coupons: out, generatedAt: new Date().toISOString() });
+}));
+
+// ---------------------------------------------------------------------------
+// Web discovery (optional Exa search). Results are DISCOVERY LEADS, never
+// verified prices/deals: every item is labeled verified:false / web-discovery
+// and the app must treat it as a pointer to look, not a claim. When Exa is
+// unconfigured, rate-limited, or failing, these return an honest empty state
+// and every other Thrive feature keeps working untouched.
+// ---------------------------------------------------------------------------
+const exa = new ExaService();
+
+function exaQuery(req) {
+  const q = ExaService.validateQuery(req.query.q); // throws 400 with .status/.expose
+  const limit = Number(req.query.limit);
+  if (req.query.limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 8)) {
+    const err = new Error("limit must be an integer between 1 and 8");
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  return { q, limit };
+}
+
+app.get("/api/v1/search/offers", asyncRoute(async (req, res) => {
+  const { q, limit } = exaQuery(req);
+  const out = await exa.search(q, { limit, kind: "offers" });
+  res.json({
+    ...out,
+    label: "Web-discovered leads — not verified prices. Open the link to confirm the current offer.",
+  });
+}));
+
+app.get("/api/v1/search/recipes", asyncRoute(async (req, res) => {
+  const { q, limit } = exaQuery(req);
+  const out = await exa.search(q, { limit, kind: "recipes" });
+  res.json({
+    ...out,
+    label: "Web-discovered recipes — read the source before cooking.",
+  });
+}));
+
+app.get("/api/v1/search/product", asyncRoute(async (req, res) => {
+  const { q, limit } = exaQuery(req);
+  const out = await exa.search(q, { limit, kind: "product" });
+  res.json({
+    ...out,
+    label: "Web-discovered product pages — verify the exact product on the store's site.",
+  });
 }));
 
 app.get("/api/v1/recipes", (req0, res) => {

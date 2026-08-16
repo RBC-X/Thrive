@@ -37,7 +37,28 @@ ensure_backend() {
 }
 
 ensure_tunnel() {
-  # A cloudflared quick tunnel is alive if we can reach the last published URL.
+  # Named-tunnel mode (stable hostname): THRIVE_HOSTNAME is set. The URL never
+  # changes, so this only needs to keep the tunnel process alive.
+  if [[ -n "${THRIVE_HOSTNAME:-}" ]]; then
+    if curl -s -m 6 "https://$THRIVE_HOSTNAME/api/v1/health" >/dev/null 2>&1; then
+      return 0
+    fi
+    log "named tunnel unreachable — restarting cloudflared"
+    CONFIG="$ROOT/backend/cloudflared.yml"
+    if [[ -f "$CONFIG" ]]; then
+      (cloudflared tunnel --config "$CONFIG" run "${TUNNEL_NAME:-thrive}" >> "$LOG" 2>&1 &)
+      for _ in $(seq 1 30); do
+        sleep 2
+        curl -s -m 6 "https://$THRIVE_HOSTNAME/api/v1/health" >/dev/null 2>&1 && { log "named tunnel up"; return 0; }
+      done
+      log "named tunnel did not come up after restart"
+    else
+      log "no named-tunnel config at $CONFIG — run tools/tunnel_named.sh setup"
+    fi
+    return 0
+  fi
+
+  # Quick-tunnel mode (legacy): URL changes on every restart, so re-publish.
   local last_url=""
   last_url="$(cat "$ROOT/.thrive-tunnel-url" 2>/dev/null || true)"
   if [[ -n "$last_url" ]] && curl -s -m 5 "$last_url/api/v1/health" >/dev/null 2>&1; then

@@ -97,12 +97,11 @@ class AiService(private val settings: SettingsStore) {
  * falls back to the deterministic on-device engine so the feature always
  * works, with or without an API key.
  */
-class AiRecipeMaker(private val ai: AiService) {
+class AiRecipeMaker(private val ai: AiService? = null, private val onDevice: OnDeviceLlm? = null) {
 
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     suspend fun generate(items: List<PantryItem>, variant: Int = 0): GeneratedRecipe? {
-        if (!ai.isEnabled) return null
         if (items.isEmpty()) return null
         val names = items.map { it.name.trim() }.filter { it.isNotEmpty() }.distinct()
         if (names.isEmpty()) return null
@@ -122,7 +121,11 @@ class AiRecipeMaker(private val ai: AiService) {
             "Write a different, original dinner recipe from these ingredients " +
             "(roll #${variant + 1} — make it distinct from earlier rolls). " +
             "Use 4 servings. Include which pantry items you used."
-        val raw = ai.chat(system, user) ?: return null
+        // Cloud AI first when the user configured a key; the on-device model
+        // is the keyless fallback; the deterministic engine covers the rest.
+        val raw = (if (ai != null && ai.isEnabled) ai.chat(system, user) else null)
+            ?: onDevice?.generate("$system\n$user")
+            ?: return null
         val parsed = parseJson(raw) ?: return null
         return toGeneratedRecipe(parsed, items, variant)
     }

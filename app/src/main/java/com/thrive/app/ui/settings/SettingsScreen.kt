@@ -50,6 +50,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -328,6 +329,72 @@ fun SettingsScreen(
                         "your pantry offline.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
+            }
+        }
+
+        item {
+            val llm = app.onDeviceLlm
+            val llmState by llm.state.collectAsState()
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                Text("On-device AI — no keys", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                when (val s = llmState) {
+                    is com.thrive.app.ai.OnDeviceLlm.State.Ready -> {
+                        Text(
+                            text = "A real language model is installed on this phone (546 MB). " +
+                                "Pantry recipes are now written by it — fully offline, no account, " +
+                                "no API key.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { llm.deleteModel() }) {
+                            Text("Remove model")
+                        }
+                    }
+                    is com.thrive.app.ai.OnDeviceLlm.State.Downloading -> {
+                        Text(
+                            text = "Downloading the on-device AI model (546 MB)… keep the app open. " +
+                                "You can keep using Thrive while it downloads.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        LinearProgressIndicator(
+                            progress = { s.progress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "${(s.progress * 100).toInt()}% downloaded",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { llm.cancelDownload() }) {
+                            Text("Cancel download")
+                        }
+                    }
+                    is com.thrive.app.ai.OnDeviceLlm.State.Failed -> {
+                        Text(
+                            text = s.reason,
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.error),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { llm.startDownload() }) {
+                            Text("Try again")
+                        }
+                    }
+                    else -> {
+                        Text(
+                            text = "Download a small language model (546 MB, one-time) so recipes are " +
+                                "written by a real AI on your phone — no API keys, works offline. " +
+                                "Newer phones recommended; Thrive works fully without it.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { llm.startDownload() }) {
+                            Text("Download 546 MB model")
+                        }
+                    }
+                }
             }
         }
 
