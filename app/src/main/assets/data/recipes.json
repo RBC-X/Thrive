@@ -2,7 +2,7 @@
  {
   "id": "r01",
   "name": "Black Bean Tacos",
-  "description": "Cheesy black bean tacos with creamy avocado — dinner for four under seven bucks.",
+  "description": "Cheesy black bean tacos with creamy avocado \u00e2\u20ac\u201d dinner for four under seven bucks.",
   "section": "under_10",
   "mealType": "Dinner",
   "tags": [
@@ -59,7 +59,7 @@
  {
   "id": "r02",
   "name": "Spaghetti Aglio e Olio",
-  "description": "The Italian pantry classic — garlic, olive oil, and chili flakes over spaghetti.",
+  "description": "The Italian pantry classic \u00e2\u20ac\u201d garlic, olive oil, and chili flakes over spaghetti.",
   "section": "under_10",
   "mealType": "Dinner",
   "tags": [
@@ -101,7 +101,7 @@
   ],
   "steps": [
    "Cook the spaghetti in well-salted boiling water until al dente. Reserve 1 cup of pasta water, then drain.",
-   "While the pasta cooks, warm the olive oil in a large skillet over medium heat. Add the garlic and red pepper flakes and cook until the garlic is golden and fragrant, 2–3 minutes. Don't let it burn.",
+   "While the pasta cooks, warm the olive oil in a large skillet over medium heat. Add the garlic and red pepper flakes and cook until the garlic is golden and fragrant, 2\u00e2\u20ac\u201c3 minutes. Don't let it burn.",
    "Add the drained spaghetti to the skillet with a splash of pasta water. Toss vigorously until the sauce coats every strand.",
    "Off the heat, toss in the parmesan and parsley. Add pasta water a splash at a time until it's silky. Serve hot."
   ],
@@ -210,7 +210,7 @@
   "steps": [
    "Heat the canned tomatoes with a splash of water in a pot over medium heat for 8 minutes. Blend with an immersion blender, stir in the cream, and season with salt. Keep warm.",
    "Butter one side of each bread slice. Build sandwiches with cheese between two buttered-out slices.",
-   "Cook in a skillet over medium-low heat, 3–4 minutes per side, until golden and the cheese melts.",
+   "Cook in a skillet over medium-low heat, 3\u00e2\u20ac\u201c4 minutes per side, until golden and the cheese melts.",
    "Slice the sandwiches and serve with the soup for dunking."
   ],
   "imageSeed": "grilled-cheese",
@@ -220,7 +220,7 @@
  {
   "id": "r05",
   "name": "Tuna Melts",
-  "description": "Crispy tuna melts with melty cheddar — lunch in 15 minutes flat.",
+  "description": "Crispy tuna melts with melty cheddar \u00e2\u20ac\u201d lunch in 15 minutes flat.",
   "section": "under_10",
   "mealType": "Lunch",
   "tags": [
@@ -262,11 +262,11 @@
   "steps": [
    "Preheat the broiler. Mix the tuna with mayo, celery, a squeeze of lemon if you have it, and a pinch of pepper.",
    "Spread the tuna mix on the bread slices and top generously with cheddar.",
-   "Broil 3–5 minutes until bubbly and golden on top. Serve hot."
+   "Broil 3\u00e2\u20ac\u201c5 minutes until bubbly and golden on top. Serve hot."
   ],
   "imageSeed": "tuna-melt",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Tuna_Melts_My_Heart.jpg/500px-Tuna_Melts_My_Heart.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Tuna_melt_sandwich_with_fries.jpg/500px-Tuna_melt_sandwich_with_fries.jpg"
  },
  {
   "id": "r06",
@@ -319,9 +319,9 @@
    }
   ],
   "steps": [
-   "Brown the beef with the onion in a large pot over medium-high heat, 5–6 minutes. Drain excess fat.",
+   "Brown the beef with the onion in a large pot over medium-high heat, 5\u00e2\u20ac\u201c6 minutes. Drain excess fat.",
    "Stir in the chili powder and cook 30 seconds. Add the pasta, tomatoes, beans, and broth.",
-   "Simmer, stirring often, until the pasta is tender and the sauce thickens, 12–15 minutes.",
+   "Simmer, stirring often, until the pasta is tender and the sauce thickens, 12\u00e2\u20ac\u201c15 minutes.",
    "Stir in the cheese until melted. Let rest 2 minutes, then serve."
   ],
   "imageSeed": "chili-mac",
@@ -380,7 +380,7 @@
   ],
   "steps": [
    "Cook the rice according to the package. Meanwhile, whisk the soy sauce, honey, ginger, and garlic into a sauce.",
-   "Heat the oil in a large skillet over medium-high heat. Cook the chicken until golden and cooked through, 6–7 minutes.",
+   "Heat the oil in a large skillet over medium-high heat. Cook the chicken until golden and cooked through, 6\u00e2\u20ac\u201c7 minutes.",
    "Add the broccoli and 1/4 cup water, cover, and steam 3 minutes until bright green and crisp-tender.",
    "Pour the sauce over everything and toss 1 minute until glossy. Serve over the rice."
   ],
@@ -391,7 +391,7 @@
  {
   "id": "r08",
   "name": "20-Minute Beef Stir-Fry",
-  "description": "Tender beef and crisp veggies in a glossy stir-fry sauce — faster than delivery.",
+  "description": "Tender beef and crisp veggies in a glossy stir-fry sauce \u00e2\u20ac\u201d faster than delivery.",
   "section": "under_20",
   "mealType": "Dinner",
   "tags": [
@@ -508,7 +508,7 @@
  {
   "id": "r10",
   "name": "Lemon Butter Salmon & Rice",
-  "description": "Flaky salmon in a lemony butter sauce with fluffy rice — fancy, fast, affordable.",
+  "description": "Flaky salmon in a lemony butter sauce with fluffy rice \u00e2\u20ac\u201d fancy, fast, affordable.",
   "section": "under_20",
   "mealType": "Dinner",
   "tags": [
@@ -606,7 +606,7 @@
   "steps": [
    "Brown the beef with the onion in a large skillet, 6 minutes. Drain excess fat.",
    "Stir in the ketchup, brown sugar, worcestershire, mustard, and 1/4 cup water.",
-   "Simmer 12–15 minutes until thick and saucy. Season to taste.",
+   "Simmer 12\u00e2\u20ac\u201c15 minutes until thick and saucy. Season to taste.",
    "Pile onto toasted buns and serve with pickles if you have them."
   ],
   "imageSeed": "sloppy-joes",
@@ -616,7 +616,7 @@
  {
   "id": "r12",
   "name": "Quesadilla Fiesta",
-  "description": "Cheesy chicken quesadillas with peppers and onion — a crowd-pleaser in 20 minutes.",
+  "description": "Cheesy chicken quesadillas with peppers and onion \u00e2\u20ac\u201d a crowd-pleaser in 20 minutes.",
   "section": "under_20",
   "mealType": "Dinner",
   "tags": [
@@ -662,7 +662,7 @@
   "steps": [
    "Cook the pepper and onion in a dry skillet over medium-high heat until charred, 5 minutes. Set aside.",
    "Heat a large skillet. Lay a tortilla in, cover with cheese, chicken, peppers, and more cheese. Top with a second tortilla.",
-   "Cook 2–3 minutes per side until golden and the cheese melts. Repeat for the remaining quesadillas.",
+   "Cook 2\u00e2\u20ac\u201c3 minutes per side until golden and the cheese melts. Repeat for the remaining quesadillas.",
    "Cut into wedges and serve with sour cream and salsa."
   ],
   "imageSeed": "quesadilla",
@@ -713,8 +713,8 @@
    }
   ],
   "steps": [
-   "Preheat the oven to 425°F. Toss the sausage, peppers, and onion with olive oil and seasoning on a sheet pan.",
-   "Roast 18–20 minutes, stirring once halfway, until the sausage is browned and the peppers soften.",
+   "Preheat the oven to 425\u00c2\u00b0F. Toss the sausage, peppers, and onion with olive oil and seasoning on a sheet pan.",
+   "Roast 18\u00e2\u20ac\u201c20 minutes, stirring once halfway, until the sausage is browned and the peppers soften.",
    "Serve as-is, over rice, or on hoagie rolls. Optionally warm the sauce and spoon it over the top."
   ],
   "imageSeed": "sausage-peppers",
@@ -724,7 +724,7 @@
  {
   "id": "r14",
   "name": "Sheet-Pan Chicken Fajitas",
-  "description": "Everything fajita on one pan — chicken, peppers, and onions with warm tortillas.",
+  "description": "Everything fajita on one pan \u00e2\u20ac\u201d chicken, peppers, and onions with warm tortillas.",
   "section": "under_20",
   "mealType": "Dinner",
   "tags": [
@@ -768,7 +768,7 @@
    }
   ],
   "steps": [
-   "Preheat the oven to 425°F. Toss the chicken, peppers, and onion with oil and fajita seasoning on a sheet pan.",
+   "Preheat the oven to 425\u00c2\u00b0F. Toss the chicken, peppers, and onion with oil and fajita seasoning on a sheet pan.",
    "Roast 18 minutes, stirring halfway, until the chicken is cooked through and the edges char.",
    "Warm the tortillas. Squeeze lime over the filling.",
    "Serve family-style with tortillas, salsa, and sour cream."
@@ -817,7 +817,7 @@
   ],
   "steps": [
    "Place the chicken in the slow cooker. Pour the BBQ sauce and broth over the top and sprinkle with garlic powder.",
-   "Cover and cook on low for 4–6 hours or high for 2–3 hours, until the chicken shreds easily.",
+   "Cover and cook on low for 4\u00e2\u20ac\u201c6 hours or high for 2\u00e2\u20ac\u201c3 hours, until the chicken shreds easily.",
    "Shred the chicken in the pot with two forks and stir into the sauce.",
    "Pile onto buns or serve over rice. Freeze leftovers in portions."
   ],
@@ -828,7 +828,7 @@
  {
   "id": "r16",
   "name": "Baked Ziti",
-  "description": "Cheesy baked ziti with bubbly mozzarella — five ingredients, one baking dish.",
+  "description": "Cheesy baked ziti with bubbly mozzarella \u00e2\u20ac\u201d five ingredients, one baking dish.",
   "section": "five_ingredients",
   "mealType": "Dinner",
   "tags": [
@@ -867,7 +867,7 @@
    "Cook the ziti until just shy of al dente. Drain and return to the pot.",
    "Stir in the pasta sauce and ricotta until everything is coated.",
    "Transfer to a 9x13 baking dish, top with mozzarella and parmesan.",
-   "Bake at 400°F for 20 minutes until bubbly and golden. Rest 5 minutes before serving."
+   "Bake at 400\u00c2\u00b0F for 20 minutes until bubbly and golden. Rest 5 minutes before serving."
   ],
   "imageSeed": "baked-ziti",
   "featured": false,
@@ -960,7 +960,7 @@
    }
   ],
   "steps": [
-   "Preheat the oven to 400°F. Place the chicken in a baking dish and pour the salsa over the top. Sprinkle with the taco seasoning.",
+   "Preheat the oven to 400\u00c2\u00b0F. Place the chicken in a baking dish and pour the salsa over the top. Sprinkle with the taco seasoning.",
    "Bake 35 minutes, until the chicken is tender and shreds easily.",
    "Shred the chicken in the dish and stir into the salsa.",
    "Serve in warm corn tortillas with cheese, avocado, or sour cream."
@@ -1020,7 +1020,7 @@
  {
   "id": "r20",
   "name": "Fluffy Pancakes",
-  "description": "Five ingredients for the fluffiest stack of pancakes — breakfast for dinner, anyone?",
+  "description": "Five ingredients for the fluffiest stack of pancakes \u00e2\u20ac\u201d breakfast for dinner, anyone?",
   "section": "five_ingredients",
   "mealType": "Breakfast",
   "tags": [
@@ -1057,7 +1057,7 @@
   ],
   "steps": [
    "Whisk the flour and baking powder in a bowl. In another bowl, whisk the milk, eggs, and melted butter.",
-   "Pour the wet into the dry and stir just until combined — a few lumps are fine.",
+   "Pour the wet into the dry and stir just until combined \u00e2\u20ac\u201d a few lumps are fine.",
    "Cook 1/4-cup scoops on a buttered skillet over medium heat until bubbles form, 2 minutes, then flip and cook 1 more minute.",
    "Serve with maple syrup. Double the batch and freeze extras for busy mornings."
   ],
@@ -1114,7 +1114,7 @@
   "steps": [
    "Mix the beef, breadcrumbs, parmesan, egg, and garlic in a bowl. Roll into 1 1/2-inch meatballs.",
    "Brown the meatballs in a large pot in batches, 2 minutes per side.",
-   "Pour the sauce into the pot with 1/2 cup water, nestle in the meatballs, and simmer 25–30 minutes.",
+   "Pour the sauce into the pot with 1/2 cup water, nestle in the meatballs, and simmer 25\u00e2\u20ac\u201c30 minutes.",
    "Meanwhile cook the spaghetti. Serve the meatballs and sauce over the pasta with extra parmesan."
   ],
   "imageSeed": "meatballs",
@@ -1124,7 +1124,7 @@
  {
   "id": "r22",
   "name": "Homemade Mac & Cheese",
-  "description": "Creamy stovetop mac with a golden panko crunch — better than the box, barely more work.",
+  "description": "Creamy stovetop mac with a golden panko crunch \u00e2\u20ac\u201d better than the box, barely more work.",
   "section": "family_favorites",
   "mealType": "Dinner",
   "tags": [
@@ -1165,7 +1165,7 @@
   ],
   "steps": [
    "Cook the pasta until al dente. Drain and set aside.",
-   "Melt the butter in a pot, whisk in the flour, and cook 1 minute. Slowly whisk in the milk until smooth. Simmer until thickened, 4–5 minutes.",
+   "Melt the butter in a pot, whisk in the flour, and cook 1 minute. Slowly whisk in the milk until smooth. Simmer until thickened, 4\u00e2\u20ac\u201c5 minutes.",
    "Remove from heat and stir in the cheese until fully melted. Add the pasta and stir.",
    "Optional: top with panko and broil 2 minutes for a golden crunch."
   ],
@@ -1176,7 +1176,7 @@
  {
   "id": "r23",
   "name": "Chicken Pot Pie",
-  "description": "A cozy classic with a biscuit topping — the ultimate comfort dinner.",
+  "description": "A cozy classic with a biscuit topping \u00e2\u20ac\u201d the ultimate comfort dinner.",
   "section": "family_favorites",
   "mealType": "Dinner",
   "tags": [
@@ -1220,10 +1220,10 @@
    }
   ],
   "steps": [
-   "Preheat the oven to 400°F. Melt the butter in a pot, whisk in the flour, and cook 1 minute.",
+   "Preheat the oven to 400\u00c2\u00b0F. Melt the butter in a pot, whisk in the flour, and cook 1 minute.",
    "Whisk in the broth and milk, simmering until thick and creamy, 5 minutes. Add the chicken and vegetables and season.",
    "Pour the filling into a baking dish. Cover with the puff pastry, trimming to fit, and cut a few slits.",
-   "Bake 30–35 minutes until the pastry is golden and the filling bubbles. Rest 10 minutes before serving."
+   "Bake 30\u00e2\u20ac\u201c35 minutes until the pastry is golden and the filling bubbles. Rest 10 minutes before serving."
   ],
   "imageSeed": "chicken-potpie",
   "featured": false,
@@ -1283,7 +1283,7 @@
    "Boil the potatoes in salted water until tender, 15 minutes. Meanwhile brown the beef with the onion and carrots, 8 minutes.",
    "Stir the peas and worcestershire into the beef with 1/2 cup water and simmer 5 minutes. Season.",
    "Mash the potatoes with butter and milk until creamy.",
-   "Layer the beef in a baking dish, top with the potatoes, and bake at 400°F for 25 minutes until golden on top."
+   "Layer the beef in a baking dish, top with the potatoes, and bake at 400\u00c2\u00b0F for 25 minutes until golden on top."
   ],
   "imageSeed": "shepherds-pie",
   "featured": false,
@@ -1292,7 +1292,7 @@
  {
   "id": "r25",
   "name": "Meatloaf & Mashed Potatoes",
-  "description": "Glazed meatloaf with creamy mashed potatoes — the dinner your family actually requests.",
+  "description": "Glazed meatloaf with creamy mashed potatoes \u00e2\u20ac\u201d the dinner your family actually requests.",
   "section": "family_favorites",
   "mealType": "Dinner",
   "tags": [
@@ -1336,9 +1336,9 @@
    }
   ],
   "steps": [
-   "Preheat the oven to 375°F. Mix the beef, breadcrumbs, egg, onion, and half the ketchup in a bowl.",
+   "Preheat the oven to 375\u00c2\u00b0F. Mix the beef, breadcrumbs, egg, onion, and half the ketchup in a bowl.",
    "Shape into a loaf in a baking dish. Mix the remaining ketchup with the brown sugar and brush over the top.",
-   "Bake 55 minutes, until the internal temperature hits 160°F.",
+   "Bake 55 minutes, until the internal temperature hits 160\u00c2\u00b0F.",
    "Boil and mash the potatoes with butter and milk while the meatloaf bakes. Slice and serve."
   ],
   "imageSeed": "meatloaf",
@@ -1408,7 +1408,7 @@
  {
   "id": "r27",
   "name": "One-Pot Jambalaya",
-  "description": "Cajun-spiced chicken and sausage rice — one pot, big flavor.",
+  "description": "Cajun-spiced chicken and sausage rice \u00e2\u20ac\u201d one pot, big flavor.",
   "section": "one_pot",
   "mealType": "Dinner",
   "tags": [
@@ -1472,7 +1472,7 @@
  {
   "id": "r28",
   "name": "Creamy Tomato Tortellini",
-  "description": "Cheese tortellini in a creamy tomato sauce — restaurant flavor, one pot, twenty minutes.",
+  "description": "Cheese tortellini in a creamy tomato sauce \u00e2\u20ac\u201d restaurant flavor, one pot, twenty minutes.",
   "section": "one_pot",
   "mealType": "Dinner",
   "tags": [
@@ -1510,7 +1510,7 @@
   ],
   "steps": [
    "Combine the tortellini, pasta sauce, cream, and 2 cups water in a large pot.",
-   "Bring to a boil, then simmer, stirring often, until the tortellini is tender and the sauce thickens, 12–15 minutes.",
+   "Bring to a boil, then simmer, stirring often, until the tortellini is tender and the sauce thickens, 12\u00e2\u20ac\u201c15 minutes.",
    "Stir in the parmesan and spinach (if using) until wilted.",
    "Season with pepper and serve with extra parmesan."
   ],
@@ -1521,7 +1521,7 @@
  {
   "id": "r29",
   "name": "One-Pot Beef Stroganoff",
-  "description": "Comforting beef and mushrooms in sour cream gravy over egg noodles — one pot to wash.",
+  "description": "Comforting beef and mushrooms in sour cream gravy over egg noodles \u00e2\u20ac\u201d one pot to wash.",
   "section": "one_pot",
   "mealType": "Dinner",
   "tags": [
@@ -1577,7 +1577,7 @@
  {
   "id": "r30",
   "name": "Coconut Curry Chicken",
-  "description": "Comforting coconut curry with chicken and rice — mild enough for kids, bold enough for you.",
+  "description": "Comforting coconut curry with chicken and rice \u00e2\u20ac\u201d mild enough for kids, bold enough for you.",
   "section": "one_pot",
   "mealType": "Dinner",
   "tags": [
@@ -1621,7 +1621,7 @@
    }
   ],
   "steps": [
-   "Start the rice. Sauté the onion in a pot with a splash of oil until soft, 3 minutes.",
+   "Start the rice. Saut\u00c3\u00a9 the onion in a pot with a splash of oil until soft, 3 minutes.",
    "Add the curry paste and ginger and cook 1 minute until fragrant. Add the chicken and cook 4 minutes.",
    "Pour in the coconut milk and 1/2 cup water. Simmer 15 minutes until the chicken is cooked through.",
    "Stir in the peas for the last 2 minutes. Serve over the rice."
@@ -1678,7 +1678,7 @@
   ],
   "steps": [
    "Season and brown the chicken in a large pot with the butter, 5 minutes. Add the garlic and cook 30 seconds.",
-   "Add the broth, cream, and fettuccine. Bring to a boil, then simmer, stirring often, until the pasta is tender, 12–14 minutes.",
+   "Add the broth, cream, and fettuccine. Bring to a boil, then simmer, stirring often, until the pasta is tender, 12\u00e2\u20ac\u201c14 minutes.",
    "Stir in the parmesan until the sauce is thick and glossy.",
    "Let rest 2 minutes and serve with extra parmesan."
   ],

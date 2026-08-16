@@ -66,6 +66,14 @@ CURATED = {
     "eBay": "EBay_logo.svg",
     "Staples": "Staples,_Inc._logo.svg",
     "Office Depot": "Office_Depot_logo.svg",
+    "Publix": "PublixLogo.svg",
+    "H-E-B": "HEB_logo.svg",
+    "Safeway": "Old_Safeway_logo.jpg",
+    "Albertsons": "Albertsons (logo).svg",
+    "Wegmans": "WegmansLogo.svg",
+    "Food Lion": "Food_lion.png",
+    "Stop & Shop": "Stop_&_Shop_logo.svg",
+    "Winn-Dixie": "Winn-Dixie logo 2026.jpg",
 }
 
 ARTICLE = {

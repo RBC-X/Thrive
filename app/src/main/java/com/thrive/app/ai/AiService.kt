@@ -1,6 +1,10 @@
 package com.thrive.app.ai
 
 import com.thrive.app.data.local.SettingsStore
+import com.thrive.app.data.model.Ingredient
+import com.thrive.app.data.model.PantryItem
+import com.thrive.app.data.model.Recipe
+import com.thrive.app.util.Money
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -83,6 +87,117 @@ class AiService(private val settings: SettingsStore) {
         const val DEFAULT_BASE_URL = "https://api.openai.com/v1/chat/completions"
         const val DEFAULT_MODEL = "gpt-4o-mini"
     }
+}
+
+/**
+ * Real generative recipe maker. When an AI provider is configured, the pantry
+ * is sent to the model and a genuinely new dish is composed from it — name,
+ * description, ingredients, and steps written fresh for THIS pantry, not a
+ * template fill-in. Any failure (no key, network, bad JSON, empty pantry)
+ * falls back to the deterministic on-device engine so the feature always
+ * works, with or without an API key.
+ */
+class AiRecipeMaker(private val ai: AiService) {
+
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+
+    suspend fun generate(items: List<PantryItem>, variant: Int = 0): GeneratedRecipe? {
+        if (!ai.isEnabled) return null
+        if (items.isEmpty()) return null
+        val names = items.map { it.name.trim() }.filter { it.isNotEmpty() }.distinct()
+        if (names.isEmpty()) return null
+
+        val system = "You are Thrive, a budget family cooking AI. You write one " +
+            "original dinner recipe that USES the exact ingredients the user has " +
+            "in their pantry. Reply with ONLY a JSON object, no markdown, no code " +
+            "fences, no commentary. The JSON shape must be exactly:\n" +
+            "{\"name\": string, \"description\": string, \"prepMinutes\": int, " +
+            "\"cookMinutes\": int, \"servings\": int, \"ingredients\": " +
+            "[{\"name\": string, \"amount\": string}], \"steps\": [string, ...], " +
+            "\"costDollars\": number}\n" +
+            "Rules: every ingredient in the recipe should come from the user's " +
+            "pantry when possible. Keep the recipe affordable (family meals). " +
+            "Never repeat the same dish if the user asks for a different one."
+        val user = "My pantry has: ${names.joinToString(", ")}. " +
+            "Write a different, original dinner recipe from these ingredients " +
+            "(roll #${variant + 1} — make it distinct from earlier rolls). " +
+            "Use 4 servings. Include which pantry items you used."
+        val raw = ai.chat(system, user) ?: return null
+        val parsed = parseJson(raw) ?: return null
+        return toGeneratedRecipe(parsed, items, variant)
+    }
+
+    private fun parseJson(raw: String): ParsedRecipe? {
+        // The model may wrap JSON in ``` fences — strip them defensively.
+        val cleaned = raw
+            .trim()
+            .removePrefix("```json").removePrefix("```")
+            .trim()
+            .removeSuffix("```").trim()
+        return runCatching { json.decodeFromString<ParsedRecipe>(cleaned) }.getOrNull()
+    }
+
+    private fun toGeneratedRecipe(p: ParsedRecipe, items: List<PantryItem>, variant: Int): GeneratedRecipe? {
+        if (p.name.isBlank() || p.steps.isEmpty()) return null
+        val used = items.map { it.name }.filter { n ->
+            val lower = n.lowercase()
+            p.name.lowercase().contains(lower) ||
+                p.ingredients.any { it.name.lowercase().contains(lower) } ||
+                p.description.lowercase().contains(lower)
+        }.distinct()
+        val cost = if (p.costDollars > 0) p.costDollars else 8.0
+        val recipe = Recipe(
+            id = "ai-" + Math.abs((p.name.hashCode() + variant * 7919).toLong()).toString(),
+            name = p.name,
+            description = p.description,
+            section = "under_20",
+            mealType = "Dinner",
+            tags = listOf("ai-generated", "pantry"),
+            prepMinutes = p.prepMinutes.coerceIn(5, 60),
+            cookMinutes = p.cookMinutes.coerceIn(5, 240),
+            servings = p.servings.coerceIn(1, 12),
+            costDollars = cost,
+            difficulty = "Easy",
+            ingredients = p.ingredients.map { Ingredient(name = it.name, amount = it.amount) },
+            steps = p.steps,
+            imageSeed = used.firstOrNull(),
+            imageUrl = com.thrive.app.ai.RecipeMakerEngine.photoFor(used.firstOrNull() ?: ""),
+            featured = false,
+        )
+        val pantryNames = items.map { it.name.lowercase() }
+        val missing = p.ingredients
+            .map { it.name }
+            .filter { name ->
+                val n = name.lowercase()
+                pantryNames.none { pn -> n.contains(pn) || pn.contains(n) }
+            }
+            .distinct()
+        return GeneratedRecipe(
+            recipe = recipe,
+            usedItems = used,
+            missingItems = missing.take(3),
+            missingToBuy = missing.take(4).map { Triple(it, "Grocery", it) },
+            estimatedCost = cost,
+        )
+    }
+
+    @Serializable
+    private data class ParsedRecipe(
+        val name: String = "",
+        val description: String = "",
+        val prepMinutes: Int = 10,
+        val cookMinutes: Int = 20,
+        val servings: Int = 4,
+        val costDollars: Double = 0.0,
+        val ingredients: List<ParsedIngredient> = emptyList(),
+        val steps: List<String> = emptyList(),
+    )
+
+    @Serializable
+    private data class ParsedIngredient(
+        val name: String = "",
+        val amount: String = "",
+    )
 }
 
 /** Merge AI tips into meal plans and trip plans. */

@@ -296,7 +296,7 @@ object RecipeMakerEngine {
         "sausage" to "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Jambalaya_%2830750226186%29.jpg/500px-Jambalaya_%2830750226186%29.jpg",
     )
 
-    private fun photoFor(proteinName: String): String? =
+    fun photoFor(proteinName: String): String? =
         PROTEIN_PHOTOS.entries.firstOrNull { (k, _) ->
             norm(proteinName).contains(norm(k)) || norm(k).contains(norm(proteinName))
         }?.value

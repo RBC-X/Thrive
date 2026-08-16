@@ -140,6 +140,12 @@
       "On-device AI is now a genuine chef: 144 recipe blueprints (12 cooking methods x 12 flavor directions), token-based ingredient matching (\"boneless skinless chicken breast\" matches \"chicken breast\"), and every pantry item woven in — with a real food photo on the generated dish",
       "Recipe photos fixed: every recipe in the app now shows a real photo of the dish (browser-grade image loading), and the 7 recipes that had none got real Wikimedia photos",
       "Thousands of coupons now visible: the full 4,235-offer catalog with direct links (exact product pages marked verified; retailer search links labeled honestly)"
+    ],
+    "1.4.3": [
+      "Catalog grew to 45 retailers — added regional grocery chains (Publix, H-E-B, Safeway, Albertsons, Wegmans, Food Lion, Meijer, Giant, Stop & Shop, Winn-Dixie) so deals come from the stores that are actually near you",
+      "Only real deals are shown: every offer in Savings is genuinely on sale or carries a coupon — products merely on file at regular price are never presented as deals (live feed and bundled catalog both enforce this)",
+      "Real generative AI recipes: when you add an AI key in Settings, a genuine LLM reads your exact pantry and writes a fresh dish for it; without a key the on-device engine (144 blueprints) keeps working fully offline",
+      "Recipe photos audited one by one — the unrelated image on Tuna Melts was replaced with a real tuna melt photo, all 31 recipes now show their actual dish"
     ]
   }
 }

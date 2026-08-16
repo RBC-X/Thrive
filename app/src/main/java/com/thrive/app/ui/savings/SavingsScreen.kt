@@ -321,12 +321,13 @@ private fun MiniDealCard(coupon: Coupon, onClick: () -> Unit) {
             )
             if (coupon.discountPercent > 0) {
                 Spacer(Modifier.width(5.dp))
-                Text(                            text = if (coupon.discountPercent > 0) "Save ${coupon.discountPercent}%" else "Live price",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = if (coupon.discountPercent > 0) accents.deal else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
+                Text(
+                    text = "Save ${coupon.discountPercent}%",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = accents.deal,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
             } else if (!coupon.estimated) {
                 // Honest live price: no promo is running, so no invented cut.
                 Spacer(Modifier.width(5.dp))

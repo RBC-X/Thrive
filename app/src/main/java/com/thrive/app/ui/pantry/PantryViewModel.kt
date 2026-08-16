@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.thrive.app.ai.AiAdvisor
+import com.thrive.app.ai.AiRecipeMaker
 import com.thrive.app.ai.AiService
 import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
@@ -56,6 +57,7 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     private val engine = PantryMealEngine
     private val ai = AiService((app as com.thrive.app.ThriveApp).settings)
     private val advisor = AiAdvisor(ai)
+    private val aiMaker = AiRecipeMaker(ai)
 
     val catalog: List<com.thrive.app.data.model.CatalogItem> by lazy { repo.catalog }
 
@@ -180,11 +182,12 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     private var recipeJob: Job? = null
 
     /**
-     * Compose a brand-new recipe from the current pantry. Runs fully on-device
-     * and offline; no API key or network needed. The same pantry + variant
-     * always yields the same recipe, so it's stable and testable. A previous
-     * in-flight generation is cancelled so rapid "Try another" taps always end
-     * on the newest recipe, never a slower earlier one.
+     * Compose a brand-new recipe from the current pantry. When an AI provider
+     * is configured, the pantry is sent to a real LLM which writes a fresh
+     * dish for THIS pantry; on any failure (offline, no key, bad response) it
+     * falls back to the deterministic on-device engine, so the feature always
+     * works with or without an API key. A previous in-flight generation is
+     * cancelled so rapid "Try another" taps always end on the newest recipe.
      */
     fun generateNewRecipe() {
         recipeJob?.cancel()
@@ -192,7 +195,9 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
         recipeJob = viewModelScope.launch {
             val items = _state.value.items
             val result = withContext(Dispatchers.Default) {
-                RecipeMakerEngine.generate(items, variant = recipeVariant)
+                // Real generative AI first; deterministic engine as fallback.
+                aiMaker.generate(items, variant = recipeVariant)
+                    ?: RecipeMakerEngine.generate(items, variant = recipeVariant)
             }
             _state.update { it.copy(generatedRecipe = result, isGeneratingRecipe = false) }
         }

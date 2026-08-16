@@ -37,6 +37,16 @@ RETAILERS = {
     "Trader Joe's": lambda s: "https://www.traderjoes.com/home",
     "Whole Foods": lambda s: "https://www.wholefoodsmarket.com/",
     "Sam's Club": lambda s: "https://www.samsclub.com/",
+    "Publix": lambda s: f"https://www.publix.com/search?q={q(s)}",
+    "H-E-B": lambda s: f"https://www.heb.com/search?q={q(s)}",
+    "Safeway": lambda s: f"https://www.safeway.com/shop/search-results.html?q={q(s)}",
+    "Albertsons": lambda s: f"https://www.albertsons.com/shop/search-results.html?q={q(s)}",
+    "Wegmans": lambda s: f"https://shop.wegmans.com/search?search_term={q(s)}",
+    "Food Lion": lambda s: f"https://www.foodlion.com/search/?q={q(s)}",
+    "Meijer": lambda s: f"https://www.meijer.com/shopping/search.html?q={q(s)}",
+    "Giant": lambda s: f"https://giantfood.com/search/?q={q(s)}",
+    "Stop & Shop": lambda s: f"https://stopandshop.com/search/?q={q(s)}",
+    "Winn-Dixie": lambda s: f"https://www.winndixie.com/search/?q={q(s)}",
     "Dollar General": lambda s: f"https://www.dollargeneral.com/search?q={q(s)}",
     "Dollar Tree": lambda s: "https://www.dollartree.com/",
     "Best Buy": lambda s: f"https://www.bestbuy.com/site/searchpage.jsp?st={q(s)}",
@@ -564,6 +574,8 @@ def exp(category, stores, families):
     EXPANSION.append((category, stores, families))
 
 G_STORES = ["Walmart", "Kroger", "Target", "Aldi", "Costco", "Sam's Club",
+            "Publix", "H-E-B", "Safeway", "Albertsons", "Wegmans", "Food Lion",
+            "Meijer", "Giant", "Stop & Shop", "Winn-Dixie",
             "Dollar General", "Dollar Tree", "Trader Joe's", "Whole Foods"]
 
 exp("Grocery", G_STORES, [

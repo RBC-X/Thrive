@@ -43,14 +43,16 @@ data class SavingsUiState(
     val backupMsg: String? = null,
 ) {
     /**
-     * Offers with a real destination link are available. Every bundled coupon
-     * carries a live retailer link (an exact product page when urlVerified,
-     * otherwise the retailer's own search for that exact item), so the whole
-     * catalog is reachable. The detail screen labels the two link kinds
-     * honestly — "Open product page" vs "Search <store> for this item".
-     * Only coupons with no destination at all are held back.
+     * Offers that are both genuinely on sale (a real "was" price above the
+     * current price) AND have a real destination link. Every bundled coupon
+     * is on sale with a live retailer link (an exact product page when
+     * urlVerified, otherwise the retailer's own search for that exact item),
+     * so the whole catalog is reachable. A product that is merely on file at
+     * regular price — or has no destination at all — is never shown as a deal.
      */
-    val available: List<Coupon> get() = coupons.filter { !it.url.isNullOrBlank() }
+    val available: List<Coupon> get() = coupons.filter {
+        !it.url.isNullOrBlank() && (it.priceBefore > it.priceAfter)
+    }
 
     /** How many feed offers are hidden because they have no usable link. */
     val hiddenUnverified: Int get() = coupons.size - available.size

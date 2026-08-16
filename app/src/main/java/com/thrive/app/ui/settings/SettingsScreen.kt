@@ -271,7 +271,11 @@ fun SettingsScreen(repo: com.thrive.app.data.ThriveRepository, savingsVm: Saving
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Thrive works fully offline with its built-in recipe & deal engine. " +
-                        "Connect any OpenAI-compatible API for richer tips and insights.",
+                        "Connect any OpenAI-compatible API (OpenAI, Groq, OpenRouter, local " +
+                        "servers) and the pantry AI becomes a genuine generative AI: it " +
+                        "writes brand-new recipes from what you have, plus adds richer tips " +
+                        "and insights. Without a key, the built-in engine still cooks from " +
+                        "your pantry offline.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }

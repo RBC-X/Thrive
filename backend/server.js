@@ -124,6 +124,10 @@ function dealToCoupon(d) {
     : d.savingsPercent > 0 && d.savingsPercent < 100
       ? d.price / (1 - d.savingsPercent / 100)
       : d.price;
+  // Only offers that are genuinely on sale or carry a coupon belong in the
+  // Savings feed. A product that is merely "in the catalog" at regular price
+  // is not a deal — drop it rather than showing a live price with no savings.
+  if (!(before > d.price)) return null;
   return {
     id: d.id,
     store: d.store,
@@ -156,7 +160,10 @@ function dealToCoupon(d) {
 function couponsFor(deals) {
   const bundled = rotateCoupons(daySeed());
   const live = Array.isArray(deals)
-    ? deals.filter((d) => d && d.urlVerified).map(dealToCoupon)
+    ? deals
+        .filter((d) => d && d.urlVerified)
+        .map(dealToCoupon)
+        .filter((c) => c !== null) // keep only real promos (dealToCoupon drops non-sale items)
     : [];
   if (!live.length) return bundled;
   const verifiedBundled = bundled.filter((c) => c && c.urlVerified);
