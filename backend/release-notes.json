@@ -1,9 +1,10 @@
 {
   "notes": {
     "1.4.4": [
-      "Google Sign-In backup: sign in with your Google account in Settings and your saved deals, pantry, and shopping list follow you to any device — no backup code to remember (the code section stays for migrating older backups)",
-      "Backend verifies Google ID tokens and stores your state under your account with the same atomic, conflict-safe write protocol as code backups",
-      "Editable grocery budget: change your trip budget and people count any time from Settings → Grocery budget"
+      "Direct-link rule: every shown deal opens the exact product page; search-page stand-ins are hidden",
+      "Resolver upgraded 724 bundled items to real Open Food Facts product pages",
+      "Backend serves only verified coupons (no search URLs in the payload)",
+      "Fixed the one-tap public connect (sync URL asset now points at the real tunnel)"
     ],
     "1.4.3": [
       "Catalog grew to 45 retailers — added regional grocery chains (Publix, H-E-B, Safeway, Albertsons, Wegmans, Food Lion, Meijer, Giant, Stop & Shop, Winn-Dixie) so deals come from the stores that are actually near you",
