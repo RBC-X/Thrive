@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 35
-        versionName = "1.4.4"
+        versionCode = 36
+        versionName = "1.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Google Sign-In web client ID (OAuth "Web application" client). Set it
         // in local.properties as GOOGLE_CLIENT_ID=... or as the environment
@@ -149,6 +149,10 @@ dependencies {
     // the model file is downloaded. Pantry recipe generation uses it when the
     // model is present and falls back to the deterministic engine otherwise.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    // tasks-genai is compiled against protobuf-javalite but does not resolve it
+    // transitively; R8 needs the real classes (Internal$ProtoNonnullApi,
+    // ProtoPresenceBits) on the classpath or the release build fails.
+    implementation("com.google.protobuf:protobuf-javalite:4.26.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
