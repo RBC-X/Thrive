@@ -1,5 +1,13 @@
 {
   "notes": {
+    "1.6.0": [
+      "The weekly planner is now a real planning engine: type what you want (\"dinner for two, five nights, under $70, high protein, mostly Aldi, no dairy\") and Thrive turns it into a structured week — it only fills in what it honestly understood",
+      "Ingredient intelligence: equivalent ingredients merge (8 oz + 1 lb of chicken become one line), your pantry is subtracted from the shopping list, and everything is grouped by store aisle with subtotals",
+      "Appliance-aware meals: tell Thrive what you have (air fryer, slow cooker, oven) and it never suggests a recipe you can't actually cook — extra appliances only open more options, never fewer",
+      "Swap any single night without touching the rest of the week, and \"Optimize to fit $X\" genuinely repairs an over-budget plan by swapping the priciest meals — or honestly tells you the cheapest plan it can reach instead of faking success",
+      "The plan screen shows a budget progress bar, per-meal cost and cook time, and honest \"in pantry\" chips on every shopping line",
+      "Bug fixes: bell peppers no longer vanish from shopping lists (a staple-name match), swapping never silently returns the same meal, and an empty plan no longer crashes the planner"
+    ],
     "1.5.0": [
       "Real on-device AI: a genuine language model (Qwen2.5 0.5B, ~540 MB) runs right on your phone — reads your exact pantry and writes fresh, diverse dinners completely offline, no API keys. Download it once from Settings (On-device AI) and the pantry chef is always available",
       "Pantry meal ideas can now 'search the web for this': each suggestion has a button that finds real online versions of that meal, clearly labeled web-discovered (never passed off as verified) with source, date, and a direct link to read before cooking",
