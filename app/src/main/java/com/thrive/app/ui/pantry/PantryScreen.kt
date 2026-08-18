@@ -73,6 +73,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
+import com.thrive.app.ai.PlanIntentParser
+import com.thrive.app.ai.ParsedPlanRequest
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.remote.WebRecipeResult
 import com.thrive.app.data.remote.WebSearchState
@@ -399,22 +401,97 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
     var people by remember { mutableIntStateOf(4) }
     var budgetText by remember { mutableStateOf("75") }
     var focus by remember { mutableStateOf("balanced") }
+    var dinners by remember { mutableIntStateOf(7) }
+    var restrictions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var maxCook by remember { mutableIntStateOf(0) }
+    var appliances by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var intent by remember { mutableStateOf("") }
+    var parsed by remember { mutableStateOf<ParsedPlanRequest?>(null) }
+    val applianceOptions = listOf("Air fryer", "Slow cooker", "Oven", "Stovetop", "Microwave")
     val quickBudgets = listOf(50.0, 75.0, 100.0, 125.0)
+    val restrictionOptions = listOf(
+        "Peanut" to "peanut", "Tree nuts" to "nuts", "Shellfish" to "shellfish", "Dairy" to "dairy",
+        "Gluten" to "gluten", "Eggs" to "eggs", "Soy" to "soy", "Pork" to "pork",
+        "Vegetarian" to "vegetarian", "Vegan" to "vegan",
+    )
+    val cookOptions = listOf("Any" to 0, "30 min" to 30, "45 min" to 45, "60 min" to 60)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .heightIn(max = 560.dp),
+                .heightIn(max = 660.dp),
         ) {
             Text("Plan my week", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Seven dinners, one budget, built around what's already in your kitchen.",
+                text = "Type what you need, or set it below. The week is built around what's already in your kitchen.",
                 style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
+
+            OutlinedTextField(
+                value = intent,
+                onValueChange = { intent = it; parsed = null },
+                placeholder = { Text("e.g. dinner for two, five nights, under \u002470, no dairy, quick") },
+                leadingIcon = { Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        val p = PlanIntentParser.parse(intent)
+                        parsed = p
+                        val r = p.request
+                        people = r.people
+                        if (r.budget > 0) budgetText = r.budget.toInt().toString()
+                        focus = r.focus
+                        dinners = r.nights
+                        restrictions = r.restrictions
+                        maxCook = r.maxCookMinutes
+                        appliances = r.appliances
+                    },
+                    enabled = intent.isNotBlank(),
+                ) {
+                    Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Understand this", fontWeight = FontWeight.Bold)
+                }
+                parsed?.let { p ->
+                    Text(
+                        text = p.understood,
+                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            parsed?.notes?.forEach { note ->
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.labelSmall.copy(color = accents.deal, fontWeight = FontWeight.SemiBold),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Dinners", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(3, 5, 7).forEach { n ->
+                        SelectableChip(text = "$n", selected = dinners == n, onClick = { dinners = n })
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("People", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
@@ -491,6 +568,8 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
                     "Balanced" to "balanced",
                     "Use expiring" to "use_expiring",
                     "Quick & easy" to "quick",
+                    "High protein" to "high_protein",
+                    "Cheap" to "cheap",
                 ).forEach { (label, key) ->
                     SelectableChip(
                         text = label,
@@ -499,12 +578,68 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
                     )
                 }
             }
+            Spacer(Modifier.height(16.dp))
+
+            Text("Avoid", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(restrictionOptions.size) { i ->
+                    val (label, key) = restrictionOptions[i]
+                    SelectableChip(
+                        text = label,
+                        selected = key in restrictions,
+                        onClick = {
+                            restrictions = if (key in restrictions) restrictions - key else restrictions + key
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            Text("Max cook time", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(cookOptions.size) { i ->
+                    val (label, minutes) = cookOptions[i]
+                    SelectableChip(
+                        text = label,
+                        selected = maxCook == minutes,
+                        onClick = { maxCook = minutes },
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            Text("I have", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(applianceOptions.size) { i ->
+                    val name = applianceOptions[i]
+                    SelectableChip(
+                        text = name,
+                        selected = name.lowercase() in appliances,
+                        onClick = {
+                            appliances = if (name.lowercase() in appliances) appliances - name.lowercase()
+                            else appliances + name.lowercase()
+                        },
+                    )
+                }
+            }
             Spacer(Modifier.height(22.dp))
             Button(
                 onClick = {
                     val budget = budgetText.toDoubleOrNull()
                     if (budget != null && budget > 0) {
-                        vm.generateWeeklyPlan(people = people, budget = budget, focus = focus)
+                        vm.generateWeeklyPlan(
+                            people = people,
+                            budget = budget,
+                            nights = dinners,
+                            focus = focus,
+                            restrictions = restrictions,
+                            maxCookMinutes = maxCook,
+                            appliances = appliances,
+                            requestSummary = parsed?.understood?.takeIf { it.isNotBlank() },
+                        )
                         onDismiss()
                         onOpenPlan()
                     }

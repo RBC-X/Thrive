@@ -255,18 +255,63 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
 
     // ---- Weekly planner ----
 
+    /** Everything needed to rebuild (or re-run) the same week. */
+    data class PlanParams(
+        val people: Int,
+        val budget: Double,
+        val nights: Int = 7,
+        val focus: String = "balanced",
+        val restrictions: List<String> = emptyList(),
+        val maxCookMinutes: Int = 0,
+        val appliances: Set<String> = emptySet(),
+        val preferredStore: String? = null,
+        val requestSummary: String? = null,
+    )
+
     private val planner = WeeklyPlannerEngine
-    private var lastPlanParams: Triple<Int, Double, String>? = null
+    private var lastPlanParams: PlanParams? = null
     private var weekPlanJob: Job? = null
 
-    fun generateWeeklyPlan(people: Int, budget: Double, focus: String = "balanced") {
+    fun generateWeeklyPlan(
+        people: Int,
+        budget: Double,
+        nights: Int = 7,
+        focus: String = "balanced",
+        restrictions: List<String> = emptyList(),
+        maxCookMinutes: Int = 0,
+        appliances: Set<String> = emptySet(),
+        preferredStore: String? = null,
+        requestSummary: String? = null,
+    ) {
         weekPlanJob?.cancel()
-        lastPlanParams = Triple(people, budget, focus)
+        lastPlanParams = PlanParams(
+            people = people,
+            budget = budget,
+            nights = nights,
+            focus = focus,
+            restrictions = restrictions,
+            maxCookMinutes = maxCookMinutes,
+            appliances = appliances,
+            preferredStore = preferredStore,
+            requestSummary = requestSummary,
+        )
         _state.update { it.copy(isPlanningWeek = true, weeklyPlan = null) }
         weekPlanJob = viewModelScope.launch {
             val items = _state.value.items
             val plan = withContext(Dispatchers.Default) {
-                planner.plan(items, repo.recipes, nights = 7, budget = budget, people = people, focus = focus)
+                planner.plan(
+                    pantry = items,
+                    recipes = repo.recipes,
+                    nights = nights,
+                    budget = budget,
+                    people = people,
+                    focus = focus,
+                    restrictions = restrictions,
+                    maxCookMinutes = maxCookMinutes,
+                    appliances = appliances,
+                    preferredStore = preferredStore,
+                    requestSummary = requestSummary,
+                )
             }
             val enriched = if (ai.isEnabled) {
                 val tip = runCatching {
@@ -284,7 +329,65 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
         }
     }
 
+    /**
+     * Swap ONE night. Every other night, and all the request's constraints,
+     * stay exactly as they were; only the swapped meal and the derived
+     * shopping list/totals change. If no eligible replacement exists the
+     * current plan stays and an honest note explains why.
+     */
+    fun swapNight(index: Int) {
+        val plan = _state.value.weeklyPlan ?: return
+        weekPlanJob?.cancel()
+        _state.update { it.copy(isPlanningWeek = true) }
+        weekPlanJob = viewModelScope.launch {
+            val items = _state.value.items
+            val swapped = withContext(Dispatchers.Default) {
+                planner.swapNight(plan, index, items, repo.recipes)
+            }
+            _state.update {
+                it.copy(
+                    weeklyPlan = swapped ?: plan.copy(
+                        repairNote = "No other meal fits your restrictions for that night — try loosening a constraint."
+                    ),
+                    isPlanningWeek = false,
+                )
+            }
+        }
+    }
+
+    /**
+     * Deterministic budget repair: swap the priciest meals for cheaper
+     * eligible ones until the plan fits the budget or honestly explains the
+     * cheapest floor it can reach. Never fakes success.
+     */
+    fun optimizePlan() {
+        val plan = _state.value.weeklyPlan ?: return
+        weekPlanJob?.cancel()
+        _state.update { it.copy(isPlanningWeek = true) }
+        weekPlanJob = viewModelScope.launch {
+            val items = _state.value.items
+            val result = withContext(Dispatchers.Default) {
+                planner.optimize(plan, items, repo.recipes)
+            }
+            _state.update {
+                it.copy(weeklyPlan = result.plan.copy(repairNote = result.note), isPlanningWeek = false)
+            }
+        }
+    }
+
     fun rePlan() {
-        lastPlanParams?.let { (people, budget, focus) -> generateWeeklyPlan(people, budget, focus) }
+        lastPlanParams?.let { p ->
+            generateWeeklyPlan(
+                people = p.people,
+                budget = p.budget,
+                nights = p.nights,
+                focus = p.focus,
+                restrictions = p.restrictions,
+                maxCookMinutes = p.maxCookMinutes,
+                appliances = p.appliances,
+                preferredStore = p.preferredStore,
+                requestSummary = p.requestSummary,
+            )
+        }
     }
 }

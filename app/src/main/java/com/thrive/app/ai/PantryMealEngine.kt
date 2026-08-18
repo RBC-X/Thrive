@@ -53,6 +53,17 @@ object PantryMealEngine {
         "flour", "garlic", "onion", "butter",
     )
 
+    /**
+     * Compounds that contain a staple token but are real purchases, not
+     * pantry staples — e.g. "bell pepper" matches the staple token "pepper"
+     * but must still appear on the shopping list.
+     */
+    private val NOT_STAPLES = setOf(
+        "bell pepper", "bell peppers", "red bell pepper", "green bell pepper",
+        "yellow bell pepper", "orange bell pepper", "chili pepper", "chili peppers",
+        "butter lettuce", "almond butter", "cashew butter",
+    )
+
     /** Approximate prices for common missing ingredients (dollars). */
     private val PRICE_MAP = mapOf(
         "chicken breast" to 4.5, "chicken thighs" to 4.0, "ground beef" to 5.0,
@@ -127,6 +138,7 @@ object PantryMealEngine {
     fun isStaple(ingredientName: String): Boolean {
         val norm = ingredientName.lowercase(Locale.US).trim()
         if (norm in STAPLES) return true
+        if (norm in NOT_STAPLES) return false
         return tokens(norm).any { it in STAPLES }
     }
 

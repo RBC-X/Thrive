@@ -56,6 +56,9 @@ data class Recipe(
     val section: String,           // under_10 | under_20 | five_ingredients | family_favorites | one_pot
     val mealType: String = "Dinner",
     val tags: List<String> = emptyList(),
+    // Appliances this recipe genuinely requires ("air fryer", "slow cooker").
+    // Empty = basic stovetop/oven — always available, never a constraint.
+    val requiredAppliances: List<String> = emptyList(),
     val prepMinutes: Int,
     val cookMinutes: Int,
     val servings: Int,

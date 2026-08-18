@@ -383,3 +383,43 @@ test("unknown routes 404 and health survives", async () => {
   assert.equal((await req("GET", "/api/v1/nope")).status, 404);
   assert.equal((await req("GET", "/api/v1/health")).status, 200);
 });
+
+// ---------------------------------------------------------------------------
+// Location-aware sync: location payloads never pollute the shared cache
+// ---------------------------------------------------------------------------
+
+test("location-tagged sync never leaks into a later location-free request", async () => {
+  // A location-aware sync first: the payload carries the location block and
+  // nearby-stores summary.
+  const loc = await req("GET", "/api/v1/sync?lat=47.62&lng=-122.33");
+  assert.equal(loc.status, 200);
+  assert.ok(loc.json.location, "location-aware sync includes a location block");
+  assert.ok(Array.isArray(loc.json.location.nearbyStores) && loc.json.location.nearbyStores.length > 0);
+
+  // Regression: the NEXT request without coordinates must be a clean,
+  // location-free payload — never the cached location-tagged one. Before the
+  // fix, syncPayload overwrote the shared location-free cache with the
+  // location payload, so this request returned another user's location block
+  // and distance-annotated deals.
+  const plain = await req("GET", "/api/v1/sync");
+  assert.equal(plain.status, 200);
+  assert.equal(plain.json.location, null, "location-free sync must not carry a location block");
+  // Deals may carry storeDistanceMi: null ("no distance known") but never an
+  // actual number — a real distance would mean the location-tagged payload
+  // leaked into this request.
+  assert.ok(
+    plain.json.deals.every((d) => d.storeDistanceMi == null),
+    "location-free deals must not be distance-annotated"
+  );
+  assert.ok(
+    plain.json.coupons.every((c) => c.storeDistanceMi == null),
+    "location-free coupons must not be distance-annotated"
+  );
+
+  // Different location bucket stays independent too.
+  const loc2 = await req("GET", "/api/v1/sync?lat=40.71&lng=-74.01");
+  assert.equal(loc2.status, 200);
+  assert.ok(loc2.json.location, "second bucket still location-aware");
+  const plain2 = await req("GET", "/api/v1/sync");
+  assert.equal(plain2.json.location, null);
+});
