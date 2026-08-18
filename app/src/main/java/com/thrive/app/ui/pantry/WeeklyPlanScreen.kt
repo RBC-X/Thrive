@@ -23,11 +23,14 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddShoppingCart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -41,6 +44,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,6 +128,50 @@ fun WeeklyPlanScreen(
             }
         }
 
+        plan.repairNote?.let { note ->
+            if (note.isNotBlank()) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(accents.goldSoft.copy(alpha = 0.55f))
+                            .padding(14.dp),
+                    ) {
+                        Icon(Icons.Rounded.Info, contentDescription = null, tint = accents.gold, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = "Budget check",
+                                style = MaterialTheme.typography.labelLarge.copy(color = accents.gold, fontWeight = FontWeight.Bold),
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(note, style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface))
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!plan.underBudget && !state.isPlanningWeek) {
+            item {
+                Button(
+                    onClick = { pantryVm.optimizePlan() },
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
+                ) {
+                    Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Optimize to fit ${Money.fmt(plan.budget)}", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
         if (plan.combinedShopping.isNotEmpty()) {
             item {
                 Row(
@@ -182,26 +230,90 @@ fun WeeklyPlanScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                 )
             }
-            items(plan.combinedShopping.size, key = { it }) { i ->
-                val missing = plan.combinedShopping[i]
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 4.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = missing.name.replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = Money.fmt(missing.estCost),
-                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    )
+            if (plan.shoppingGroups.isNotEmpty()) {
+                plan.shoppingGroups.forEach { group ->
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 2.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = group.category.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (group.subtotal > 0) {
+                                Text(
+                                    text = "≈ ${Money.fmt(group.subtotal)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                )
+                            }
+                        }
+                    }
+                    items(group.items.size, key = { group.category + it }) { i ->
+                        val line = group.items[i]
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = line.name.replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (line.haveInPantry) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                        textDecoration = if (line.haveInPantry) TextDecoration.LineThrough else TextDecoration.None,
+                                    ),
+                                )
+                                Text(
+                                    text = line.label + if (line.recipes > 1) " · used in ${line.recipes} meals" else "",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                )
+                            }
+                            if (line.haveInPantry) {
+                                SoftChip(text = "In pantry", bg = accents.leafSoft, fg = accents.leaf)
+                            } else {
+                                Text(
+                                    text = Money.fmt(line.estCost),
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                items(plan.combinedShopping.size, key = { it }) { i ->
+                    val missing = plan.combinedShopping[i]
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = missing.name.replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = Money.fmt(missing.estCost),
+                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
+                    }
                 }
             }
         } else {
@@ -236,7 +348,11 @@ fun WeeklyPlanScreen(
         }
 
         items(plan.nights.size, key = { it }) { i ->
-            NightCard(plan.nights[i])
+            NightCard(
+                night = plan.nights[i],
+                swapEnabled = !state.isPlanningWeek,
+                onSwap = { pantryVm.swapNight(i) },
+            )
         }
 
         item {
@@ -274,13 +390,24 @@ private fun WeekSummaryCard(plan: WeeklyPlan) {
             .padding(20.dp),
     ) {
         Text(
-            text = "7 NIGHTS · ${plan.people} PEOPLE",
+            text = "${plan.nights.size} NIGHTS · ${plan.people} PEOPLE",
             style = MaterialTheme.typography.labelSmall.copy(
                 color = Color.White.copy(alpha = 0.85f),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp,
             ),
         )
+        plan.requestSummary?.let { summary ->
+            if (summary.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.labelSmall.copy(color = Color.White.copy(alpha = 0.85f)),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         Spacer(Modifier.height(6.dp))
         Text(
             text = "${Money.fmt(plan.totalCost)} of ${Money.fmt(plan.budget)} budget",
@@ -289,11 +416,18 @@ private fun WeekSummaryCard(plan: WeeklyPlan) {
                 fontWeight = FontWeight.ExtraBold,
             ),
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { if (plan.budget > 0) (plan.totalCost / plan.budget).toFloat().coerceIn(0f, 1f) else 0f },
+            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)),
+            color = Color.White,
+            trackColor = Color.White.copy(alpha = 0.25f),
+        )
+        Spacer(Modifier.height(6.dp))
         Text(
             text = when {
-                plan.underBudget -> "${Money.fmt(plan.remaining)} to spare — treat night 7"
-                else -> "Over by ${Money.fmt(plan.overshoot)} — re-plan or swap a meal"
+                plan.underBudget -> "${Money.fmt(plan.remaining)} to spare — treat the last night"
+                else -> "Over by ${Money.fmt(plan.overshoot)} — optimize or swap a meal"
             },
             style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.9f)),
         )
@@ -317,16 +451,23 @@ private fun WeekSummaryCard(plan: WeeklyPlan) {
                 )
             }
             SoftChip(
-                text = "≈ ${Money.fmt(plan.totalCost / plan.nightsCount)}/night",
+                text = "≈ ${Money.fmt(plan.costPerMeal)}/meal",
                 bg = Color.White.copy(alpha = 0.2f),
                 fg = Color.White,
             )
+            if (plan.avgMinutes > 0) {
+                SoftChip(
+                    text = "~${plan.avgMinutes} min avg",
+                    bg = Color.White.copy(alpha = 0.2f),
+                    fg = Color.White,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun NightCard(night: PlannedNight) {
+private fun NightCard(night: PlannedNight, swapEnabled: Boolean, onSwap: () -> Unit) {
     val accents = LocalThriveColors.current
     Row(
         modifier = Modifier
@@ -389,6 +530,13 @@ private fun NightCard(night: PlannedNight) {
             Text(
                 text = "${night.suggestion.recipe.totalMinutes} min",
                 style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            )
+        }
+        IconButton(onClick = onSwap, enabled = swapEnabled) {
+            Icon(
+                Icons.Rounded.SwapHoriz,
+                contentDescription = "Swap this meal",
+                tint = if (swapEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline,
             )
         }
     }

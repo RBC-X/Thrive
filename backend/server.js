@@ -390,17 +390,23 @@ async function getDeals(lat, lng) {
 async function syncPayload(lat, lng) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const withLoc = lat != null && lng != null;
-  if (!withLoc && payloadCache && payloadCacheAt === todayKey) return payloadCache;
-  const pKey = withLoc ? `payload:${locBucket(lat, lng)}` : null;
+  // Location-aware and location-free payloads are cached SEPARATELY. A
+  // location-tagged payload must never overwrite the shared location-free
+  // cache (and vice versa) — otherwise the next request with a different
+  // location mode would receive another user's `location` block and
+  // distance-annotated deals.
   if (withLoc) {
+    const pKey = `payload:${locBucket(lat, lng)}`;
     const hit = locCache.get(pKey);
     if (hit && hit.at === todayKey) return hit.deals;
+  } else if (payloadCache && payloadCacheAt === todayKey) {
+    return payloadCache;
   }
   const deals = await getDeals(lat, lng);
   const location = withLoc
     ? { lat, lng, nearbyStores: nearbyStores(lat, lng) }
     : null;
-  payloadCache = {
+  const body = {
     version: VERSION,
     generatedAt: new Date().toISOString(),
     source: sources.map((s) => s.name),
@@ -410,9 +416,14 @@ async function syncPayload(lat, lng) {
     recipes,
     catalog,
   };
+  if (withLoc) {
+    locCache.set(`payload:${locBucket(lat, lng)}`, { at: todayKey, deals: body });
+    if (locCache.size > 40) locCache.delete(locCache.keys().next().value); // bound memory
+    return body;
+  }
+  payloadCache = body;
   payloadCacheAt = todayKey;
-  if (withLoc) locCache.set(pKey, { at: todayKey, deals: payloadCache });
-  return payloadCache;
+  return body;
 }
 
 // ---------------------------------------------------------------------------

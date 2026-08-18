@@ -556,7 +556,7 @@
   ],
   "imageSeed": "lemon-salmon",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Liat_Portal_for_Foodie_Disorder_-_Grilled_salmon_with_sweet_potatoes.jpg/500px-Liat_Portal_for_Foodie_Disorder_-_Grilled_salmon_with_sweet_potatoes.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Grilled_Salmon_%26_Black_Sweet_Rice_%289638954931%29.jpg/500px-Grilled_Salmon_%26_Black_Sweet_Rice_%289638954931%29.jpg"
  },
  {
   "id": "r11",
@@ -667,7 +667,7 @@
   ],
   "imageSeed": "quesadilla",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/At_Long_Island_2023_267.jpg/500px-At_Long_Island_2023_267.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Chicken_quesadilla_-_Massachusetts.jpg/500px-Chicken_quesadilla_-_Massachusetts.jpg"
  },
  {
   "id": "r13",
@@ -719,7 +719,7 @@
   ],
   "imageSeed": "sausage-peppers",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Cold_chicken_sausage%2C_avocado%2C_and_bell_peppers_on_mixed_greens%2C_with_black_pepper%2C_grated_cheddar_cheese%2C_and_dressing_of_mustard%2C_olive_oil%2C_and_vinegar_-_Massachusetts.jpg/500px-thumbnail.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Sausage_and_peppers.jpg/500px-Sausage_and_peppers.jpg"
  },
  {
   "id": "r14",
@@ -788,6 +788,7 @@
    "set-and-forget",
    "kid-friendly"
   ],
+  "requiredAppliances": ["slow cooker"],
   "prepMinutes": 5,
   "cookMinutes": 240,
   "servings": 6,
@@ -1343,7 +1344,7 @@
   ],
   "imageSeed": "meatloaf",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/2020-07-17_00_33_05_A_heated_Hungry_Man_Home-Style_Meatloaf_meal_%28Meatloaf_patties_with_mashed_potatoes%2C_gravy%2C_mixed_vegetables_and_a_brownie%29_in_Rochelle_Park%2C_Bergen_County%2C_New_Jersey.jpg/500px-thumbnail.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Hackbraten_Aachener_Brauhaus.jpg/500px-Hackbraten_Aachener_Brauhaus.jpg"
  },
  {
   "id": "r26",
