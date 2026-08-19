@@ -9,11 +9,18 @@ import java.util.Locale
  */
 data class PlanIngredientLine(
     val name: String,          // canonical display name ("chicken breast")
-    val quantity: Double,      // in [unit] scale
+    val quantity: Double,      // in [unit] scale (recipe consumption)
     val unit: String,          // "lb", "cup", "can", "each", ...
-    val estCost: Double,       // estimated cost of the needed quantity
+    val estCost: Double,       // estimated cost of the needed quantity (consumption)
     val recipes: Int,          // how many planned recipes use it (reuse signal)
     val haveInPantry: Boolean = false,
+    // Package-aware cart fields: what you actually buy and pay. Recipe
+    // quantities are fractions, but customers buy packages/counter cuts —
+    // 0.5 lb becomes a 1 lb purchase. cartCost keeps the same estimated unit
+    // price as estCost, scaled to the rounded quantity, so the register total
+    // is honest without inventing new prices.
+    val cartQty: Double = 0.0,
+    val cartCost: Double = 0.0,
 ) {
     val label: String
         get() = if (quantity >= 2 || quantity == 0.0) "${trimQty(quantity)} $unit" else "1 $unit"
@@ -27,6 +34,8 @@ data class PlanShoppingGroup(
     val category: String,
     val items: List<PlanIngredientLine>,
     val subtotal: Double,
+    // What the aisle actually costs at the register (package-rounded).
+    val cartSubtotal: Double = subtotal,
 )
 
 /**
@@ -256,6 +265,24 @@ object IngredientNormalizer {
         else -> u
     }
 
+    /**
+     * Rounds a needed quantity up to the practical purchase size
+     * (package-aware): weight rounds to the next 0.5 lb with a floor of 0.5,
+     * count/container units round up to a whole item (you buy a whole can,
+     * bunch, or package), and volume stays as-is (priced per unit used).
+     * Never rounds DOWN — the cart can only cost as much or more than the
+     * recipe consumption estimate.
+     */
+    fun packageQty(qty: Double, unit: String): Double = when (unit) {
+        // Weight: round up to the next half pound with a 1 lb floor — a recipe
+        // needing 0.5 lb of chicken means buying a 1 lb package, and 200 g of
+        // anything still means a ~1 lb counter cut.
+        "lb" -> (Math.ceil(qty * 2) / 2).coerceAtLeast(1.0)
+        "each", "can", "jar", "bag", "box", "package", "bunch", "head", "clove",
+        "stalk", "slice", "piece", "fillet" -> Math.ceil(qty).coerceAtLeast(1.0)
+        else -> qty
+    }
+
     /** Converts a (qty, unit) into the family base for summing. */
     private fun toBase(qty: Double, unit: String): Triple<Double, String, Double>? = when (unit) {
         "lb" -> Triple(qty, "lb", 1.0)
@@ -376,10 +403,20 @@ object IngredientNormalizer {
             // existing line; the new one is intentionally not merged.
         }
 
-        // Pantry subtraction: mark what the user already owns.
+        // Pantry subtraction + package-aware cart rounding: mark what the user
+        // already owns (zero cost) and round everything else up to a practical
+        // purchase quantity at the same estimated unit price.
         val finalList = merged.values.map { line ->
             val has = pantryLookup(pantryNames, line.name)
-            if (has) line.copy(haveInPantry = true, estCost = 0.0) else line
+            if (has) {
+                line.copy(haveInPantry = true, estCost = 0.0, cartQty = line.quantity, cartCost = 0.0)
+            } else {
+                val cartQ = packageQty(line.quantity, line.unit)
+                val cartC = if (line.quantity > 0)
+                    Math.round(line.estCost * (cartQ / line.quantity) * 100) / 100.0
+                else line.estCost
+                line.copy(cartQty = cartQ, cartCost = cartC)
+            }
         }
 
         // Group by aisle, in a walkable order.
@@ -394,6 +431,7 @@ object IngredientNormalizer {
                     category = cat,
                     items = items.sortedBy { it.name },
                     subtotal = Math.round(items.filterNot { it.haveInPantry }.sumOf { it.estCost } * 100) / 100.0,
+                    cartSubtotal = Math.round(items.filterNot { it.haveInPantry }.sumOf { it.cartCost } * 100) / 100.0,
                 )
             }
     }

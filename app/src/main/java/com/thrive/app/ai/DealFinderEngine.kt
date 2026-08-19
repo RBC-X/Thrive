@@ -137,6 +137,36 @@ object DealFinderEngine {
     }
 
     /**
+     * Matches a generated weekly plan's shopping list against the verified
+     * deal feed and produces a per-store trip plan with real prices where a
+     * verified deal exists. Plan aisles ("Produce", "Meat & Seafood", ...)
+     * map to the deal feed's grocery bucket — but the strict token and
+     * identity matching still apply, so nothing is ever matched by category
+     * alone. Items the user already has in the pantry are skipped; anything
+     * without a verified deal stays honest ("Any store", estimate) rather
+     * than being faked into a match.
+     */
+    fun tripFor(plan: WeeklyPlan, deals: List<Deal>): TripPlan? {
+        val items = plan.shoppingGroups.flatMap { g -> g.items }
+            .filterNot { it.haveInPantry }
+            .map { line ->
+                ShoppingItem(
+                    id = "plan:" + line.name.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "-"),
+                    name = line.name,
+                    category = "Grocery", // deal feed's grocery bucket; token matching stays strict
+                    quantity = 1,
+                    unit = "${trimQty(line.quantity)} ${line.unit}".trim(),
+                    estPrice = line.estCost,
+                )
+            }
+        if (items.isEmpty()) return null
+        return plan(items, deals, budget = plan.budget, people = plan.people)
+    }
+
+    private fun trimQty(q: Double): String =
+        if (q == q.toInt().toDouble()) q.toInt().toString() else (Math.round(q * 10) / 10.0).toString()
+
+    /**
      * Picks the best deal for one item, comparing per-unit prices when both
      * sides carry comparable units, and falling back to whole-item prices.
      */

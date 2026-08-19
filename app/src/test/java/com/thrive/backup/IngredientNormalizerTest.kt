@@ -117,6 +117,58 @@ class IngredientNormalizerTest {
     }
 
     @Test
+    fun `half pound of chicken rounds up to a one-pound cart purchase`() {
+        val groups = IngredientNormalizer.build(
+            recipes = listOf(
+                recipe("a", listOf(ingredient("chicken breast", "0.5 lb")))
+            ),
+            pantryNames = emptyList(),
+        )
+        val line = findLine(groups, "chicken breast").first()
+        // Recipe consumes 0.5 lb, but you buy a 1 lb package: cart qty rounds up.
+        assertEquals(0.5, line.quantity, 0.001)
+        assertEquals(1.0, line.cartQty, 0.001)
+        // Same estimated unit price, doubled for the doubled quantity.
+        assertEquals(line.estCost * 2.0, line.cartCost, 0.001)
+        assertTrue(line.cartCost >= line.estCost)
+    }
+
+    @Test
+    fun `package rounding never rounds down and rounds to half pounds`() {
+        assertEquals(1.5, IngredientNormalizer.packageQty(1.4, "lb"), 0.001)   // up to next half
+        assertEquals(1.5, IngredientNormalizer.packageQty(1.1, "lb"), 0.001)
+        assertEquals(1.0, IngredientNormalizer.packageQty(0.1, "lb"), 0.001)   // 1 lb package floor
+        assertEquals(1.0, IngredientNormalizer.packageQty(0.5, "lb"), 0.001)   // half lb -> whole package
+        assertEquals(3.0, IngredientNormalizer.packageQty(2.6, "lb"), 0.001)
+        assertEquals(2.0, IngredientNormalizer.packageQty(1.5, "can"), 0.001)  // whole container
+        assertEquals(2.0, IngredientNormalizer.packageQty(1.1, "each"), 0.001)
+        assertEquals(2.0, IngredientNormalizer.packageQty(2.0, "cup"), 0.001)  // volume unchanged
+        assertEquals(1.5, IngredientNormalizer.packageQty(1.5, "cup"), 0.001)
+    }
+
+    @Test
+    fun `cart subtotal sums rounded costs and pantry costs nothing`() {
+        val groups = IngredientNormalizer.build(
+            recipes = listOf(
+                recipe(
+                    "a",
+                    listOf(
+                        ingredient("chicken breast", "0.5 lb"),
+                        ingredient("pasta", "1 lb"),
+                    ),
+                )
+            ),
+            pantryNames = listOf("chicken breast"),
+        )
+        val chicken = findLine(groups, "chicken breast").first()
+        assertTrue(chicken.haveInPantry)
+        assertEquals(0.0, chicken.cartCost, 0.001)
+        val pasta = findLine(groups, "pasta").first()
+        assertTrue(pasta.cartCost > 0)
+        assertTrue(groups.all { it.cartSubtotal >= it.subtotal })
+    }
+
+    @Test
     fun `groups are aisle-sorted with subtotals`() {
         val groups = IngredientNormalizer.build(
             recipes = listOf(

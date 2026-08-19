@@ -1,6 +1,9 @@
 package com.thrive.ai
 
 import com.thrive.app.ai.DealFinderEngine
+import com.thrive.app.ai.PlanIngredientLine
+import com.thrive.app.ai.PlanShoppingGroup
+import com.thrive.app.ai.WeeklyPlan
 import com.thrive.app.data.model.Deal
 import com.thrive.app.data.model.ShoppingItem
 import org.junit.Assert.assertEquals
@@ -26,6 +29,100 @@ class DealFinderEngineTest {
         deal("d2", "Great Value Spaghetti 16oz", "Grocery", 0.98, listOf("pasta", "spaghetti")),
         deal("d3", "Whole Milk 1 Gallon", "Grocery", 2.89, listOf("milk")),
     )
+
+    // ---------------------------------------------------------------------
+    // Weekly-plan trip matching (tripFor)
+    // ---------------------------------------------------------------------
+
+    private fun planWith(vararg lines: Triple<String, Double, String>) = WeeklyPlan(
+        nights = emptyList(),
+        budget = 60.0,
+        people = 2,
+        recipeCost = 0.0,
+        extraCost = 30.0,
+        combinedShopping = emptyList(),
+        shoppingGroups = listOf(
+            PlanShoppingGroup(
+                category = "Meat & Seafood",
+                items = lines.map { (n, q, u) -> PlanIngredientLine(n, q, u, q * 5.0, 1) },
+                subtotal = lines.sumOf { it.first.length.toDouble() },
+            ),
+        ),
+    )
+
+    @Test
+    fun `tripFor groups matched plan lines by store with real prices`() {
+        val plan = planWith(Triple("chicken breast", 2.0, "lb"))
+        val deals = listOf(
+            deal("k1", "Kroger Chicken Breast 2 lb", "Grocery", 6.98, listOf("chicken", "breast")).let {
+                it.copy(store = "Kroger", size = "2 lb")
+            },
+        )
+        val trip = DealFinderEngine.tripFor(plan, deals)!!
+        val item = trip.items.single()
+        assertTrue(item.dealFound)
+        assertEquals("Kroger", item.store)
+        assertEquals("k1", item.dealId)
+        // Deal price is used where it beats the estimate (2 lb for $6.98 vs $4.00/lb estimate).
+        assertEquals(6.98, trip.totalAfter, 0.001)
+        val kroger = trip.storeGroups.single { it.store == "Kroger" }
+        assertEquals(6.98, kroger.subtotal, 0.001)
+        assertEquals(1, trip.storesUsed.size)
+    }
+
+    @Test
+    fun `tripFor never matches by category alone and marks unmatched honestly`() {
+        // Only a coconut-milk deal exists; the plan needs plain milk. The
+        // identity-changer guard must keep them apart even though both are
+        // "Grocery" after the aisle bridge.
+        val plan = planWith(Triple("milk", 1.0, "gal"))
+        val deals = listOf(
+            deal("cm", "Coconut Milk 32 oz", "Grocery", 2.49, listOf("coconut", "milk")).let {
+                it.copy(store = "Whole Foods", size = "32 floz")
+            },
+        )
+        val trip = DealFinderEngine.tripFor(plan, deals)!!
+        val item = trip.items.single()
+        assertFalse(item.dealFound)
+        assertEquals("Any store", item.store)
+        // Still estimated, still honest — never a fake match.
+        assertEquals(item.item.estPrice, trip.totalAfter, 0.001)
+        assertTrue(trip.totalSavings == 0.0)
+    }
+
+    @Test
+    fun `tripFor skips pantry-owned lines`() {
+        val plan = WeeklyPlan(
+            nights = emptyList(),
+            budget = 60.0,
+            people = 2,
+            recipeCost = 0.0,
+            extraCost = 10.0,
+            combinedShopping = emptyList(),
+            shoppingGroups = listOf(
+                PlanShoppingGroup(
+                    "Dairy & Eggs",
+                    listOf(
+                        PlanIngredientLine("eggs", 1.0, "dozen", 3.49, 1, haveInPantry = true),
+                        PlanIngredientLine("butter", 1.0, "lb", 4.29, 1),
+                    ),
+                    7.78,
+                ),
+            ),
+        )
+        val trip = DealFinderEngine.tripFor(plan, emptyList())!!
+        assertEquals(1, trip.items.size)
+        assertEquals("butter", trip.items.single().item.name)
+    }
+
+    @Test
+    fun `tripFor returns null when there is nothing to buy`() {
+        val plan = WeeklyPlan(
+            nights = emptyList(), budget = 60.0, people = 2,
+            recipeCost = 0.0, extraCost = 0.0, combinedShopping = emptyList(),
+        )
+        assertNull(DealFinderEngine.tripFor(plan, emptyList()))
+    }
 
     @Test
     fun `best deal found for matching item`() {

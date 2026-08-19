@@ -337,6 +337,87 @@ fun WeeklyPlanScreen(
             }
         }
 
+        state.tripPlan?.let { trip ->
+            if (trip.storeGroups.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        text = "Trip total by store",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Real prices where a verified deal exists; everything else is an estimate.",
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                trip.storeGroups.forEach { group ->
+                    item(key = "trip:" + group.store) {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp, vertical = 6.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(14.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = group.store,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    text = Money.fmt(group.subtotal),
+                                    style = MaterialTheme.typography.titleSmall.copy(color = accents.deal, fontWeight = FontWeight.Bold),
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            group.items.forEach { r ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = r.item.name.replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = if (r.dealFound) FontWeight.Medium else FontWeight.Normal,
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    if (r.dealFound) {
+                                        Text(
+                                            text = Money.fmt(r.price * r.item.quantity),
+                                            style = MaterialTheme.typography.labelSmall.copy(color = accents.deal),
+                                        )
+                                    } else {
+                                        Text(
+                                            text = Money.fmt(r.price * r.item.quantity) + " · est",
+                                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                item {
+                    val matched = trip.items.count { it.dealFound }
+                    Text(
+                        text = "${matched} of ${trip.items.size} items have a verified deal · ≈ ${Money.fmt(trip.totalAfter)} total",
+                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp).fillMaxWidth(),
+                    )
+                }
+            }
+        }
+
         item {
             Spacer(Modifier.height(18.dp))
             Text(
@@ -431,6 +512,16 @@ private fun WeekSummaryCard(plan: WeeklyPlan) {
             },
             style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.9f)),
         )
+        // Package-aware honesty: recipes consume fractions, but you buy
+        // packages — 0.5 lb of chicken is a 1 lb purchase. Shown only when
+        // the register estimate actually differs from the consumption cost.
+        if (plan.cartTotal > plan.totalCost + 0.01) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "~${Money.fmt(plan.cartTotal)} at the register — packages round up (a half-pound of meat is a 1 lb buy)",
+                style = MaterialTheme.typography.labelSmall.copy(color = Color.White.copy(alpha = 0.85f)),
+            )
+        }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SoftChip(
@@ -510,6 +601,14 @@ private fun NightCard(night: PlannedNight, swapEnabled: Boolean, onSwap: () -> U
                         text = "Uses ${night.suggestion.usesCount}",
                         bg = accents.leafSoft,
                         fg = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                night.suggestion.recipe.requiredAppliances.firstOrNull()?.let { appliance ->
+                    Spacer(Modifier.width(6.dp))
+                    SoftChip(
+                        text = appliance.replaceFirstChar { it.uppercase() },
+                        bg = accents.berrySoft,
+                        fg = accents.berry,
                     )
                 }
             }

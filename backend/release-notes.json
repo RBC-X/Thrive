@@ -173,6 +173,13 @@
       "Live Tech section: a keyless Target feed adds hundreds of on-sale tech deals with direct product-page links (headphones, laptops, TVs, smart home, gaming) with an honest last-good cache when the retailer throttles",
       "Named Cloudflare tunnel support: one stable HTTPS hostname forever for the one-tap public connect (tools/tunnel_named.sh) plus a boot-service install",
       "Optional web discovery via Exa search (server-side, key in backend only): guarded /api/v1/search/{offers,recipes,product} endpoints return labeled web-discovered leads with rate limits, caching, spend caps, and honest empty states — never treated as verified prices"
+    ],
+    "1.6.1": [
+      "Live-deal trip totals: the weekly plan's shopping list is now matched against Thrive's verified deal feed — see a per-store trip total with real prices where a verified deal exists, and honest 'estimate' labels everywhere else. Nothing is ever matched by category alone.",
+      "Package-aware register estimate: 0.5 lb of chicken is a 1 lb buy, and the plan screen shows what your cart actually costs at the register next to the recipe-consumption total.",
+      "Smarter swaps: replacing a night now prefers a meal that shares ingredients with the rest of the week, so you buy less and waste less.",
+      "Appliance-aware meals actually enforced: recipes now carry honest appliance tags (oven-baked, slow cooker), the planner never suggests a meal you can't cook, and every night card shows the appliance it uses. Oven and stovetop are always assumed; air fryer, slow cooker, and microwave are real constraints.",
+      "Planner acceptance suite: five end-to-end scenarios (budget plan, allergy restrictions, single-night swap stability, pantry subtraction, over-budget repair) now run in CI as unit tests."
     ]
   }
 }

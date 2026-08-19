@@ -37,6 +37,29 @@ class PlanIntentParserTest {
     }
 
     @Test
+    fun `every appliance phrase is detected`() {
+        val p = PlanIntentParser.parse("we have an air fryer and a slow cooker, the oven, stovetop, and microwave")
+        val apps = p.request.appliances
+        assertTrue("air fryer" in apps)
+        assertTrue("slow cooker" in apps)
+        assertTrue("oven" in apps)
+        assertTrue("stovetop" in apps)
+        assertTrue("microwave" in apps)
+    }
+
+    @Test
+    fun `crockpot phrasing maps to slow cooker`() {
+        val p = PlanIntentParser.parse("dinners for the week, we have a crockpot")
+        assertTrue("slow cooker" in p.request.appliances)
+    }
+
+    @Test
+    fun `no appliance mention means no constraint`() {
+        val p = PlanIntentParser.parse("quick dinners under 30 minutes")
+        assertTrue(p.request.appliances.isEmpty())
+    }
+
+    @Test
     fun `blank input returns default request with honest note`() {
         val p = PlanIntentParser.parse("   ")
         assertEquals(4, p.request.people)

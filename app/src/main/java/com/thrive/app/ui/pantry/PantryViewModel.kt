@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.thrive.app.ai.AiAdvisor
 import com.thrive.app.ai.AiRecipeMaker
 import com.thrive.app.ai.AiService
+import com.thrive.app.ai.DealFinderEngine
+import com.thrive.app.ai.TripPlan
 import com.thrive.app.ai.GeneratedRecipe
 import com.thrive.app.ai.MealSuggestion
 import com.thrive.app.ai.PantryMealEngine
@@ -40,6 +42,10 @@ data class PantryUiState(
     val isGeneratingRecipe: Boolean = false,
     val webSearch: WebSearchState = WebSearchState.Idle,
     val aiEnabled: Boolean = false,
+    // Live-deal matching of the weekly plan's shopping list: per-store trip
+    // totals with real prices where a verified deal exists (null until a plan
+    // has been generated and matched).
+    val tripPlan: TripPlan? = null,
 ) {
     val expiringSoon: List<PantryItem>
         get() {
@@ -313,6 +319,9 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
                     requestSummary = requestSummary,
                 )
             }
+            val trip = withContext(Dispatchers.Default) {
+                runCatching { DealFinderEngine.tripFor(plan, repo.deals) }.getOrNull()
+            }
             val enriched = if (ai.isEnabled) {
                 val tip = runCatching {
                     advisor.weekTip(
@@ -325,7 +334,14 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
                 }.getOrNull()
                 plan.copy(aiTip = tip)
             } else plan
-            _state.update { it.copy(weeklyPlan = enriched, isPlanningWeek = false, aiEnabled = ai.isEnabled) }
+            _state.update {
+                it.copy(
+                    weeklyPlan = enriched,
+                    tripPlan = trip,
+                    isPlanningWeek = false,
+                    aiEnabled = ai.isEnabled,
+                )
+            }
         }
     }
 
@@ -344,11 +360,16 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
             val swapped = withContext(Dispatchers.Default) {
                 planner.swapNight(plan, index, items, repo.recipes)
             }
+            val finalPlan = swapped ?: plan.copy(
+                repairNote = "No other meal fits your restrictions for that night — try loosening a constraint."
+            )
+            val trip = withContext(Dispatchers.Default) {
+                runCatching { DealFinderEngine.tripFor(finalPlan, repo.deals) }.getOrNull()
+            }
             _state.update {
                 it.copy(
-                    weeklyPlan = swapped ?: plan.copy(
-                        repairNote = "No other meal fits your restrictions for that night — try loosening a constraint."
-                    ),
+                    weeklyPlan = finalPlan,
+                    tripPlan = trip,
                     isPlanningWeek = false,
                 )
             }
@@ -369,8 +390,12 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
             val result = withContext(Dispatchers.Default) {
                 planner.optimize(plan, items, repo.recipes)
             }
+            val optimized = result.plan.copy(repairNote = result.note)
+            val trip = withContext(Dispatchers.Default) {
+                runCatching { DealFinderEngine.tripFor(optimized, repo.deals) }.getOrNull()
+            }
             _state.update {
-                it.copy(weeklyPlan = result.plan.copy(repairNote = result.note), isPlanningWeek = false)
+                it.copy(weeklyPlan = optimized, tripPlan = trip, isPlanningWeek = false)
             }
         }
     }

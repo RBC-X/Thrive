@@ -46,6 +46,15 @@ data class WeeklyPlan(
     /** Honest cost of the week: what you'll buy plus the pantry value used. */
     val totalCost: Double get() = extraCost + pantryValueUsed
 
+    /**
+     * Package-aware register estimate: what the new groceries actually cost
+     * when quantities are rounded to practical purchases (0.5 lb of chicken
+     * becomes a 1 lb package). Can exceed [totalCost] — that's the honest
+     * difference between recipe consumption and the shopping cart.
+     */
+    val cartTotal: Double
+        get() = Math.round(shoppingGroups.sumOf { it.cartSubtotal } * 100) / 100.0
+
     /** Estimated dollar value of pantry items the plan consumes. */
     val pantryValueUsed: Double
         get() = nights.sumOf { it.suggestion.pantryValueUsed }
@@ -113,13 +122,27 @@ object WeeklyPlannerEngine {
         maxCookMinutes <= 0 || recipe.totalMinutes <= maxCookMinutes
 
     /**
+     * Baseline appliances every household is assumed to have (documented):
+     * untagged recipes assume a basic stovetop/oven, so those two are always
+     * available regardless of what the intent parser detected. Only
+     * beyond-baseline appliances (air fryer, slow cooker, microwave) act as
+     * real constraints — an extra appliance can only make MORE recipes
+     * eligible, never fewer, and a recipe tagged "oven" is never dropped just
+     * because the user only mentioned an air fryer.
+     */
+    private val BASELINE_APPLIANCES = setOf("oven", "stovetop")
+
+    /**
      * True when the household's appliances can make this recipe. Untagged
-     * recipes assume a basic stovetop/oven (always available), so an extra
-     * appliance can only make MORE recipes eligible, never fewer.
+     * recipes assume a basic stovetop/oven (always available). Tagged
+     * recipes need every listed appliance; oven/stovetop tags are always
+     * satisfied by the baseline, while air fryer / slow cooker / microwave
+     * must be declared.
      */
     fun fitsAppliances(recipe: Recipe, appliances: Set<String>): Boolean {
         if (recipe.requiredAppliances.isEmpty()) return true
-        return recipe.requiredAppliances.all { it in appliances }
+        val available = appliances + BASELINE_APPLIANCES
+        return recipe.requiredAppliances.all { it in available }
     }
 
     /** Eligible recipes for this request, in catalog order. */
@@ -203,6 +226,23 @@ object WeeklyPlannerEngine {
             shoppingGroups = groups,
             repairNote = null,
         )
+    }
+
+    /**
+     * How many of the candidate's non-staple ingredients the REST of the plan
+     * already buys. Swap prefers these candidates: reusing an ingredient the
+     * user will already have cuts waste and keeps the cart honest.
+     */
+    private fun reuseOverlap(recipe: Recipe, plan: WeeklyPlan, excludeIndex: Int): Int {
+        val planCanonicals = plan.nights
+            .mapIndexedNotNull { i, n -> if (i == excludeIndex) null else n.suggestion.recipe }
+            .flatMap { r -> r.ingredients.map { IngredientNormalizer.canonicalName(it.name) } }
+            .filter { !PantryMealEngine.isStaple(it) }
+            .toSet()
+        return recipe.ingredients
+            .map { IngredientNormalizer.canonicalName(it.name) }
+            .filter { !PantryMealEngine.isStaple(it) }
+            .count { it in planCanonicals }
     }
 
     /** Aggregates the combined shopping list from a set of nights. */
@@ -298,8 +338,25 @@ object WeeklyPlannerEngine {
         val pool = eligible(recipes, plan.restrictions, plan.maxCookMinutes, plan.appliances)
             .filter { it.id !in keepIds }
         val perNightBudget = if (plan.nights.isNotEmpty()) plan.budget / plan.nights.size else plan.budget
-        val pick = pickNight(pool, pantry, plan.focus, perNightBudget, 1.2) ?: return null
-        return withReplacement(plan, index, pick, pantry)
+        // Rank replacements by ingredient reuse with the rest of the week first
+        // (then pantry coverage, then price) — a swap should reuse what's
+        // already on the list, not randomly regenerate. If nothing fits the
+        // per-night budget, fall back to the cheapest eligible meal.
+        val scored = pool.map { r -> Triple(r, scoreOrSynthetic(r, pantry, plan.focus), reuseOverlap(r, plan, index)) }
+        val fits = scored.filter { it.first.costDollars <= perNightBudget * 1.2 }
+        // Reuse-overlap first, then pantry coverage, then price. Falls back to
+        // the cheapest eligible meal when nothing fits the per-night budget.
+        val suggestion = when {
+            fits.isNotEmpty() -> fits
+                .sortedWith(
+                    compareByDescending<Triple<Recipe, MealSuggestion, Int>> { reuseOverlap(it.first, plan, index) }
+                        .thenByDescending { it.second.coverageScore }
+                        .thenBy { it.second.recipe.costDollars }
+                )
+                .first().second
+            else -> scored.minByOrNull { it.first.costDollars }?.second
+        } ?: return null
+        return withReplacement(plan, index, suggestion, pantry)
     }
 
     /**

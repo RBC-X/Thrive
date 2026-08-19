@@ -1,5 +1,6 @@
 package com.thrive.backup
 
+import com.thrive.app.ai.IngredientNormalizer
 import com.thrive.app.ai.WeeklyPlannerEngine
 import com.thrive.app.data.model.Ingredient
 import com.thrive.app.data.model.PantryItem
@@ -157,6 +158,39 @@ class WeeklyPlannerEngineTest {
     }
 
     @Test
+    fun `air fryer recipes are excluded unless the household has an air fryer`() {
+        val airFryer = recipe("af1", "Air Fryer Chicken Nuggets", requiredAppliances = listOf("air fryer"))
+        val stovetop = recipe("st1", "Stovetop Pasta", cost = 6.0, ingredients = listOf(ingredient("pasta", "1 lb"), ingredient("tomato sauce", "1 jar")))
+        val catalog = listOf(airFryer, stovetop)
+        // No air fryer → air-fryer recipe must never be selected.
+        val without = WeeklyPlannerEngine.plan(pantry, catalog, nights = 2, budget = 60.0)
+        assertTrue(without.nights.none { it.suggestion.recipe.id == "af1" })
+        // Declared air fryer → eligible again.
+        assertTrue(WeeklyPlannerEngine.eligible(catalog, emptyList(), 0, setOf("air fryer")).any { it.id == "af1" })
+    }
+
+    @Test
+    fun `microwave recipes are excluded unless the household has a microwave`() {
+        val micro = recipe("mw1", "Microwave Mug Cake", requiredAppliances = listOf("microwave"))
+        val stovetop = recipe("st1", "Stovetop Pasta", cost = 6.0, ingredients = listOf(ingredient("pasta", "1 lb"), ingredient("tomato sauce", "1 jar")))
+        val catalog = listOf(micro, stovetop)
+        val plan = WeeklyPlannerEngine.plan(pantry, catalog, nights = 2, budget = 60.0)
+        assertTrue(plan.nights.none { it.suggestion.recipe.id == "mw1" })
+        assertTrue(WeeklyPlannerEngine.eligible(catalog, emptyList(), 0, setOf("microwave")).any { it.id == "mw1" })
+    }
+
+    @Test
+    fun `oven tagged recipes stay eligible when the user only declared an air fryer`() {
+        // Oven is baseline (untagged recipes assume stovetop/oven), so the
+        // household that mentions only an air fryer still gets oven-baked
+        // meals — an extra appliance can only open recipes up, never close any.
+        val baked = recipe("ov1", "Baked Ziti", requiredAppliances = listOf("oven"))
+        val catalog = listOf(baked, recipe("st1", "Stovetop Pasta", cost = 6.0, ingredients = listOf(ingredient("pasta", "1 lb"), ingredient("tomato sauce", "1 jar"))))
+        assertTrue(WeeklyPlannerEngine.eligible(catalog, emptyList(), 0, setOf("air fryer")).any { it.id == "ov1" })
+        assertTrue(WeeklyPlannerEngine.fitsAppliances(baked, setOf("air fryer")))
+    }
+
+    @Test
     fun `extra appliances never reduce eligibility`() {
         // Untagged recipes assume basic stovetop/oven, so declaring more
         // appliances can only open recipes up, never close any.
@@ -165,6 +199,41 @@ class WeeklyPlannerEngineTest {
         assertEquals(3, with.nights.size)
         assertEquals(3, without.nights.size)
         assertEquals(with.nights.map { it.suggestion.recipe.id }, without.nights.map { it.suggestion.recipe.id })
+    }
+
+    @Test
+    fun `swap prefers alternatives that reuse ingredients already on the list`() {
+        // r7 shares ground beef with r2 and rice with r3, so when it's eligible
+        // the swap must pick it over zero-overlap alternatives.
+        val catalog = listOf(
+            recipe("r1", "Chicken and Rice", cost = 8.0),
+            recipe("r2", "Beef Tacos", cost = 10.0, ingredients = listOf(ingredient("ground beef", "1 lb"), ingredient("tortillas", "8"))),
+            recipe("r3", "Pork Stir Fry", cost = 7.0, ingredients = listOf(ingredient("pork", "1 lb"), ingredient("rice", "2 cups"))),
+            recipe("r4", "Veggie Pasta", cost = 6.0, ingredients = listOf(ingredient("pasta", "1 lb"), ingredient("tomato sauce", "1 jar"))),
+            recipe("r6", "Peanut Noodles", cost = 5.0, ingredients = listOf(ingredient("noodles", "1 lb"), ingredient("peanut butter", "2 tbsp"))),
+            recipe("r7", "Beef Fried Rice", cost = 9.0, ingredients = listOf(ingredient("ground beef", "1 lb"), ingredient("rice", "2 cups"))),
+        )
+        val plan = WeeklyPlannerEngine.plan(
+            pantry, catalog, nights = 3, budget = 60.0,
+            restrictions = listOf("peanut"), maxCookMinutes = 30,
+        )
+        val swapped = WeeklyPlannerEngine.swapNight(plan, 0, pantry, catalog)
+        assertNotNull(swapped)
+        val rest = swapped!!.nights.drop(1)
+            .flatMap { it.suggestion.recipe.ingredients.map { ing -> IngredientNormalizer.canonicalName(ing.name) } }
+            .toSet()
+        val picked = swapped.nights[0].suggestion.recipe
+        val pickedOverlap = picked.ingredients
+            .map { IngredientNormalizer.canonicalName(it.name) }
+            .count { it in rest }
+        assertTrue(
+            "swap should prefer ingredient reuse with the rest of the week, picked $pickedOverlap overlap",
+            pickedOverlap >= 1
+        )
+        // Untouched nights still stable, constraints still enforced.
+        assertEquals(plan.nights[1].suggestion.recipe.id, swapped.nights[1].suggestion.recipe.id)
+        assertEquals(plan.nights[2].suggestion.recipe.id, swapped.nights[2].suggestion.recipe.id)
+        assertTrue(swapped.nights.all { it.suggestion.recipe.id != "r6" })
     }
 
     @Test

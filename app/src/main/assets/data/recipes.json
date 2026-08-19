@@ -266,7 +266,10 @@
   ],
   "imageSeed": "tuna-melt",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Tuna_melt_sandwich_with_fries.jpg/500px-Tuna_melt_sandwich_with_fries.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Tuna_melt_sandwich_with_fries.jpg/500px-Tuna_melt_sandwich_with_fries.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r06",
@@ -719,7 +722,10 @@
   ],
   "imageSeed": "sausage-peppers",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Sausage_and_peppers.jpg/500px-Sausage_and_peppers.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Sausage_and_peppers.jpg/500px-Sausage_and_peppers.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r14",
@@ -775,7 +781,10 @@
   ],
   "imageSeed": "chicken-fajitas",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Chicken_fajitas.jpg/500px-Chicken_fajitas.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Chicken_fajitas.jpg/500px-Chicken_fajitas.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r15",
@@ -788,7 +797,9 @@
    "set-and-forget",
    "kid-friendly"
   ],
-  "requiredAppliances": ["slow cooker"],
+  "requiredAppliances": [
+   "slow cooker"
+  ],
   "prepMinutes": 5,
   "cookMinutes": 240,
   "servings": 6,
@@ -872,7 +883,10 @@
   ],
   "imageSeed": "baked-ziti",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Baked_Ziti_%28cropped%29.jpg/500px-Baked_Ziti_%28cropped%29.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Baked_Ziti_%28cropped%29.jpg/500px-Baked_Ziti_%28cropped%29.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r17",
@@ -968,7 +982,10 @@
   ],
   "imageSeed": "salsa-chicken",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Chicken_with_salsa_filipino.jpg/500px-Chicken_with_salsa_filipino.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Chicken_with_salsa_filipino.jpg/500px-Chicken_with_salsa_filipino.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r19",
@@ -1228,7 +1245,10 @@
   ],
   "imageSeed": "chicken-potpie",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/191-365_Chicken_Pot_Pie.jpg/500px-191-365_Chicken_Pot_Pie.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/191-365_Chicken_Pot_Pie.jpg/500px-191-365_Chicken_Pot_Pie.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r24",
@@ -1288,7 +1308,10 @@
   ],
   "imageSeed": "shepherds-pie",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg/500px-Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg/500px-Homerton_College_-_Shepherd%27s_pie_%28cropped%29.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r25",
@@ -1344,7 +1367,10 @@
   ],
   "imageSeed": "meatloaf",
   "featured": false,
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Hackbraten_Aachener_Brauhaus.jpg/500px-Hackbraten_Aachener_Brauhaus.jpg"
+  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Hackbraten_Aachener_Brauhaus.jpg/500px-Hackbraten_Aachener_Brauhaus.jpg",
+  "requiredAppliances": [
+   "oven"
+  ]
  },
  {
   "id": "r26",

@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 38
-        versionName = "1.6.0"
+        versionCode = 39
+        versionName = "1.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Google Sign-In web client ID (OAuth "Web application" client). Set it
         // in local.properties as GOOGLE_CLIENT_ID=... or as the environment
