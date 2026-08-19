@@ -421,7 +421,11 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .heightIn(max = 660.dp),
+                .heightIn(max = 660.dp)
+                // The sheet content is taller than 660dp on most phones —
+                // without this, the appliance chips and "Build my week" button
+                // below the fold are unreachable (clipped, no scroll).
+                .verticalScroll(rememberScrollState()),
         ) {
             Text("Plan my week", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(6.dp))

@@ -180,6 +180,10 @@
       "Smarter swaps: replacing a night now prefers a meal that shares ingredients with the rest of the week, so you buy less and waste less.",
       "Appliance-aware meals actually enforced: recipes now carry honest appliance tags (oven-baked, slow cooker), the planner never suggests a meal you can't cook, and every night card shows the appliance it uses. Oven and stovetop are always assumed; air fryer, slow cooker, and microwave are real constraints.",
       "Planner acceptance suite: five end-to-end scenarios (budget plan, allergy restrictions, single-night swap stability, pantry subtraction, over-budget repair) now run in CI as unit tests."
+    ],
+    "1.6.2": [
+      "Plan-sheet fix: on phones where the sheet is shorter than its content, the appliance chips and 'Build my week' button were clipped out of reach — the sheet now scrolls, so every control is reachable on any screen size.",
+      "The weekly-plan appliance chips (Air fryer, Slow cooker, Oven, Stovetop, Microwave) and the generate button are now always visible by scrolling, even at large font scales."
     ]
   }
 }
