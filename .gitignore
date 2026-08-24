@@ -38,3 +38,6 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+/artifacts/baseline/
+/artifacts/final/
+*.tsbuildinfo

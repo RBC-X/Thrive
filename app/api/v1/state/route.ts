@@ -1,9 +1,107 @@
-import { env } from "cloudflare:workers";
 import { errorResponse, readJson } from "../../../../lib/thrive-data";
 
-const idPattern=/^[a-zA-Z0-9_-]{20,80}$/;
-const safeState=(value:unknown)=>{ if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("INVALID_STATE"); const input=value as Record<string,unknown>; return {favorites:Array.isArray(input.favorites)?input.favorites.slice(0,500):[],pantry:Array.isArray(input.pantry)?input.pantry.slice(0,250):[],shopping:Array.isArray(input.shopping)?input.shopping.slice(0,250):[],budget:typeof input.budget==="number"?input.budget:null,people:typeof input.people==="number"?input.people:4,settings:input.settings&&typeof input.settings==="object"?input.settings:{}}; };
+const idPattern = /^[a-zA-Z0-9_-]{20,80}$/;
 
-export async function GET(request:Request){ const deviceId=new URL(request.url).searchParams.get("deviceId")||""; if(!idPattern.test(deviceId))return errorResponse("VALIDATION_ERROR","A valid device ID is required"); try{const row=await env.DB.prepare("SELECT version, payload, updated_at FROM user_state WHERE device_id = ?").bind(deviceId).first<{version:number;payload:string;updated_at:string}>(); return Response.json(row?{found:true,version:row.version,state:JSON.parse(row.payload),updatedAt:row.updated_at}:{found:false,version:0,state:null},{headers:{"Cache-Control":"no-store"}});}catch{return errorResponse("STORAGE_UNAVAILABLE","Saved data is temporarily unavailable",503);} }
-export async function PUT(request:Request){ try{const body=await readJson<{deviceId?:string;state?:unknown}>(request); const deviceId=String(body.deviceId||""); if(!idPattern.test(deviceId))return errorResponse("VALIDATION_ERROR","A valid device ID is required"); const state=safeState(body.state),payload=JSON.stringify(state); if(payload.length>200_000)return errorResponse("PAYLOAD_TOO_LARGE","Saved data is too large",413); const row=await env.DB.prepare("INSERT INTO user_state (device_id, version, payload, created_at, updated_at) VALUES (?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(device_id) DO UPDATE SET version = user_state.version + 1, payload = excluded.payload, updated_at = CURRENT_TIMESTAMP RETURNING version, updated_at").bind(deviceId,payload).first<{version:number;updated_at:string}>(); return Response.json({ok:true,version:row?.version||1,updatedAt:row?.updated_at||new Date().toISOString()});}catch(error){ if(error instanceof Error&&error.message==="PAYLOAD_TOO_LARGE")return errorResponse("PAYLOAD_TOO_LARGE","Saved data is too large",413); if(error instanceof Error&&(error.message==="INVALID_STATE"||error instanceof SyntaxError))return errorResponse("VALIDATION_ERROR","Saved state is invalid"); return errorResponse("STORAGE_UNAVAILABLE","Saved data could not be updated",503);} }
-export async function DELETE(request:Request){ const deviceId=new URL(request.url).searchParams.get("deviceId")||""; if(!idPattern.test(deviceId))return errorResponse("VALIDATION_ERROR","A valid device ID is required"); try{await env.DB.prepare("DELETE FROM user_state WHERE device_id = ?").bind(deviceId).run(); return new Response(null,{status:204});}catch{return errorResponse("STORAGE_UNAVAILABLE","Saved data could not be cleared",503);} }
+async function getDatabase(): Promise<D1Database | null> {
+  try {
+    const workers = (await import("cloudflare:workers")) as unknown as {
+      env?: { DB?: D1Database };
+    };
+    return workers.env?.DB ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeState(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("INVALID_STATE");
+  const input = value as Record<string, unknown>;
+  const budget = input.budget;
+  const people = input.people;
+
+  if (budget !== null && budget !== undefined && (typeof budget !== "number" || !Number.isFinite(budget) || budget < 0 || budget > 1_000_000)) {
+    throw new Error("INVALID_STATE");
+  }
+  if (people !== undefined && (typeof people !== "number" || !Number.isInteger(people) || people < 1 || people > 20)) {
+    throw new Error("INVALID_STATE");
+  }
+
+  return {
+    favorites: Array.isArray(input.favorites) ? input.favorites.slice(0, 500) : [],
+    pantry: Array.isArray(input.pantry) ? input.pantry.slice(0, 250) : [],
+    shopping: Array.isArray(input.shopping) ? input.shopping.slice(0, 250) : [],
+    budget: typeof budget === "number" ? budget : null,
+    people: typeof people === "number" ? people : 4,
+    settings: input.settings && typeof input.settings === "object" && !Array.isArray(input.settings) ? input.settings : {},
+  };
+}
+
+export async function GET(request: Request) {
+  const deviceId = new URL(request.url).searchParams.get("deviceId") || "";
+  if (!idPattern.test(deviceId)) return errorResponse("VALIDATION_ERROR", "A valid device ID is required");
+
+  const db = await getDatabase();
+  if (!db) return errorResponse("STORAGE_UNAVAILABLE", "Saved data is temporarily unavailable", 503);
+
+  try {
+    const row = await db
+      .prepare("SELECT version, payload, updated_at FROM user_state WHERE device_id = ?")
+      .bind(deviceId)
+      .first<{ version: number; payload: string; updated_at: string }>();
+    return Response.json(
+      row
+        ? { found: true, version: row.version, state: JSON.parse(row.payload), updatedAt: row.updated_at }
+        : { found: false, version: 0, state: null },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return errorResponse("STORAGE_UNAVAILABLE", "Saved data is temporarily unavailable", 503);
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await readJson<{ deviceId?: string; state?: unknown }>(request);
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("INVALID_STATE");
+    const deviceId = String(body.deviceId || "");
+    if (!idPattern.test(deviceId)) return errorResponse("VALIDATION_ERROR", "A valid device ID is required");
+
+    const state = safeState(body.state);
+    const payload = JSON.stringify(state);
+    if (payload.length > 200_000) return errorResponse("PAYLOAD_TOO_LARGE", "Saved data is too large", 413);
+
+    const db = await getDatabase();
+    if (!db) return errorResponse("STORAGE_UNAVAILABLE", "Saved data could not be updated", 503);
+
+    const row = await db
+      .prepare(
+        "INSERT INTO user_state (device_id, version, payload, created_at, updated_at) VALUES (?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(device_id) DO UPDATE SET version = user_state.version + 1, payload = excluded.payload, updated_at = CURRENT_TIMESTAMP RETURNING version, updated_at",
+      )
+      .bind(deviceId, payload)
+      .first<{ version: number; updated_at: string }>();
+    return Response.json({ ok: true, version: row?.version || 1, updatedAt: row?.updated_at || new Date().toISOString() });
+  } catch (error) {
+    if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {
+      return errorResponse("PAYLOAD_TOO_LARGE", "Saved data is too large", 413);
+    }
+    if (error instanceof Error && (error.message === "INVALID_STATE" || error instanceof SyntaxError)) {
+      return errorResponse("VALIDATION_ERROR", "Saved state is invalid");
+    }
+    return errorResponse("STORAGE_UNAVAILABLE", "Saved data could not be updated", 503);
+  }
+}
+
+export async function DELETE(request: Request) {
+  const deviceId = new URL(request.url).searchParams.get("deviceId") || "";
+  if (!idPattern.test(deviceId)) return errorResponse("VALIDATION_ERROR", "A valid device ID is required");
+
+  const db = await getDatabase();
+  if (!db) return errorResponse("STORAGE_UNAVAILABLE", "Saved data could not be cleared", 503);
+
+  try {
+    await db.prepare("DELETE FROM user_state WHERE device_id = ?").bind(deviceId).run();
+    return new Response(null, { status: 204 });
+  } catch {
+    return errorResponse("STORAGE_UNAVAILABLE", "Saved data could not be cleared", 503);
+  }
+}

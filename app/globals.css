@@ -19,3 +19,198 @@
 .overlay-screen{position:fixed;z-index:45;inset:0;max-width:480px;margin:auto;background:var(--canvas);overflow-y:auto;padding-bottom:90px}.overlay-header{display:flex;align-items:center;gap:12px;padding:16px 20px}.overlay-header>button,.back-button{width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:14px;background:#fff;color:var(--ink)}.overlay-header h1{font-size:21px;margin:0}.overlay-header p{font-size:11px;color:var(--ink-soft);margin:2px 0 0}.plan-summary,.trip-summary{display:grid;grid-template-columns:1fr 1fr;margin:0 20px 16px;padding:18px;border-radius:20px;color:#fff}.plan-summary.good,.trip-summary.good{background:linear-gradient(135deg,#0b6e4f,#128f6a)}.plan-summary.over,.trip-summary.over{background:linear-gradient(135deg,#a63b2b,#d15743)}.plan-summary>div,.trip-summary>div{display:flex;flex-direction:column}.plan-summary>div:nth-child(2),.trip-summary>div:nth-child(2){text-align:right}.plan-summary span,.trip-summary span{font-size:10px;opacity:.82}.plan-summary strong,.trip-summary strong{font-size:24px}.plan-summary b,.trip-summary b{font-size:16px}.plan-summary p,.trip-summary p{grid-column:1/-1;font-size:11px;line-height:16px;margin:10px 0 0;opacity:.9}.night-list{padding:0 20px}.night-list>button{width:100%;display:flex;align-items:center;gap:10px;border:0;border-radius:18px;background:#fff;margin:7px 0;padding:9px;text-align:left}.night-list>button>span{width:35px;font-size:11px;font-weight:800;color:var(--emerald)}.night-list img{width:50px;height:50px;border-radius:13px;object-fit:cover}.night-list>button>div{flex:1;min-width:0;display:flex;flex-direction:column}.night-list b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.night-list small{font-size:9px;color:var(--ink-soft);margin-top:3px}.night-list svg{width:17px;color:var(--coral)}.sticky-action{position:sticky;bottom:0;padding:12px 20px max(18px,env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--canvas) 20%)}.trip-plan{padding-bottom:105px}.trip-plan .app-header{justify-content:flex-start;gap:12px}.store-group{margin-top:18px}.deal-match{display:flex;align-items:center;gap:10px;margin:6px 20px;padding:12px;background:#fff;border-radius:16px}.deal-match>.store-avatar{width:34px;height:34px;font-size:9px}.deal-match>div{flex:1;display:flex;flex-direction:column}.deal-match b{font-size:12px}.deal-match small{font-size:9px;color:var(--ink-soft)}.deal-match>strong{font-size:12px}.deal-button:disabled{opacity:.65}
 .settings-card{display:flex;align-items:center;gap:12px;margin:0 20px 18px;padding:16px;background:#fff;border-radius:20px}.settings-card>span{width:44px;height:44px;display:grid;place-items:center;border-radius:14px}.settings-card>span.online{color:var(--emerald);background:var(--mint-light)}.settings-card>span.offline{color:#8b5a00;background:var(--gold-soft)}.settings-card>div{flex:1;display:flex;flex-direction:column}.settings-card b{font-size:13px}.settings-card small{font-size:10px;line-height:15px;color:var(--ink-soft)}.settings-card>button{border:0;background:none;color:var(--emerald)}.settings-list{margin:0 20px;background:#fff;border-radius:20px;overflow:hidden}.settings-list>button,.settings-info{width:100%;display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid #edf0ed;background:#fff;padding:15px;text-align:left}.settings-list>button>span,.settings-info>span{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:var(--emerald);background:var(--mint-light)}.settings-list>button>div,.settings-info>div{flex:1;display:flex;flex-direction:column}.settings-list b{font-size:12px}.settings-list small{font-size:9px;line-height:14px;color:var(--ink-soft)}.settings-list svg{width:18px}.settings-list>button>svg{color:var(--ink-soft)}.settings-list .danger-row{border-bottom:0}.settings-list .danger-row>span{color:#b93726;background:var(--coral-soft)}.settings-list .danger-row b{color:#b93726}.privacy-note{display:flex;gap:10px;margin:18px 28px;color:var(--ink-soft)}.privacy-note svg{flex:none;width:18px;color:var(--emerald)}.privacy-note p{font-size:10px;line-height:16px;margin:0}
 @media(min-width:760px){.overlay-screen{position:absolute}}
+
+/* Higgsfield-guided responsive product redesign */
+button,a{transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid rgba(13,124,95,.34);outline-offset:2px}
+button:active{transform:scale(.98)}
+.header-actions button,.icon-button,.favorite-button,.recipe-favorite,.recipe-search-favorite,.sheet-close,.settings-card>button,.shop-item .trash,.shop-item .check,.stepper button{min-width:44px;min-height:44px}
+.chip-row button,.amounts button,.focus-grid button{min-width:44px;min-height:44px}
+.nav-brand,.overview-metrics,.insights-panel{display:none}
+.daily-pick,.budget-hero,.budget-progress,.meal-cta,.deal-button,.plan-summary.good,.trip-summary.good{background:#0b7656}
+.plan-summary.over,.trip-summary.over{background:#a84332}
+.honest-art{display:grid;place-items:center;align-content:center;gap:5px;overflow:hidden;color:var(--emerald);background:#e7f2ec}
+.honest-art svg{width:30%;height:30%;min-width:22px;min-height:22px}
+.honest-art small{display:block;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.product-art{background:#f1eee6;color:#7c5d33}
+.recipe-art{background:#e4f2ea;color:#0b7656}
+.art-under_10,.art-five_ingredients{background:#fff0df;color:#9b5925}
+.art-under_20,.art-one_pot{background:#e3efe9;color:#0b7656}
+.art-family_favorites{background:#fde6e0;color:#b44630}
+.daily-art{position:absolute;right:14px;top:14px;width:112px;height:100px;border-radius:22px;background:rgba(255,255,255,.15);color:#fff}
+.daily-pick>div,.daily-pick footer{z-index:1}
+.daily-pick h2{max-width:58%}
+.daily-pick footer{padding-right:0}
+.daily-pick footer>b{min-height:44px}
+.product-photo .honest-art{width:100%;height:100%}
+.deal-row{position:relative;display:block;padding:0;cursor:default}
+.deal-open{width:100%;min-height:124px;display:flex;align-items:center;gap:12px;padding:10px 58px 10px 10px;border:0;border-radius:22px;background:#fff;text-align:left;color:inherit}
+.favorite-button{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;border:0;border-radius:14px;background:#f4f6f4;color:var(--ink-soft)}
+.favorite-button:active{transform:translateY(-50%) scale(.96)}
+.panel-heading{display:flex;align-items:end;justify-content:space-between;padding:8px 20px 4px}
+.panel-heading h2{margin:0;font-size:19px}
+.panel-heading p{margin:2px 0 0;color:var(--ink-soft);font-size:11px}
+.featured-recipe>.honest-art{position:absolute;inset:0;width:100%;height:100%;color:#fff;background:#0b7656}
+.featured-recipe .shade{background:linear-gradient(transparent,rgba(6,44,32,.9))}
+.recipe-card{position:relative}
+.recipe-open{width:100%;padding:0 0 12px;border:0;background:#fff;text-align:left;color:inherit}
+.recipe-open>.honest-art{width:100%;height:110px}
+.recipe-favorite{position:absolute;right:6px;top:6px;display:grid;place-items:center;border:0;border-radius:14px;background:rgba(255,255,255,.92);color:var(--ink-soft)}
+.recipe-search-row{position:relative;height:auto;min-height:88px;padding:0;display:block}
+.recipe-search-open{width:100%;min-height:88px;padding:8px 58px 8px 8px;border:0;border-radius:18px;background:#fff;display:flex;align-items:center;text-align:left;color:inherit}
+.recipe-search-open>.honest-art{width:64px;height:64px;border-radius:14px;flex:none}
+.recipe-search-open>div{flex:1;min-width:0;padding-left:12px}
+.recipe-search-favorite{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;border:0;border-radius:14px;background:#f4f6f4;color:var(--ink-soft)}
+.recipe-search-favorite:active{transform:translateY(-50%) scale(.96)}
+.meal-options .honest-art{width:64px;height:64px;border-radius:14px;flex:none}
+.night-list .honest-art{width:50px;height:50px;border-radius:13px;flex:none}
+.store-offer-link{width:100%;min-height:52px;margin-top:10px;border:1px solid var(--outline);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--emerald-dark);font-size:14px;font-weight:800;text-decoration:none;background:#fff}
+.detail-art{width:100%;height:100%;font-size:13px}
+.detail-art svg{width:54px;height:54px}
+.sheet-dismiss{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+.bottom-sheet{z-index:1}
+.form-group{margin:14px 0}
+.form-group>span{font-size:12px;font-weight:700}
+.form-group .people-stepper{margin:8px 0 18px}
+.screen:has(.savings-dashboard){min-width:0}
+.mobile-overview{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 20px}
+.mobile-overview>button{min-height:68px;padding:10px 12px;border:1px solid #e2e8e3;border-radius:18px;background:#fff;color:inherit;display:flex;align-items:center;gap:11px;text-align:left}
+.mobile-overview>button>svg:first-child{width:38px;height:38px;padding:9px;border-radius:12px;color:var(--emerald);background:var(--mint-light)}
+.mobile-overview>button>svg:last-child{width:18px;color:var(--coral)}
+.mobile-overview span{flex:1;min-width:0;display:flex;flex-direction:column}
+.mobile-overview b{font-size:12px}
+.mobile-overview small{font-size:10px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.show-deals-button{width:calc(100% - 40px);min-height:48px;margin:10px 20px 4px;border:1px solid var(--outline);border-radius:15px;background:#fff;color:var(--emerald-dark);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px}
+.show-deals-button svg{width:17px}
+.weekly-kicker{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.weekly-kicker>div{display:flex;align-items:center;gap:10px}.weekly-kicker>div>svg{width:34px;height:34px;padding:8px;border-radius:11px;background:var(--gold-soft);color:#9a6507}.weekly-kicker span{display:flex;flex-direction:column}.weekly-kicker b{font-size:12px}.weekly-kicker small{font-size:9px;color:var(--ink-soft)}
+.weekly-kicker>button{min-height:44px;padding:0 12px;border:0;border-radius:13px;background:#e3f3eb;color:var(--emerald-dark);font-size:10px;font-weight:800;display:flex;align-items:center;gap:5px}
+
+@media(min-width:760px) and (max-width:979px){
+  html{background:var(--canvas)}
+  .site-stage{display:block;padding:0}
+  .desktop-note{display:none}
+  body{overflow:hidden}
+  .phone-app{display:grid;grid-template-columns:104px minmax(0,1fr);width:100%;max-width:none;min-height:100dvh;height:100dvh;border-radius:0;box-shadow:none}
+  .status-spacer{display:none}
+  .screen{grid-column:2;grid-row:1;min-width:0;min-height:0;height:100%;overflow:hidden}
+  .scroll-screen{min-height:0;height:100%;overflow-y:auto;padding-bottom:42px}
+  .bottom-bar{grid-column:1;grid-row:1;position:static;transform:none;width:auto;max-width:none;height:100%;padding:20px 8px;display:flex;flex-direction:column;gap:8px;background:#083f30;border:0}
+  .nav-brand{display:block;margin:3px auto 22px;color:#fff;font-size:17px}
+  .bottom-bar button{min-height:62px;border-radius:14px;color:#c3d8cf}
+  .bottom-bar button b{font-size:10px}
+  .bottom-bar button.selected{color:#fff;background:rgba(255,255,255,.12)}
+  .bottom-bar button.selected>span{background:transparent;color:#ff8268}
+  .fab{position:absolute;right:20px;bottom:20px}
+  .detail-screen,.sheet-backdrop,.overlay-screen{position:absolute;left:104px;right:0;top:0;bottom:0;max-width:none}
+  .app-header,.panel-heading,.section-title{padding-left:28px;padding-right:28px}
+  .daily-pick,.savings-strip,.search-box,.deal-row,.pantry-item,.shop-item,.settings-card{margin-left:28px;margin-right:28px}
+  .daily-pick,.search-box{width:calc(100% - 56px)}
+  .deal-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0 28px;gap:10px}
+  .deal-row{margin:0}
+  .featured-scroll,.recipe-scroll,.chip-row{padding-left:28px;padding-right:28px}
+  .dashboard-top{display:grid;gap:12px}
+  .dashboard-columns{display:flex;flex-direction:column}
+  .overview-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 28px}
+  .overview-metrics>div{padding:15px;border:1px solid #e0e7e2;border-radius:18px;background:#fff;display:flex;flex-direction:column}
+  .overview-metrics span,.overview-metrics small{font-size:10px;color:var(--ink-soft)}
+  .overview-metrics strong{font-size:19px;margin:5px 0;color:var(--deep)}
+  .mobile-overview{display:none}
+  .insights-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 28px;order:-1}
+  .insight-card{border:1px solid #e0e7e2;border-radius:20px;background:#fff;overflow:hidden}
+  .mini-meals{padding:2px 12px 12px}
+  .mini-meals>button{width:100%;min-height:66px;padding:6px;border:0;background:#fff;display:flex;align-items:center;gap:9px;text-align:left}
+  .mini-meals .honest-art{width:48px;height:48px;border-radius:12px;flex:none}
+  .mini-meals span{display:flex;flex-direction:column}.mini-meals b{font-size:11px}.mini-meals small{font-size:9px;color:var(--ink-soft)}
+  .shopping-snapshot{padding:18px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .shopping-snapshot>div{display:flex;flex-direction:column}.shopping-snapshot span,.shopping-snapshot small{font-size:10px;color:var(--ink-soft)}.shopping-snapshot strong{font-size:19px;margin:4px 0}
+  .shopping-snapshot button{min-height:44px;padding:0 12px;border:0;border-radius:13px;background:#ffe3da;color:#a43d29;font-size:10px;font-weight:800;display:flex;align-items:center;gap:5px}
+  .show-deals-button{width:calc(100% - 56px);margin-left:28px;margin-right:28px}
+}
+
+@media(min-width:980px){
+  html{background:#e9efeb}
+  body{overflow:hidden}
+  .site-stage{display:block;padding:20px;min-height:100vh}
+  .desktop-note,.status-spacer{display:none}
+  .phone-app{display:grid;grid-template-columns:220px minmax(0,1fr);width:100%;max-width:1500px;min-height:680px;height:calc(100dvh - 40px);margin:auto;border-radius:26px;background:#f5f7f4;box-shadow:0 18px 70px rgba(20,47,36,.15);overflow:hidden}
+  .screen{grid-column:2;grid-row:1;min-width:0;min-height:0;height:100%;overflow:hidden}
+  .scroll-screen{min-height:0;height:100%;overflow-y:auto;padding:30px 32px 60px}
+  .bottom-bar{grid-column:1;grid-row:1;position:static;transform:none;width:auto;max-width:none;height:100%;padding:26px 16px;display:flex;flex-direction:column;gap:6px;background:#083f30;border:0}
+  .nav-brand{display:block;color:#fff;font-size:25px;letter-spacing:-.8px;margin:4px 12px 24px}
+  .bottom-bar button{min-height:50px;padding:0 12px;display:flex;flex-direction:row;justify-content:flex-start;gap:12px;border-radius:14px;color:#c3d8cf}
+  .bottom-bar button>span{height:40px;min-width:40px}
+  .bottom-bar button b{font-size:13px}
+  .bottom-bar button.selected{color:#fff;background:rgba(255,255,255,.12)}
+  .bottom-bar button.selected>span{background:transparent;color:#ff8268}
+  .app-header{padding:0 0 22px}
+  .app-header h1{font-size:29px;line-height:36px}
+  .app-header p{font-size:13px}
+  .header-actions{gap:6px}
+  .header-actions button,.icon-button{border-radius:14px;background:#fff;box-shadow:0 4px 15px rgba(25,50,40,.06)}
+  .dashboard-top{display:grid;grid-template-columns:minmax(360px,1.15fr) minmax(420px,1fr);gap:18px}
+  .daily-pick{width:100%;height:210px;margin:0;padding:24px;border-radius:24px}
+  .daily-art{width:135px;height:118px;right:20px;top:20px}
+  .daily-pick h2{font-size:21px;line-height:28px}
+  .overview-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .overview-metrics>div{min-width:0;padding:20px 16px;border:1px solid #e0e7e2;border-radius:20px;background:#fff;display:flex;flex-direction:column;justify-content:center}
+  .overview-metrics span{font-size:11px;color:var(--ink-soft)}
+  .overview-metrics strong{margin:9px 0 4px;font-size:22px;line-height:28px;color:var(--deep)}
+  .overview-metrics small{font-size:10px;line-height:15px;color:var(--ink-soft)}
+  .savings-strip{display:none}
+  .mobile-overview{display:none}
+  .dashboard-tools{display:grid;grid-template-columns:minmax(280px,420px) 1fr;align-items:center;gap:14px;margin:22px 0 14px}
+  .search-box{width:100%;margin:0;border-radius:15px}
+  .chip-row{padding:0;overflow-x:auto}
+  .dashboard-columns{display:grid;grid-template-columns:minmax(500px,1.25fr) minmax(300px,.75fr);gap:18px;align-items:start}
+  .deals-panel,.insight-card{border:1px solid #e0e7e2;border-radius:22px;background:#fff;overflow:hidden}
+  .panel-heading{padding:18px 18px 8px}
+  .deal-list{padding:0 10px 12px}
+  .deal-row{margin:6px 0;border:1px solid #edf0ed;background:#fff}
+  .deal-open{border-radius:21px}
+  .insights-panel{display:flex;flex-direction:column;gap:14px}
+  .mini-meals{padding:4px 10px 12px}
+  .mini-meals>button{width:100%;min-height:76px;padding:8px;border:0;border-radius:14px;background:#fff;display:flex;align-items:center;gap:11px;text-align:left;color:inherit}
+  .mini-meals>button:hover{background:#f3f6f4}
+  .mini-meals .honest-art{width:56px;height:56px;border-radius:13px;flex:none}
+  .mini-meals span{display:flex;flex-direction:column;gap:3px}
+  .mini-meals b{font-size:12px}
+  .mini-meals small{font-size:10px;color:var(--ink-soft)}
+  .shopping-snapshot{padding:19px;display:flex;align-items:center;justify-content:space-between;gap:15px}
+  .shopping-snapshot>div{display:flex;flex-direction:column}
+  .shopping-snapshot span,.shopping-snapshot small{font-size:10px;color:var(--ink-soft)}
+  .shopping-snapshot strong{font-size:20px;margin:4px 0}
+  .shopping-snapshot button{min-height:44px;padding:0 14px;border:0;border-radius:13px;background:#ffe3da;color:#a43d29;font-size:11px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .featured-scroll,.recipe-scroll{padding-left:0;padding-right:0}
+  .featured-scroll{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .featured-recipe{width:100%}
+  .recipe-section{margin-top:28px}
+  .recipe-scroll{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}
+  .recipe-card{width:100%}
+  .section-title{padding:0}
+  .feature-cta,.pantry-item,.shop-item,.budget-hero,.budget-progress,.settings-card{width:100%;margin-left:0;margin-right:0}
+  .feature-cta{max-width:760px}
+  .empty-state{max-width:650px;margin:40px auto;padding:60px 30px;border:1px solid #e0e7e2;border-radius:26px;background:#fff}
+  .fab{position:absolute;right:28px;bottom:28px}
+  .detail-screen{position:absolute;left:220px;right:0;top:0;bottom:0;max-width:none;display:grid;grid-template-columns:minmax(330px,.72fr) minmax(500px,1.28fr);overflow:hidden;background:#f5f7f4}
+  .detail-photo{height:100%}
+  .detail-body{height:100%;margin:0;padding:48px 48px 80px;border-radius:0;overflow-y:auto}
+  .detail-body h1{font-size:34px;line-height:41px}
+  .sheet-backdrop{position:absolute;left:220px;right:0;top:0;bottom:0;max-width:none}
+  .bottom-sheet{max-width:720px;max-height:84%;border-radius:28px 28px 0 0}
+  .overlay-screen{position:absolute;left:220px;right:0;top:0;bottom:0;max-width:none;padding:30px 32px 70px}
+  .trip-plan{height:100%;overflow-y:auto;padding:30px 32px 80px}
+  .recipe-search-row{width:100%;margin:7px 0}
+  .recipe-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .deal-button{width:100%;margin-left:0;margin-right:0}
+}
+
+@media(min-width:1280px){
+  .deal-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .deal-row{margin:0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

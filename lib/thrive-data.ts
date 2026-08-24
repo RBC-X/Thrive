@@ -5,6 +5,10 @@ import dealTemplates from "../app/data/deals.json";
 
 export { coupons, recipes, catalog };
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function hashString(value: string) {
   let hash = 0;
   for (let i = 0; i < value.length; i += 1) hash = (Math.imul(hash, 31) + value.charCodeAt(i)) | 0;
@@ -35,13 +39,26 @@ function etagHash(value: string) {
     h ^= value.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  return `\"${(h >>> 0).toString(16)}\"`;
+  return `"${(h >>> 0).toString(16)}"`;
+}
+
+export function stableGeneratedAt(now = new Date()) {
+  return `${now.toISOString().slice(0, 10)}T00:00:00.000Z`;
+}
+
+function requestHasEtag(request: Request, etag: string) {
+  const header = request.headers.get("if-none-match");
+  if (!header) return false;
+  return header
+    .split(",")
+    .map((value) => value.trim().replace(/^W\//, ""))
+    .some((value) => value === etag || value === "*");
 }
 
 export function jsonWithEtag(request: Request, body: unknown, cacheControl = "no-cache") {
   const payload = JSON.stringify(body);
   const etag = etagHash(payload);
-  if (request.headers.get("if-none-match") === etag) {
+  if (requestHasEtag(request, etag)) {
     return new Response(null, { status: 304, headers: { ETag: etag, "Cache-Control": cacheControl } });
   }
   return new Response(payload, {
@@ -62,6 +79,6 @@ export async function readJson<T>(request: Request, maxBytes = 262_144): Promise
   const length = Number(request.headers.get("content-length") || 0);
   if (length > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
   const text = await request.text();
-  if (text.length > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
+  if (new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
   return JSON.parse(text) as T;
 }

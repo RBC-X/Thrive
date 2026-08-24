@@ -2,9 +2,10 @@ import type recipesData from "../app/data/recipes.json";
 import type dealsData from "../app/data/deals.json";
 
 export type Recipe = (typeof recipesData)[number];
-export type Deal = (typeof dealsData)[number] & { size?: string | null; unitPrice?: string };
+export type Deal = Omit<(typeof dealsData)[number], "size" | "unitPrice"> & { size?: string | null; unitPrice?: string };
 export type PantryItem = { id?: string; name: string; category?: string; location?: string; quantity?: number; expiresAt?: number | null };
 export type ShoppingItem = { id: string; name: string; category: string; quantity: number; unit?: string; price?: number; estPrice?: number; checked?: boolean };
+export type MealFocus = "balanced" | "use_expiring" | "lowest_cost";
 
 const staples = new Set(["salt","pepper","black pepper","cooking oil","olive oil","water","sugar","flour","garlic","onion","butter"]);
 const stopwords = new Set(["fresh","boneless","skinless","uncooked","cooked","plain","whole","organic","large","small","medium","raw","low-fat","low","fat","2","store-bought","store","bought","leftover","canned","diced","shredded","grated","chopped","minced","sliced","ground","extra","virgin","big","smaller","flavored"]);
@@ -21,7 +22,7 @@ const intersects = (a: string, b: string) => {
 export const isStaple = (name: string) => staples.has(name.toLowerCase().trim()) || [...tokens(name)].some(x => staples.has(x));
 export const estimateIngredientPrice = (name: string) => prices[name.toLowerCase().trim()] ?? Object.entries(prices).find(([key]) => name.toLowerCase().includes(key))?.[1] ?? 2;
 
-export function scoreRecipe(recipe: Recipe, pantry: PantryItem[], focus = "balanced") {
+export function scoreRecipe(recipe: Recipe, pantry: PantryItem[], focus: MealFocus = "balanced") {
   const now = Date.now();
   const expiring = pantry.filter(item => item.expiresAt && item.expiresAt - now < 259_200_000).map(item => item.name);
   let used = 0, required = 0, expiringUsed = 0;
@@ -34,7 +35,7 @@ export function scoreRecipe(recipe: Recipe, pantry: PantryItem[], focus = "balan
     if (match) {
       used += 1; usedItems.add(match.name);
       if (expiring.includes(match.name)) expiringUsed += 1;
-    } else if (!ingredient.optional) missingItems.push({ name: ingredient.name, estCost: estimateIngredientPrice(ingredient.name) });
+    } else if (!("optional" in ingredient && ingredient.optional)) missingItems.push({ name: ingredient.name, estCost: estimateIngredientPrice(ingredient.name) });
   }
   if (!required || !used) return null;
   const coverage = used / required;
@@ -43,20 +44,25 @@ export function scoreRecipe(recipe: Recipe, pantry: PantryItem[], focus = "balan
   return { recipe, usedItems:[...usedItems], expiringItemsUsed:expiring.filter(x => usedItems.has(x)), missingItems, coverageScore, estimatedExtraCost:extraCost, usesCount:usedItems.size, isZeroShopping:!missingItems.length, aiTip: missingItems.length ? `You already have ${usedItems.size} ingredient${usedItems.size === 1 ? "" : "s"}. Pick up ${missingItems.slice(0,2).map(x=>x.name).join(" and ")} to finish it.` : "You have everything you need. This is a true pantry win." };
 }
 
-export function suggestMeals(pantry: PantryItem[], recipes: Recipe[], focus = "balanced", limit = 3) {
-  return recipes.map(recipe => scoreRecipe(recipe, pantry, focus)).filter(Boolean).sort((a,b) => b!.coverageScore-a!.coverageScore).slice(0,Math.max(1,Math.min(10,limit)));
+export type ScoredRecipe = NonNullable<ReturnType<typeof scoreRecipe>>;
+
+const isScoredRecipe = (value: ScoredRecipe | null): value is ScoredRecipe => value !== null;
+
+export function suggestMeals(pantry: PantryItem[], recipes: Recipe[], focus: MealFocus = "balanced", limit = 3) {
+  const safeLimit = Number.isInteger(limit) ? Math.max(1, Math.min(10, limit)) : 3;
+  return recipes.map(recipe => scoreRecipe(recipe, pantry, focus)).filter(isScoredRecipe).sort((a,b) => b.coverageScore-a.coverageScore).slice(0,safeLimit);
 }
 
-export function weeklyPlan(pantry: PantryItem[], recipes: Recipe[], budget: number, people = 4, focus = "balanced", nights = 7) {
+export function weeklyPlan(pantry: PantryItem[], recipes: Recipe[], budget: number, people = 4, focus: MealFocus = "balanced", nights = 7) {
   const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-  const count = Math.max(1,Math.min(7,nights));
+  const count = Number.isInteger(nights) ? Math.max(1,Math.min(7,nights)) : 7;
   const perNight = budget / count;
   const used = new Set<string>();
-  const planned: any[] = [];
+  const planned: { day: string; suggestion: ScoredRecipe }[] = [];
   for (let i=0;i<count;i+=1) {
     const candidates = recipes.filter(r => !used.has(r.id)).map(recipe => {
       const scored = scoreRecipe(recipe,pantry,focus);
-      const missingItems = scored?.missingItems ?? recipe.ingredients.filter(x => !isStaple(x.name) && !x.optional).map(x => ({name:x.name,estCost:estimateIngredientPrice(x.name)}));
+      const missingItems = scored?.missingItems ?? recipe.ingredients.filter(x => !isStaple(x.name) && !("optional" in x && x.optional)).map(x => ({name:x.name,estCost:estimateIngredientPrice(x.name)}));
       const suggestion = scored ?? { recipe, usedItems:[], expiringItemsUsed:[], missingItems, coverageScore:-1, estimatedExtraCost:missingItems.reduce((s,x)=>s+x.estCost,0), usesCount:0, isZeroShopping:false, aiTip:"A low-cost choice that keeps the week balanced." };
       return { suggestion, score:suggestion.coverageScore, cost:recipe.costDollars };
     });
@@ -86,7 +92,7 @@ export function tripPlan(items: ShoppingItem[], deals: Deal[], budget: number, p
       const dealUnit=parseUnit(deal.size); let price=deal.price,unitMatched=false;
       if(itemUnit&&dealUnit&&itemUnit.family===dealUnit.family){const effective=deal.price/dealUnit.baseQty*itemUnit.baseQty;if(effective<est){price=effective;unitMatched=true}else if(deal.price>=est)return null}else if(deal.price>=est)return null;
       return {deal,score,price,unitMatched,savings:(est-price)*item.quantity};
-    }).filter(Boolean).sort((a,b)=>(Number(b!.unitMatched)-Number(a!.unitMatched))||(b!.savings-a!.savings)||(b!.score-a!.score));
+    }).filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null).sort((a,b)=>(Number(b.unitMatched)-Number(a.unitMatched))||(b.savings-a.savings)||(b.score-a.score));
     const best=candidates[0];
     return best?{item,store:best.deal.store,price:best.price,dealFound:true,savings:Math.max(0,best.savings),dealId:best.deal.id,unitMatched:best.unitMatched,unitLabel:best.unitMatched?(best.deal.unitPrice||null):null}:{item,store:"Any store",price:est,dealFound:false,savings:0,dealId:null,unitMatched:false,unitLabel:null};
   });

@@ -1,2 +1,15 @@
-import { jsonWithEtag, recipes } from "../../../../lib/thrive-data";
-export async function GET(request: Request) { const url=new URL(request.url); let out=[...recipes]; const section=url.searchParams.get("section"),query=url.searchParams.get("query")?.toLowerCase(); if(section)out=out.filter(x=>x.section===section); if(query)out=out.filter(x=>x.name.toLowerCase().includes(query)||x.tags.some(t=>t.includes(query))||x.ingredients.some(i=>i.name.toLowerCase().includes(query))); return jsonWithEtag(request,{recipes:out,generatedAt:new Date().toISOString()},"public, max-age=300"); }
+import { jsonWithEtag, recipes, stableGeneratedAt } from "../../../../lib/thrive-data";
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  let out = [...recipes];
+  const section = url.searchParams.get("section")?.trim().slice(0, 50);
+  const query = url.searchParams.get("query")?.trim().slice(0, 100).toLowerCase();
+  if (section) out = out.filter((recipe) => recipe.section === section);
+  if (query) {
+    out = out.filter(
+      (recipe) => recipe.name.toLowerCase().includes(query) || recipe.tags.some((tag) => tag.toLowerCase().includes(query)) || recipe.ingredients.some((ingredient) => ingredient.name.toLowerCase().includes(query)),
+    );
+  }
+  return jsonWithEtag(request, { recipes: out, generatedAt: stableGeneratedAt() }, "public, max-age=300");
+}

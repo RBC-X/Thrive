@@ -1,91 +1,83 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+let workerPromise;
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+async function worker() {
+  if (!workerPromise) {
+    const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+    workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
+    workerPromise = import(workerUrl.href).then(module => module.default);
+  }
+  return workerPromise;
+}
 
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
+async function request(path = "/", options = {}) {
+  const app = await worker();
+  return app.fetch(
+    new Request(`http://localhost${path}`, options),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
   );
 }
 
-test("server-renders the starter loading skeleton", async () => {
-  const response = await render();
+test("server-renders the real Thrive product shell", async () => {
+  const response = await request("/", { headers: { accept: "text/html" } });
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /<title>Thrive/);
+  assert.match(html, /Today(?:&apos;|&#x27;|')s pick/i);
+  assert.match(html, /Deals for you/);
+  assert.match(html, /aria-label="Main navigation"/);
+  assert.match(html, />Savings</);
+  assert.match(html, />Recipes</);
+  assert.match(html, />Pantry</);
+  assert.match(html, />Budget</);
+  assert.doesNotMatch(html, /Your site is taking shape|Building your site|react-loading-skeleton/i);
+  assert.doesNotMatch(html, /Sign in with ChatGPT/i);
+  assert.doesNotMatch(html, /picsum\.photos/i);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
+test("core read-only and planning APIs return real structured data", async () => {
+  const health = await request("/api/v1/health");
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).ok, true);
+
+  const sync = await request("/api/v1/sync");
+  assert.equal(sync.status, 200);
+  const feed = await sync.json();
+  assert.ok(feed.coupons.length > 20);
+  assert.ok(feed.recipes.length > 10);
+  assert.ok(feed.catalog.length > 20);
+
+  const meals = await request("/api/v1/meal-suggestions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pantry: [{ name: "black beans", quantity: 2 }], limit: 3 }),
+  });
+  assert.equal(meals.status, 200);
+  assert.ok((await meals.json()).suggestions.length > 0);
+
+  const week = await request("/api/v1/weekly-plan", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pantry: [], budget: 75, people: 4, focus: "balanced", nights: 7 }),
+  });
+  assert.equal(week.status, 200);
+  assert.equal((await week.json()).plan.nightsCount, 7);
+});
+
+test("source preserves anonymous use and honest unavailable imagery", async () => {
+  const [page, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
   ]);
-
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
-
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
-
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
-
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+  assert.match(page, /No account required/);
+  assert.match(page, /Product image unavailable/);
+  assert.match(page, /aria-current/);
+  assert.doesNotMatch(page, /picsum\.photos|foodImg|productImg/);
+  assert.match(layout, /Thrive — Save smarter\. Eat better\./);
 });
