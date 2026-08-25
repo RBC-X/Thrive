@@ -819,10 +819,14 @@ private fun SavingsSummaryStrip(state: SavingsUiState, filtered: List<Coupon>) {
         // a savings claim. With none saved, we say the feed is fresh and let
         // each offer speak for itself — never the catalog-wide sum.
         val favSavings = state.favoritesSavings
-        val headline = if (favSavings != null)
-            "Your saved deals save you up to ${Money.fmt(favSavings.first)} across ${favSavings.second} items"
-        else
-            "${filtered.size} fresh deals today — every one opens the exact product page"
+        val headline = when {
+            favSavings != null ->
+                "Your saved deals save you up to ${Money.fmt(favSavings.first)} across ${favSavings.second} items"
+            state.showingEstimates ->
+                "${filtered.size} planning estimates — open the retailer search to confirm each price"
+            else ->
+                "${filtered.size} fresh deals today — every one opens the exact product page"
+        }
         Text(
             text = headline,
             style = MaterialTheme.typography.bodyMedium.copy(
