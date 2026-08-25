@@ -4,7 +4,14 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.data.remote.GoogleAccountInfo
+import com.thrive.app.data.remote.GoogleAuthResult
+import com.thrive.app.data.remote.GoogleBackup
 import com.thrive.app.data.remote.GoogleAccountStore
+import com.thrive.app.data.remote.HttpResult
+import com.thrive.app.data.remote.JsonHttpClient
+import com.thrive.app.data.remote.BackupSnapshot
+import com.thrive.app.data.remote.PushResult
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,6 +27,35 @@ import org.robolectric.annotation.Config
 // any test body runs. These tests only need a Context for SharedPreferences.
 @Config(sdk = [34], application = android.app.Application::class)
 class GoogleAccountTest {
+
+    private class FakeHttpClient : JsonHttpClient {
+        val methods = mutableListOf<String>()
+        val ifMatches = mutableListOf<String?>()
+        var postResult = HttpResult(500, "", null)
+        var getResult = HttpResult(404, "", null)
+        val putResults = ArrayDeque<HttpResult>()
+
+        override suspend fun get(url: String, ifNoneMatch: String?, token: String?): HttpResult {
+            methods += "GET"
+            return getResult
+        }
+
+        override suspend fun putJson(
+            url: String,
+            jsonBody: String,
+            ifMatch: String?,
+            token: String?,
+        ): HttpResult {
+            methods += "PUT"
+            ifMatches += ifMatch
+            return putResults.removeFirst()
+        }
+
+        override suspend fun postJson(url: String, jsonBody: String, token: String?): HttpResult {
+            methods += "POST"
+            return postResult
+        }
+    }
 
     private fun store(): SettingsStore {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
@@ -86,5 +122,58 @@ class GoogleAccountTest {
         val b = GoogleAccountInfo(sub = "same-sub", accountKey = "gdeadbeefdeadbeef")
         assertEquals(a.accountKey, b.accountKey)
         assertEquals(a.sub, b.sub)
+    }
+
+    @Test
+    fun authExchangeUsesPostAndPersistsServerIdentity() = runBlocking {
+        val settings = store()
+        val http = FakeHttpClient().apply {
+            postResult = HttpResult(
+                200,
+                """{"sub":"google-123","name":"Ada","email":"ada@example.com","accountKey":"g0123456789abcde"}""",
+                null,
+            )
+        }
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http)
+
+        val result = backup.exchange("google-id-token")
+
+        assertTrue(result is GoogleAuthResult.Ok)
+        assertEquals(listOf("POST"), http.methods)
+        assertEquals("google-123", GoogleAccountStore.load(settings).sub)
+    }
+
+    @Test
+    fun successfulPushPersistsRevisionForTheNextSave() = runBlocking {
+        val settings = store()
+        GoogleAccountStore.save(
+            settings,
+            GoogleAccountInfo(sub = "google-123", accountKey = "g0123456789abcde"),
+        )
+        val http = FakeHttpClient().apply {
+            putResults += HttpResult(200, """{"ok":true,"revision":"r1"}""", null)
+            putResults += HttpResult(200, """{"ok":true,"revision":"r2"}""", null)
+        }
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http)
+
+        val first = backup.push("token", BackupSnapshot(favorites = setOf("deal-a")))
+        val second = backup.push("token", BackupSnapshot(favorites = setOf("deal-a", "deal-b")))
+
+        assertTrue(first is PushResult.Ok)
+        assertTrue(second is PushResult.Ok)
+        assertEquals(listOf("*", "r1"), http.ifMatches)
+        assertEquals("r2", GoogleAccountStore.revision(settings, "g0123456789abcde"))
+    }
+
+    @Test
+    fun signOutRemovesTheAccountRevision() {
+        val settings = store()
+        val accountKey = "g0123456789abcde"
+        GoogleAccountStore.save(settings, GoogleAccountInfo(sub = "google-123", accountKey = accountKey))
+        GoogleAccountStore.saveRevision(settings, accountKey, "r7")
+
+        GoogleAccountStore.clear(settings)
+
+        assertEquals(null, GoogleAccountStore.revision(settings, accountKey))
     }
 }

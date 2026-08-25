@@ -52,7 +52,9 @@ class ThriveRepositoryTest {
         priceBefore = 5.0,
         priceAfter = 3.0,
         endsInDays = 5,
+        url = "https://www.kroger.com/p/$id",
         urlVerified = true,
+        estimated = false,
     )
 
     private fun payload(vararg ids: String) = SyncPayload(coupons = ids.map(::coupon))

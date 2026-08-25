@@ -7,7 +7,7 @@ plugins {
 // ---------------------------------------------------------------------------
 // Release signing is configured LAZILY: debug builds, lint, and unit tests must
 // work on a clean clone with no signing material. Credentials are read from
-// gitignored gradle.properties (THRIVE_KEYSTORE_*) or the environment. Tasks
+// user-level/project-local Gradle properties (THRIVE_KEYSTORE_*) or the environment. Tasks
 // that produce or install a release artifact fail closed with a clear message
 // when the keystore or passwords are missing.
 // ---------------------------------------------------------------------------
@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 40
-        versionName = "1.6.2"
+        versionCode = 41
+        versionName = "1.6.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Google Sign-In web client ID (OAuth "Web application" client). Set it
         // in local.properties as GOOGLE_CLIENT_ID=... or as the environment
@@ -91,6 +91,10 @@ android {
             // Robolectric needs real resources/assets (bundled feeds) to test
             // the repository's cache/ETag behavior against a real Context.
             isIncludeAndroidResources = true
+            all { test ->
+                test.maxHeapSize = "384m"
+                test.maxParallelForks = 1
+            }
         }
     }
 
@@ -114,7 +118,7 @@ tasks.configureEach {
                 throw GradleException(
                     "Release signing is not configured.\n" +
                         "Provide THRIVE_KEYSTORE_PASSWORD / THRIVE_KEYSTORE_KEY_PASSWORD in " +
-                        "local gradle.properties (gitignored) or the environment, and place " +
+                        "user-level ~/.gradle/gradle.properties, a gitignored project-local file, or the environment, and place " +
                         "thrive-release.keystore in the project root.\n" +
                         "Debug, lint, and unit tests do not need signing material."
                 )

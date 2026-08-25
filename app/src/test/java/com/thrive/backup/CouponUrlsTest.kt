@@ -22,6 +22,7 @@ class CouponUrlsTest {
         val store: String = "",
         val url: String? = null,
         val urlVerified: Boolean = false,
+        val estimated: Boolean = true,
     )
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -48,10 +49,8 @@ class CouponUrlsTest {
     @Test
     fun `verified product links point at a real product page, never a search`() {
         val list = coupons()
-        var verified = 0
         for (c in list) {
             if (!c.urlVerified) continue
-            verified++
             val url = c.url
             assertTrue("${c.id} (${c.title}) verified link must be https", url != null && url.startsWith("https://"))
             // A verified link must land on the product itself — never a bare
@@ -62,14 +61,18 @@ class CouponUrlsTest {
                     !lower.contains("search?q=") &&
                     !lower.contains("?q=") &&
                     !lower.contains("query="))
-            // Verified product pages we ship today come from Open Food Facts
-            // barcodes; the URL must name the exact product code.
-            if (lower.contains("openfoodfacts.org")) {
-                assertTrue("${c.id} OFF link must be a product page (/product/<barcode>): $url",
-                    lower.contains("/product/"))
-            }
+            assertTrue("${c.id} Open Food Facts is product information, not a retailer offer: $url",
+                !lower.contains("openfoodfacts.org"))
         }
-        assertTrue("at least some coupons should carry a verified direct product link", verified > 0)
+    }
+
+    @Test
+    fun `bundled catalog is always labeled estimated and never links to third-party product info`() {
+        for (c in coupons()) {
+            assertTrue("${c.id} bundled price must be labeled estimated", c.estimated)
+            assertTrue("${c.id} destination must be the retailer, not Open Food Facts",
+                !c.url.orEmpty().contains("openfoodfacts.org"))
+        }
     }
 
     @Test

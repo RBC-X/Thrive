@@ -106,8 +106,9 @@ fun SavingsScreen(
         item {
             SavingsHeader(
                 state = state,
-                verifiedCount = filtered.size,
+                availableCount = filtered.size,
                 hiddenCount = state.hiddenUnverified,
+                showingEstimates = state.showingEstimates,
                 onOpenSettings = onOpenSettings,
                 onRefresh = vm::refreshNow,
             )
@@ -513,8 +514,9 @@ private fun UpdateBanner(update: UpdateInfo) {
 @Composable
 private fun SavingsHeader(
     state: SavingsUiState,
-    verifiedCount: Int,
+    availableCount: Int,
     hiddenCount: Int,
+    showingEstimates: Boolean,
     onOpenSettings: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -579,9 +581,12 @@ private fun SavingsHeader(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Showing $verifiedCount deals — every one opens the exact " +
-                            "product page. $hiddenCount offers without a direct product link " +
-                            "are hidden (no search-page stand-ins).",
+                        text = if (showingEstimates)
+                            "Showing $availableCount bundled planning estimates. Prices are not live; " +
+                                "each item opens the retailer's search so you can confirm it."
+                        else
+                            "Showing $availableCount retailer-verified deals. $hiddenCount older or " +
+                                "unverified feed rows are hidden.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),

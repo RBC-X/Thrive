@@ -282,14 +282,22 @@ fun SettingsScreen(
                 com.thrive.app.data.remote.SyncStatus.ERROR -> "Sync failed: ${s.error ?: "no server reachable"}. Bundled feed still active."
                 else -> "No server configured — bundled feed active."
             }
+            if (syncUrl == publicServer) {
+                serverMsg = when (s.status) {
+                    com.thrive.app.data.remote.SyncStatus.OK -> "Public backup server verified and connected."
+                    com.thrive.app.data.remote.SyncStatus.ERROR ->
+                        "Couldn't verify the public backup server. Bundled offline features are still available."
+                    else -> "No public backup server is available right now."
+                }
+            }
         }
     }
 
     fun connectToPublicServer() {
         val url = publicServer ?: return
         syncUrl = url
+        serverMsg = "Checking the public backup server…"
         runSync()
-        serverMsg = "Connected to the public backup server."
     }
 
     LazyColumn(
@@ -403,10 +411,10 @@ fun SettingsScreen(
                 Text("Sync server", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Point Thrive at your sync API (backend/ → npm start). " +
-                        "Emulator default: http://10.0.2.2:4000. For a phone, use a public HTTPS " +
-                        "endpoint (e.g. a cloudflare tunnel) — backup needs HTTPS and never " +
-                        "sends codes over plain HTTP.",
+                    text = "Live prices and cross-device backup need a compatible Thrive sync service. " +
+                        "If your administrator gave you a secure HTTPS address, enter it below. " +
+                        "Without one, Savings, Recipes, Pantry, Budget, and weekly planning keep " +
+                        "working offline; backup clearly remains unavailable.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }
@@ -562,7 +570,12 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(if (syncUrl == publicServer) "Connected" else "Connect to public backup server")
+                        Text(
+                            if (syncUrl == publicServer && syncStatus.status == com.thrive.app.data.remote.SyncStatus.OK)
+                                "Connected"
+                            else
+                                "Connect to public backup server"
+                        )
                     }
                     if (serverMsg != null) {
                         Spacer(Modifier.height(6.dp))

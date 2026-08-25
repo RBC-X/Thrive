@@ -7,10 +7,16 @@ import java.net.URL
 
 data class HttpResult(val code: Int, val body: String, val etag: String?)
 
-/** Tiny synchronous HTTP client — good enough for the sync API. */
-object ApiClient {
+interface JsonHttpClient {
+    suspend fun get(url: String, ifNoneMatch: String? = null, token: String? = null): HttpResult
+    suspend fun putJson(url: String, jsonBody: String, ifMatch: String? = null, token: String? = null): HttpResult
+    suspend fun postJson(url: String, jsonBody: String, token: String? = null): HttpResult
+}
 
-    suspend fun get(url: String, ifNoneMatch: String? = null, token: String? = null): HttpResult =
+/** Tiny synchronous HTTP client — good enough for the sync API. */
+object ApiClient : JsonHttpClient {
+
+    override suspend fun get(url: String, ifNoneMatch: String?, token: String?): HttpResult =
         withContext(Dispatchers.IO) {
             val conn = URL(url).openConnection() as HttpURLConnection
             try {
@@ -47,11 +53,24 @@ object ApiClient {
      * silently overwrite each other. [token] adds an Authorization: Bearer
      * header for Google-account backups.
      */
-    suspend fun putJson(url: String, jsonBody: String, ifMatch: String? = null, token: String? = null): HttpResult =
+    override suspend fun putJson(url: String, jsonBody: String, ifMatch: String?, token: String?): HttpResult =
+        writeJson("PUT", url, jsonBody, ifMatch, token)
+
+    /** POSTs JSON for endpoints such as the Google ID-token exchange. */
+    override suspend fun postJson(url: String, jsonBody: String, token: String?): HttpResult =
+        writeJson("POST", url, jsonBody, ifMatch = null, token = token)
+
+    private suspend fun writeJson(
+        method: String,
+        url: String,
+        jsonBody: String,
+        ifMatch: String?,
+        token: String?,
+    ): HttpResult =
         withContext(Dispatchers.IO) {
             val conn = URL(url).openConnection() as HttpURLConnection
             try {
-                conn.requestMethod = "PUT"
+                conn.requestMethod = method
                 conn.connectTimeout = 8_000
                 conn.readTimeout = 15_000
                 conn.doOutput = true

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parallel resolver: upgrade coupon search URLs to OFF product pages.
+"""Parallel image enricher using Open Food Facts product metadata.
 
 Splits the catalog across N worker threads (OFF tolerates modest concurrency),
 saves incrementally every 50 items so progress survives interruptions, and
@@ -88,9 +88,9 @@ def save(coupons, results):
         if kind == "hit":
             c = coupons[i]
             url, img = val
-            c["url"] = url
-            c["urlVerified"] = True
-            c["estimated"] = False
+            # OFF is product information, not the named retailer's current
+            # offer. Keep the honest retailer destination and estimate flags;
+            # only use the matched product photo.
             c["imageUrl"] = img
     import os as _os
     _tmp = COUPONS_PATH.with_suffix(".json.tmp")
@@ -113,8 +113,8 @@ def main():
     for t in threads:
         t.join()
     save(coupons, results)
-    verified = sum(1 for c in coupons if c.get("urlVerified"))
-    print(f"DONE: {verified}/{len(coupons)} verified", flush=True)
+    enriched = sum(1 for c in coupons if c.get("imageUrl"))
+    print(f"DONE: {enriched}/{len(coupons)} have product images", flush=True)
 
 if __name__ == "__main__":
     main()

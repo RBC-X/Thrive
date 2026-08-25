@@ -3,6 +3,7 @@ package com.thrive.app.ui.pantry
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -503,6 +508,11 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
                     Modifier
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .heightIn(min = 48.dp)
+                        .semantics {
+                            contentDescription = "Decrease people"
+                            role = Role.Button
+                        }
                         .clickable { people = (people - 1).coerceAtLeast(1) }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) { Text("−", style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary)) }
@@ -515,6 +525,11 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
                     Modifier
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .heightIn(min = 48.dp)
+                        .semantics {
+                            contentDescription = "Increase people"
+                            role = Role.Button
+                        }
                         .clickable { people = (people + 1).coerceAtMost(12) }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) { Text("+", style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary)) }
@@ -543,20 +558,27 @@ private fun WeekPlanSheet(vm: PantryViewModel, onDismiss: () -> Unit, onOpenPlan
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(quickBudgets.size) { i ->
                     val amount = quickBudgets[i]
+                    val selected = budgetText.toDoubleOrNull() == amount
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(
-                                if (budgetText.toDoubleOrNull() == amount) MaterialTheme.colorScheme.primary
+                                if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
-                            .clickable { budgetText = "${amount.toInt()}" }
+                            .heightIn(min = 48.dp)
+                            .selectable(
+                                selected = selected,
+                                role = Role.RadioButton,
+                                onClick = { budgetText = "${amount.toInt()}" },
+                            )
                             .padding(horizontal = 14.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "$${amount.toInt()}",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = if (budgetText.toDoubleOrNull() == amount) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold,
                             ),
                         )
@@ -1384,8 +1406,10 @@ private fun SelectableChip(text: String, selected: Boolean, onClick: () -> Unit)
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,

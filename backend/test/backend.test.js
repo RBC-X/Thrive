@@ -73,12 +73,13 @@ test("health is up and lists sources", async () => {
 test("sync returns the full payload with an ETag and 304s on match", async () => {
   const r1 = await req("GET", "/api/v1/sync");
   assert.equal(r1.status, 200);
-  // Every served coupon carries a VERIFIED direct product link — the app's
-  // "direct link or don't show it" rule starts at the server, so the payload
-  // never includes search-page stand-ins.
-  assert.ok(r1.json.coupons.length > 10, "verified coupons present");
+  // Without retailer credentials the server falls back to useful planning
+  // estimates. Search links are intentionally never called verified product
+  // links, and snapshot prices are intentionally never called live.
+  assert.ok(r1.json.coupons.length > 10, "bundled planning estimates present");
   for (const c of r1.json.coupons) {
-    assert.equal(c.urlVerified, true, `coupon ${c.id} must be urlVerified`);
+    assert.equal(c.urlVerified, false, `coupon ${c.id} search link must not be called verified`);
+    assert.equal(c.estimated, true, `coupon ${c.id} bundled price must stay estimated`);
     assert.ok(c.url && c.url.startsWith("https://"), `coupon ${c.id} must keep an https url`);
   }
   assert.ok(Array.isArray(r1.json.deals));

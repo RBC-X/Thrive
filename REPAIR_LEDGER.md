@@ -1,7 +1,37 @@
-# Thrive Repair Ledger — v1.4.0 audit pass
+# Thrive Repair Ledger
+
+## v1.6.3 finish pass (August 24, 2026)
+
+The historical v1.4.0 audit below was released in subsequent versions through
+v1.6.2. This pass fixes newly verified release gaps: Google authentication now
+uses the backend's POST contract; Google backup persists revisions and safely
+re-pulls/merges on conflicts; repeated saves no longer use `If-Match: *`;
+expired in-memory sessions no longer appear signed in; Settings confirms a
+public server only after a successful sync; private preferences are excluded
+from Android cloud/device-transfer backup; the release script refuses to
+publish an unverified sync URL; and CI rejects signing credentials in the
+tracked project build-tuning file (credentials belong in user-level Gradle settings).
+
+The bundled savings catalog is now truthful: Open Food Facts remains only an
+image source, never a retailer offer destination. All bundled prices are
+explicit estimates and open the named retailer's search/home page. Current,
+direct purchase deals appear only when a real retailer source supplies a
+verified product URL and current promo price.
+
+Remaining external requirement: Thrive's mobile app works offline, but live
+sync and cross-device backup require a durable HTTPS deployment. No dead tunnel
+URL is published with v1.6.3; Settings reports the feature unavailable until a
+healthy compatible server is configured. Google Sign-In also remains hidden
+unless the publisher supplies and device-tests a real OAuth client ID.
+
+---
+
+## Historical v1.4.0 audit pass
 
 Audited commit: `95d5f5dcb11033682c27eb9e6d6e4b18f8ec09a6` (Thrive 1.4.0, matches `main`).
-All repairs below are **uncommitted working-tree changes** on top of that commit (20 files changed, +597/−192, plus new test files). Nothing has been pushed or released; the release decision is at the bottom.
+The text below is retained as historical evidence. Those repairs were later
+committed and released; references to "uncommitted" describe that older audit
+moment, not the current repository state.
 
 ---
 

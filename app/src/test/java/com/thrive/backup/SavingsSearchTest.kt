@@ -5,6 +5,7 @@ import com.thrive.app.data.remote.NearbyStore
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.ui.savings.SavingsUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -147,7 +148,7 @@ class SavingsSearchTest {
     @Test
     fun `only offers with a verified product link are available`() {
         val verified = coupon("v1", title = "Verified Milk", urlVerified = true)
-        val unverified = coupon("u1", title = "No Link Milk", urlVerified = false)
+        val unverified = coupon("u1", title = "No Link Milk", urlVerified = false).copy(estimated = false)
         val s = state(listOf(verified, unverified))
         assertEquals(listOf("v1"), s.filtered.map { it.id })
         assertEquals(listOf("v1"), s.storeSections.flatMap { it.coupons }.map { it.id })
@@ -157,11 +158,23 @@ class SavingsSearchTest {
     @Test
     fun `available-only filtering applies to search and shelves`() {
         val verified = coupon("v1", title = "Milk", urlVerified = true)
-        val unverified = coupon("u1", title = "Milk", urlVerified = false)
+        val unverified = coupon("u1", title = "Milk", urlVerified = false).copy(estimated = false)
         val s = state(listOf(verified, unverified))
         assertEquals(listOf("v1"), s.copy(query = "milk").filtered.map { it.id })
         assertTrue(s.newThisWeek.none { it.id == "u1" })
         s.dailyPick?.let { assertTrue(it.urlVerified) }
         assertEquals(null, s.copy(coupons = listOf(unverified)).dailyPick)
+    }
+
+    @Test
+    fun `offline estimated offers remain usable without pretending to be verified`() {
+        val estimate = coupon("e1", title = "Estimated Milk", urlVerified = false).copy(
+            url = "https://walmart.com/search?q=milk",
+            estimated = true,
+        )
+        val s = state(listOf(estimate))
+        assertEquals(listOf("e1"), s.available.map { it.id })
+        assertTrue(s.showingEstimates)
+        assertFalse(s.available.first().urlVerified)
     }
 }

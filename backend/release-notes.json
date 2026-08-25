@@ -1,5 +1,11 @@
 {
   "notes": {
+    "1.6.3": [
+      "Google backup repaired end to end: sign-in now uses the backend's POST contract, backup revisions survive repeated saves, conflicts re-pull and merge instead of overwriting, and expired sessions ask you to sign in again",
+      "Honest savings data: bundled prices are clearly labeled planning estimates and open the named retailer, while Open Food Facts is used only for product images — never presented as a store offer or live price",
+      "Connection status is truthful: Thrive only says a public sync server is connected after a successful check, and this release does not advertise the previous expired tunnel URL",
+      "Privacy and release safety: private preferences are excluded from Android cloud/device-transfer backup, signing credentials stay outside tracked files, and release tooling health-checks sync endpoints before publishing them"
+    ],
     "1.6.0": [
       "The weekly planner is now a real planning engine: type what you want (\"dinner for two, five nights, under $70, high protein, mostly Aldi, no dairy\") and Thrive turns it into a structured week — it only fills in what it honestly understood",
       "Ingredient intelligence: equivalent ingredients merge (8 oz + 1 lb of chicken become one line), your pantry is subtracted from the shopping list, and everything is grouped by store aisle with subtotals",

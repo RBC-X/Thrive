@@ -115,13 +115,22 @@ gh release create "v$NEW_NAME" "$APK" \
   --notes "$NOTES"
 # Attach the published public sync URL (named tunnel or last quick tunnel) so
 # the release's one-tap connect always has the current endpoint.
-if [[ -f "$ROOT/backend/public_url.txt" ]]; then
-  cp "$ROOT/backend/public_url.txt" /tmp/thrive-sync-url.txt
-  gh release upload "v$NEW_NAME" /tmp/thrive-sync-url.txt --clobber -R "$REPO" >/dev/null 2>&1 \
-    && echo "  attached thrive-sync-url.txt ($(cat /tmp/thrive-sync-url.txt))"
-elif [[ -f /tmp/thrive-sync-url.txt ]] && [[ -s /tmp/thrive-sync-url.txt ]]; then
-  gh release upload "v$NEW_NAME" /tmp/thrive-sync-url.txt --clobber -R "$REPO" >/dev/null 2>&1 \
-    && echo "  attached thrive-sync-url.txt ($(cat /tmp/thrive-sync-url.txt))"
+SYNC_FILE=""
+if [[ -s "$ROOT/backend/public_url.txt" ]]; then
+  SYNC_FILE="$ROOT/backend/public_url.txt"
+elif [[ -s /tmp/thrive-sync-url.txt ]]; then
+  SYNC_FILE="/tmp/thrive-sync-url.txt"
+fi
+if [[ -n "$SYNC_FILE" ]]; then
+  SYNC_URL="$(tr -d '\r\n' < "$SYNC_FILE")"
+  if [[ "$SYNC_URL" == https://* ]] && curl -fsS --max-time 10 "$SYNC_URL/api/v1/health" >/dev/null; then
+    mkdir -p /tmp/thrive-release-assets
+    cp "$SYNC_FILE" /tmp/thrive-release-assets/thrive-sync-url.txt
+    gh release upload "v$NEW_NAME" /tmp/thrive-release-assets/thrive-sync-url.txt --clobber -R "$REPO" >/dev/null 2>&1 \
+      && echo "  attached verified thrive-sync-url.txt"
+  else
+    echo "  sync URL omitted: endpoint did not pass the HTTPS health check"
+  fi
 fi
 # gh creates the tag on GitHub; fetch it locally so we can verify provenance.
 git fetch --tags origin --quiet
@@ -129,6 +138,7 @@ echo ""
 
 # --- 5. provenance: prove the published APK came from the tagged commit ------------
 echo "=== 5/7 Verifying release provenance ==="
+bash tools/check_release.sh "v$NEW_NAME" "$APK"
 TAG_COMMIT="$(git rev-parse "v$NEW_NAME^{commit}" 2>/dev/null || echo 'MISSING')"
 if [[ "$TAG_COMMIT" == "MISSING" ]]; then
   echo "ERROR: tag v$NEW_NAME does not exist locally after fetch." >&2

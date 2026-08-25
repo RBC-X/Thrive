@@ -142,6 +142,9 @@ class ThriveRepository(
     val deals: List<Deal> get() = remoteDeals ?: bundledDeals
     val catalog: List<CatalogItem> get() = remoteCatalog ?: bundledCatalog
 
+    private fun hasLiveCoupons(items: List<Coupon>? = remoteCoupons): Boolean =
+        items?.any { it.urlVerified && !it.estimated && !it.url.isNullOrBlank() } == true
+
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
@@ -225,10 +228,8 @@ class ThriveRepository(
                             it.copy(
                                 status = SyncStatus.OK,
                                 lastSyncedAt = System.currentTimeMillis(),
-                                // Keep whatever origin the current coupons came
-                                // from: 304 means nothing changed, so the
-                                // on-screen set is still live if it was live.
-                                feedOrigin = "live",
+                                // A 304 keeps the cached feed's real provenance.
+                                feedOrigin = if (hasLiveCoupons()) "live" else "bundled",
                             )
                         }
                         settings.putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
@@ -236,7 +237,6 @@ class ThriveRepository(
                 }
                 result.code in 200..299 -> {
                     val payload = json.decodeFromString(SyncPayload.serializer(), result.body)
-                    val couponsFromServer = payload.coupons.isNotEmpty()
                     remoteCoupons = payload.coupons.ifEmpty { remoteCoupons }
                     remoteRecipes = payload.recipes.ifEmpty { remoteRecipes }
                     remoteDeals = payload.deals.ifEmpty { remoteDeals }
@@ -251,10 +251,10 @@ class ThriveRepository(
                             lastSyncedAt = System.currentTimeMillis(),
                             source = payload.source,
                             update = payload.update,
-                            // Label what's actually on screen: live when the
-                            // server sent coupons OR we kept last-good live
-                            // data; bundled otherwise.
-                            feedOrigin = if (couponsFromServer || remoteCoupons != null) "live" else "bundled",
+                            // Only verified, non-estimated retailer offers earn
+                            // the live label. Server-delivered planning data is
+                            // still bundled/estimated data.
+                            feedOrigin = if (hasLiveCoupons()) "live" else "bundled",
                             locationEnabled = payload.location != null || it.locationEnabled,
                             locationLat = payload.location?.lat ?: it.locationLat,
                             locationLng = payload.location?.lng ?: it.locationLng,
@@ -269,7 +269,7 @@ class ThriveRepository(
                 it.copy(
                     status = SyncStatus.ERROR,
                     error = err.message ?: "Sync failed",
-                    feedOrigin = if (remoteCoupons != null) "live" else "bundled",
+                    feedOrigin = if (hasLiveCoupons()) "live" else "bundled",
                 )
             }
         }
