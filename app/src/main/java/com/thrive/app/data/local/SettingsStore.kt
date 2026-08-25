@@ -17,4 +17,14 @@ class SettingsStore(private val prefs: SharedPreferences) {
     fun putFloat(key: String, value: Float) = prefs.edit { putFloat(key, value) }
     fun getFloat(key: String, def: Float) = prefs.getFloat(key, def)
     fun remove(key: String) = prefs.edit { remove(key) }
+
+    /** Persisted set of appliances the user owns (lowercase). */
+    fun getAppliances(): Set<String> {
+        val raw = getString("appliances", null) ?: return emptySet()
+        return raw.split(",").filter { it.isNotBlank() }.toSet()
+    }
+
+    fun setAppliances(appliances: Set<String>) {
+        putString("appliances", appliances.joinToString(","))
+    }
 }

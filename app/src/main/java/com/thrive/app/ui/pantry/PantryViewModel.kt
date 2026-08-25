@@ -304,6 +304,10 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
         _state.update { it.copy(isPlanningWeek = true, weeklyPlan = null) }
         weekPlanJob = viewModelScope.launch {
             val items = _state.value.items
+            // Merge Settings-persisted appliances with NL-parsed ones — extra
+            // appliances never exclude recipes, only add eligible ones.
+            val savedAppliances = (getApplication<com.thrive.app.ThriveApp>()).settings.getAppliances()
+            val mergedAppliances = savedAppliances + appliances
             val plan = withContext(Dispatchers.Default) {
                 planner.plan(
                     pantry = items,
@@ -314,7 +318,7 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
                     focus = focus,
                     restrictions = restrictions,
                     maxCookMinutes = maxCookMinutes,
-                    appliances = appliances,
+                    appliances = mergedAppliances,
                     preferredStore = preferredStore,
                     requestSummary = requestSummary,
                 )

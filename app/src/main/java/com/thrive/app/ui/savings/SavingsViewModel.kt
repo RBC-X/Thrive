@@ -200,7 +200,7 @@ internal fun pickDailyPick(available: List<Coupon>, day: Int): Coupon? {
     return ranked[minOf(day % 3, ranked.size - 1)]
 }
 
-class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {
+class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {
 
     private val backup = StateBackup(app.settings) { repo.syncBaseUrl }
     private var pushJob: Job? = null
@@ -262,6 +262,11 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
     fun setQuery(query: String) = _state.update { it.copy(query = query) }
 
     fun setMode(mode: String) = _state.update { it.copy(mode = mode) }
+
+    /** Mark the given deal IDs as "seen" — the New pill and New shelf filter them out. */
+    fun markSeen(ids: Collection<String>) {
+        com.thrive.app.data.local.DealReadStore.markSeen(app.settings, ids)
+    }
 
     fun toggleFavorite(id: String) {
         viewModelScope.launch {

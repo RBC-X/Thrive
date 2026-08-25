@@ -137,6 +137,8 @@ fun SettingsScreen(
     var locMessage by remember { mutableStateOf<String?>(null) }
     var locWorking by remember { mutableStateOf(false) }
     var locDenied by remember { mutableStateOf(false) }
+    var appliances by remember { mutableStateOf(settings.getAppliances()) }
+    val applianceOptions = listOf("Air fryer", "Slow cooker", "Oven", "Stovetop", "Microwave")
     var publicServer by remember { mutableStateOf<String?>(null) }
     var discoveringServer by remember { mutableStateOf(false) }
     var serverMsg by remember { mutableStateOf<String?>(null) }
@@ -324,6 +326,9 @@ fun SettingsScreen(
             }
         }
 
+        // ── Account ──────────────────────────────────────────────────────────
+        item { SettingsSectionHeader("Account") }
+
         item {
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Text("AI assistant", style = MaterialTheme.typography.titleMedium)
@@ -400,6 +405,50 @@ fun SettingsScreen(
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = { llm.startDownload() }) {
                             Text("Download 546 MB model")
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Appliances ──────────────────────────────────────────────────────
+        item { SettingsSectionHeader("Appliances") }
+
+        item {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Which appliances do you have? The weekly planner uses these to " +
+                        "pick recipes your kitchen can actually make. You can change this any time.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                )
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(applianceOptions.size) { i ->
+                        val name = applianceOptions[i]
+                        val selected = name.lowercase() in appliances
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .clickable {
+                                    appliances = if (selected) appliances - name.lowercase()
+                                    else appliances + name.lowercase()
+                                    settings.setAppliances(appliances)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                            )
                         }
                     }
                 }
@@ -936,6 +985,9 @@ fun SettingsScreen(
             }
         }
 
+        // ── Budget ──────────────────────────────────────────────────────────
+        item { SettingsSectionHeader("Budget") }
+
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -982,6 +1034,9 @@ fun SettingsScreen(
                 }
             }
         }
+
+        // ── Updates ─────────────────────────────────────────────────────────
+        item { SettingsSectionHeader("Updates") }
 
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
@@ -1122,6 +1177,9 @@ fun SettingsScreen(
             }
         }
 
+        // ── About ───────────────────────────────────────────────────────────
+        item { SettingsSectionHeader("About Thrive") }
+
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1154,6 +1212,37 @@ fun SettingsScreen(
                 showBudgetEdit = false
                 Toast.makeText(context, "Budget updated — your list and plan adjust", Toast.LENGTH_SHORT).show()
             },
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Section headers used to group settings by category
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    val accents = LocalThriveColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(accents.deal),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = ThriveFont,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            ),
         )
     }
 }

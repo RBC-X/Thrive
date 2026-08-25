@@ -45,6 +45,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -99,6 +100,28 @@ fun SavingsScreen(
     val newThisWeek = remember(state.coupons) { state.newThisWeek }
     val dailyPick = remember(state.coupons) { state.dailyPick }
 
+    // Deal read-tracking: mark every deal on screen as "seen" the first
+    // time the list renders, so "New this week" and per-card NewPills
+    // disappear after the user has scrolled past them.
+    val context = LocalContext.current
+    val appSettings = remember(context) {
+        (context.applicationContext as com.thrive.app.ThriveApp).settings
+    }
+    val seenIds = rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.coupons) {
+        if (!seenIds.value && state.coupons.isNotEmpty()) {
+            vm.markSeen(state.coupons.map { it.id })
+            seenIds.value = true
+        }
+    }
+    val seenSet = remember(state.coupons, appSettings) {
+        com.thrive.app.data.local.DealReadStore.seen(appSettings)
+    }
+    // Only show "New this week" for deals the user hasn't seen yet.
+    val unseenNewThisWeek = remember(state.coupons, seenSet) {
+        newThisWeek.filter { it.id !in seenSet }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp),
@@ -126,11 +149,11 @@ fun SavingsScreen(
         } else {
             item { StoresIntro(state) }
         }
-        if (state.mode == "Deals" && state.query.isBlank() && newThisWeek.isNotEmpty()) {
+        if (state.mode == "Deals" && state.query.isBlank() && unseenNewThisWeek.isNotEmpty()) {
             item { SectionHeader("New this week", "Fresh offers, while they last") }
             item {
                 NewThisWeekShelf(
-                    deals = newThisWeek,
+                    deals = unseenNewThisWeek,
                     onOpen = { onOpenCoupon(it.id) },
                 )
             }
@@ -163,6 +186,7 @@ fun SavingsScreen(
                     isFavorite = coupon.id in state.favorites,
                     onClick = { onOpenCoupon(coupon.id) },
                     onFavorite = { vm.toggleFavorite(coupon.id) },
+                    seenSet = seenSet,
                 )
             }
         } else {
@@ -175,6 +199,7 @@ fun SavingsScreen(
                 },
                 onOpenCoupon = onOpenCoupon,
                 onFavorite = { vm.toggleFavorite(it) },
+                seenSet = seenSet,
             )
         }
     }
@@ -351,6 +376,7 @@ private fun LazyListScope.StoresList(
     onToggleStore: (String) -> Unit,
     onOpenCoupon: (String) -> Unit,
     onFavorite: (String) -> Unit,
+    seenSet: Set<String> = emptySet(),
 ) {
     item {
         Text(
@@ -387,6 +413,7 @@ private fun LazyListScope.StoresList(
                     isFavorite = coupon.id in favorites,
                     onClick = { onOpenCoupon(coupon.id) },
                     onFavorite = { onFavorite(coupon.id) },
+                    seenSet = seenSet,
                 )
             }
         }
@@ -556,10 +583,7 @@ private fun SavingsHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
-            if (!state.sync.hasLiveFeed) {
-                Spacer(Modifier.height(6.dp))
-                BundledFeedNotice(state.sync)
-            }
+
             // Honest availability: every deal shown carries a VERIFIED direct
             // product link. Offers that only have a store search page (no exact
             // product page) are hidden, and the user is told exactly that — the
@@ -654,40 +678,7 @@ private fun SyncChip(sync: com.thrive.app.data.remote.SyncState) {
     }
 }
 
-@Composable
-private fun BundledFeedNotice(sync: com.thrive.app.data.remote.SyncState) {
-    val text = when (sync.status) {
-        com.thrive.app.data.remote.SyncStatus.ERROR ->
-            "Can't reach the live server — showing bundled deals with estimated prices. " +
-                "Pull to refresh or check Settings."
-        com.thrive.app.data.remote.SyncStatus.OK ->
-            "Server reached, but it sent no fresh deals — showing bundled estimates. " +
-                "Pull to refresh."
-        else ->
-            "Offline — showing bundled deals with estimated prices. Deals refresh when a server is configured."
-    }
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Info,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        )
-    }
-}
+
 
 @Composable
 private fun DailyPickHero(coupon: Coupon, onClick: () -> Unit) {
@@ -921,6 +912,7 @@ fun DealCard(
     onClick: () -> Unit,
     onFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    seenSet: Set<String> = emptySet(),
 ) {
     Row(
         modifier = modifier
@@ -969,7 +961,7 @@ fun DealCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
                 )
-                if (coupon.isNew) {
+                if (coupon.isNew && coupon.id !in seenSet) {
                     Spacer(Modifier.width(6.dp))
                     NewPill()
                 }
