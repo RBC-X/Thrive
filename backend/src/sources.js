@@ -220,7 +220,8 @@ class KrogerLiveSource {
             const size = (item0 && item0.size) || null;
             // productPageURI is the canonical page path (may carry a cid tracking
             // query) — prefer it over guessing /p/{id}.
-            const pagePath = String(it.productPageURI || "/p/" + it.productId).split("?")[0];
+            const hasProductPage = typeof it.productPageURI === "string" && it.productPageURI.trim().length > 0;
+            const pagePath = hasProductPage ? String(it.productPageURI).split("?")[0] : null;
             out.push({
               id: `kroger-${it.productId}`,
               store: "Kroger",
@@ -232,8 +233,8 @@ class KrogerLiveSource {
               savingsPercent: promo && regular ? Math.round((1 - promo / regular) * 100) : 0,
               keywords: term.toLowerCase().split(/\s+/),
               endsInDays: 7,
-              url: `https://www.kroger.com${pagePath}`,
-              urlVerified: true, // productPageURI from the API resolves to this exact product
+              url: pagePath ? `https://www.kroger.com${pagePath}` : null,
+              urlVerified: hasProductPage, // only Kroger's authoritative URI is an exact product destination
               size: size,
               brand: it.brand || null,
               imageUrl: (it.images && it.images[0] && it.images[0].sizes && it.images[0].sizes[0] && it.images[0].sizes[0].url) || null,

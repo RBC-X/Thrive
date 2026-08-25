@@ -11,6 +11,12 @@ const path = require("path");
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "thrive-test-"));
 process.env.THRIVE_BACKUP_DIR = path.join(tmpDir, "backups");
 process.env.THRIVE_ADMIN_TOKEN = "test-admin-token";
+process.env.THRIVE_TEST_BUNDLED_ONLY = "1";
+// Keep this route-suite deterministic even when a developer's .env contains
+// retailer credentials; the dedicated Kroger/Target suites cover live sources.
+delete process.env.KROGER_CLIENT_ID;
+delete process.env.KROGER_CLIENT_SECRET;
+delete process.env.TARGET_API_KEY;
 
 const app = require("../server");
 let server;

@@ -111,7 +111,10 @@ function rotateCoupons(day) {
   });
 }
 
-const sources = [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource(), new TargetLiveSource()].filter((s) => s.enabled !== false);
+const sources = process.env.THRIVE_TEST_BUNDLED_ONLY === "1"
+  ? [new DailyRotationSource()]
+  : [new DailyRotationSource(), new PartnerApiSource(), new KrogerLiveSource(), new TargetLiveSource()]
+      .filter((s) => s.enabled !== false);
 
 /**
  * Converts a live Deal (e.g. a Kroger product with a verified product-page

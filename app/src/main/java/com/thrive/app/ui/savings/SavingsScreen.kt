@@ -103,22 +103,17 @@ fun SavingsScreen(
     // Deal read-tracking: mark every deal on screen as "seen" the first
     // time the list renders, so "New this week" and per-card NewPills
     // disappear after the user has scrolled past them.
-    val context = LocalContext.current
-    val appSettings = remember(context) {
-        (context.applicationContext as com.thrive.app.ThriveApp).settings
-    }
-    val seenIds = rememberSaveable { mutableStateOf(false) }
+    val hasMarkedCurrentFeed = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.coupons) {
-        if (!seenIds.value && state.coupons.isNotEmpty()) {
-            vm.markSeen(state.coupons.map { it.id })
-            seenIds.value = true
+        if (!hasMarkedCurrentFeed.value && state.coupons.isNotEmpty()) {
+            kotlinx.coroutines.delay(1_500)
+            vm.markSeen(state.coupons.take(20).map { it.id })
+            hasMarkedCurrentFeed.value = true
         }
     }
-    val seenSet = remember(state.coupons, appSettings) {
-        com.thrive.app.data.local.DealReadStore.seen(appSettings)
-    }
+    val seenSet = state.seenDealIds
     // Only show "New this week" for deals the user hasn't seen yet.
-    val unseenNewThisWeek = remember(state.coupons, seenSet) {
+    val unseenNewThisWeek = remember(newThisWeek, seenSet) {
         newThisWeek.filter { it.id !in seenSet }
     }
 

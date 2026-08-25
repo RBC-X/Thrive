@@ -46,6 +46,7 @@ data class SavingsUiState(
     // in memory (never persisted) so account backups can authenticate. The
     // signed-in profile itself is persisted via GoogleAccountStore.
     val googleIdToken: String? = null,
+    val seenDealIds: Set<String> = emptySet(),
 ) {
     /**
      * Prefer current, retailer-verified deals whenever the server supplies
@@ -211,7 +212,11 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
     val restored: SharedFlow<BackupSnapshot> = _restored.asSharedFlow()
 
     private val _state = MutableStateFlow(
-        SavingsUiState(coupons = repo.coupons, backupCode = backup.activeCode())
+        SavingsUiState(
+            coupons = repo.coupons,
+            backupCode = backup.activeCode(),
+            seenDealIds = com.thrive.app.data.local.DealReadStore.seen(app.settings),
+        )
     )
     val state: StateFlow<SavingsUiState> = _state.asStateFlow()
 
@@ -263,9 +268,10 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
 
     fun setMode(mode: String) = _state.update { it.copy(mode = mode) }
 
-    /** Mark the given deal IDs as "seen" — the New pill and New shelf filter them out. */
+    /** Mark the given deal IDs as "seen" and publish the new set immediately. */
     fun markSeen(ids: Collection<String>) {
         com.thrive.app.data.local.DealReadStore.markSeen(app.settings, ids)
+        _state.update { it.copy(seenDealIds = com.thrive.app.data.local.DealReadStore.seen(app.settings)) }
     }
 
     fun toggleFavorite(id: String) {
