@@ -232,10 +232,15 @@ test("rapid concurrent PUTs never corrupt the file", async () => {
   const conflicts = results.filter((r) => r.status === 409).length;
   assert.ok(oks >= 1, `at least one writer succeeded (${oks})`);
   assert.ok(conflicts >= 1, `at least one writer conflicted (${conflicts})`);
-  // File is always valid JSON with a revision and a favorites array.
+  // Files are encrypted envelopes, never plaintext personal data. The route
+  // already proved the decrypted payload remained readable above.
   const raw = JSON.parse(fs.readFileSync(path.join(process.env.THRIVE_BACKUP_DIR, `${code}.json`), "utf-8"));
-  assert.ok(Array.isArray(raw.favorites));
-  assert.ok(typeof raw.revision === "string" && raw.revision.length > 0);
+  assert.equal(raw.alg, "aes-256-gcm");
+  assert.equal(raw.v, 1);
+  assert.equal(typeof raw.iv, "string");
+  assert.equal(typeof raw.tag, "string");
+  assert.equal(typeof raw.data, "string");
+  assert.equal(raw.favorites, undefined);
 });
 
 test("backup validates codes and bodies", async () => {

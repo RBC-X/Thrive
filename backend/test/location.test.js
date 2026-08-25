@@ -10,6 +10,7 @@ const path = require("path");
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "thrive-loc-test-"));
 process.env.THRIVE_BACKUP_DIR = path.join(tmpDir, "backups");
 process.env.THRIVE_ADMIN_TOKEN = "loc-test-token";
+process.env.THRIVE_TEST_BUNDLED_ONLY = "1";
 
 // Disable live sources for deterministic tests: no Kroger credentials in CI.
 process.env.KROGER_CLIENT_ID = "";
@@ -107,12 +108,15 @@ test("full-precision GPS fixes are accepted (10-14 decimals)", async () => {
   assert.ok(json.deals.some((d) => d.storeDistanceMi != null), "still ranked");
 });
 
-test("sync payload carries location echo + nearby stores", async () => {
+test("sync payload carries coarse nearby stores without exact user coordinates", async () => {
   const { status, json } = await req("GET", `/api/v1/sync?${CIN}`);
   assert.equal(status, 200);
-  assert.ok(json.location, "payload echoes location");
-  assert.ok(Math.abs(json.location.lat - 39.1) < 0.001 && Math.abs(json.location.lng - -84.51) < 0.001);
+  assert.ok(json.location, "payload carries nearby-store results");
+  assert.equal(json.location.lat, undefined, "exact latitude is never returned");
+  assert.equal(json.location.lng, undefined, "exact longitude is never returned");
   assert.ok(json.location.nearbyStores.length > 0, "nearbyStores listed");
+  assert.equal(json.location.nearbyStores[0].lat, undefined, "branch latitude is not public");
+  assert.equal(json.location.nearbyStores[0].lng, undefined, "branch longitude is not public");
   assert.equal(json.location.nearbyStores[0].store, "Kroger");
   assert.ok(json.location.nearbyStores[0].distMi <= 5, "nearest store is genuinely near");
   // Deals inside the sync payload are distance-ranked too.

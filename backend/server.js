@@ -306,7 +306,7 @@ function nearbyStores(lat, lng) {
   const rows = [];
   for (const chain of Object.keys(STORES)) {
     const b = nearestBranch(chain, lat, lng);
-    if (b) rows.push({ store: chain, city: b.city, distMi: Math.round(b.distMi * 10) / 10, lat: b.lat, lng: b.lng });
+    if (b) rows.push({ store: chain, city: b.city, distMi: Math.round(b.distMi * 10) / 10 });
   }
   return rows.sort((a, b) => a.distMi - b.distMi).slice(0, 6);
 }
@@ -399,8 +399,11 @@ async function syncPayload(lat, lng) {
     return payloadCache;
   }
   const deals = await getDeals(lat, lng);
+  // Never echo exact user coordinates. The server uses them transiently to
+  // rank deals, but public responses contain only coarse store/city/distance
+  // results. This prevents location leakage through logs, caches, or clients.
   const location = withLoc
-    ? { lat, lng, nearbyStores: nearbyStores(lat, lng) }
+    ? { nearbyStores: nearbyStores(lat, lng) }
     : null;
   const body = {
     version: VERSION,
@@ -623,6 +626,30 @@ app.get("/api/v1/sync", asyncRoute(async (req0, res) => {
 
 const BACKUP_DIR = process.env.THRIVE_BACKUP_DIR || path.join(__dirname, "data", "backups");
 const BACKUP_CODE_RE = /^[a-z0-9]{6,12}$/;
+const BACKUP_ENCRYPTION_KEY = (() => {
+  const raw = process.env.THRIVE_BACKUP_ENCRYPTION_KEY;
+  if (raw && /^[0-9a-f]{64}$/i.test(raw)) return Buffer.from(raw, "hex");
+  if (process.env.NODE_ENV === "test" || process.env.THRIVE_TEST_BUNDLED_ONLY === "1" || process.env.THRIVE_GOOGLE_TEST_SUB) {
+    return crypto.createHash("sha256").update("thrive-test-backup-key").digest();
+  }
+  throw new Error("THRIVE_BACKUP_ENCRYPTION_KEY must be a 64-character hex key in production");
+})();
+
+function encryptBackup(payload) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", BACKUP_ENCRYPTION_KEY, iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
+  return JSON.stringify({ v: 1, alg: "aes-256-gcm", iv: iv.toString("base64url"), tag: cipher.getAuthTag().toString("base64url"), data: ciphertext.toString("base64url") });
+}
+
+function decryptBackup(raw) {
+  const envelope = JSON.parse(raw);
+  if (!envelope || envelope.v !== 1 || envelope.alg !== "aes-256-gcm") throw new Error("unsupported backup envelope");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", BACKUP_ENCRYPTION_KEY, Buffer.from(envelope.iv, "base64url"));
+  decipher.setAuthTag(Buffer.from(envelope.tag, "base64url"));
+  const plaintext = Buffer.concat([decipher.update(Buffer.from(envelope.data, "base64url")), decipher.final()]);
+  return JSON.parse(plaintext.toString("utf8"));
+}
 const BACKUP_MAX_ITEMS = 500;
 
 function backupFile(code) {
@@ -634,7 +661,7 @@ const EMPTY_BACKUP = { favorites: [], pantry: [], budget: null, updatedAt: null,
 /** Reads a backup file. Never throws: corrupt/absent files read as an empty backup. */
 async function readBackupFile(code) {
   try {
-    const saved = JSON.parse(await fsp.readFile(backupFile(code), "utf-8"));
+    const saved = decryptBackup(await fsp.readFile(backupFile(code), "utf-8"));
     return {
       payload: saved,
       revision: typeof saved.revision === "string" && saved.revision.length > 0 ? saved.revision : null,
@@ -648,7 +675,7 @@ async function readBackupFile(code) {
 async function writeBackupAtomic(code, payload) {
   await fsp.mkdir(BACKUP_DIR, { recursive: true });
   const tmp = path.join(BACKUP_DIR, `${code}.${process.pid}.${crypto.randomBytes(4).toString("hex")}.tmp`);
-  await fsp.writeFile(tmp, JSON.stringify(payload, null, 2));
+  await fsp.writeFile(tmp, encryptBackup(payload), { mode: 0o600 });
   await fsp.rename(tmp, backupFile(code));
 }
 
