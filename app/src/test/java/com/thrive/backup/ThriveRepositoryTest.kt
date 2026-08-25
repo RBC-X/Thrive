@@ -53,6 +53,7 @@ class ThriveRepositoryTest {
         priceAfter = 3.0,
         endsInDays = 5,
         urlVerified = true,
+        estimated = false,
     )
 
     private fun payload(vararg ids: String) = SyncPayload(coupons = ids.map(::coupon))

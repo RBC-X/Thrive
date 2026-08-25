@@ -148,7 +148,7 @@ class SavingsSearchTest {
     @Test
     fun `only offers with a verified product link are available`() {
         val verified = coupon("v1", title = "Verified Milk", urlVerified = true)
-        val unverified = coupon("u1", title = "No Link Milk", urlVerified = false)
+        val unverified = coupon("u1", title = "No Link Milk", urlVerified = false).copy(estimated = false)
         val s = state(listOf(verified, unverified))
         assertEquals(listOf("v1"), s.filtered.map { it.id })
         assertEquals(listOf("v1"), s.storeSections.flatMap { it.coupons }.map { it.id })
@@ -158,7 +158,7 @@ class SavingsSearchTest {
     @Test
     fun `available-only filtering applies to search and shelves`() {
         val verified = coupon("v1", title = "Milk", urlVerified = true)
-        val unverified = coupon("u1", title = "Milk", urlVerified = false)
+        val unverified = coupon("u1", title = "Milk", urlVerified = false).copy(estimated = false)
         val s = state(listOf(verified, unverified))
         assertEquals(listOf("v1"), s.copy(query = "milk").filtered.map { it.id })
         assertTrue(s.newThisWeek.none { it.id == "u1" })

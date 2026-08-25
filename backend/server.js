@@ -153,30 +153,23 @@ function dealToCoupon(d) {
 }
 
 /**
- * The Savings feed: live deals with verified product links first (they are
- * real, current, and open the exact product page), then the bundled catalog.
- * The app itself shows only urlVerified offers as available — this ordering
- * simply makes the live catalog the first thing a synced phone sees.
+ * The Savings feed prefers live deals with verified product links. When no
+ * retailer API has a current promotion, it returns the bundled planning
+ * estimates instead of an empty screen. Those estimates keep urlVerified=false
+ * and estimated=true, so clients can never mistake a retailer search link for
+ * a verified product page or a planning price for a live offer.
  */
 function couponsFor(deals) {
-  // The Savings feed serves ONLY offers with a VERIFIED direct product link —
-  // a URL that lands on the exact product page. Bundled offers that only have
-  // a store search page are not served (the app would have to hide them
-  // anyway; keeping them out of the payload keeps it lean and honest). The
-  // bundled catalog is daily-rotated so the same verified products feel fresh;
-  // live verified retailer deals are prepended, never a replacement.
-  const bundled = rotateCoupons(daySeed()).filter((c) => c && c.url && c.urlVerified);
+  const bundledEstimates = rotateCoupons(daySeed()).filter(
+    (c) => c && c.url && c.urlVerified !== true && c.estimated === true,
+  );
   const live = Array.isArray(deals)
     ? deals
         .filter((d) => d && d.urlVerified)
         .map(dealToCoupon)
         .filter((c) => c !== null) // keep only real promos (dealToCoupon drops non-sale items)
     : [];
-  if (!live.length) return bundled;
-  // Live ids override their bundled twins (a fresher price beats the snapshot);
-  // everything else keeps the bundled entry, so no verified offer is dropped.
-  const liveIds = new Set(live.map((c) => c.id).filter(Boolean));
-  return [...live, ...bundled.filter((c) => !liveIds.has(c.id))];
+  return live.length ? live : bundledEstimates;
 }
 
 const VERSION = 4;
