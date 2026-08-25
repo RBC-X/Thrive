@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -187,20 +189,27 @@ private fun BudgetOnboarding(vm: BudgetViewModel) {
                 Spacer(Modifier.height(10.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickAmounts) { amount ->
+                        val selected = budgetText.toDoubleOrNull() == amount
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    if (budgetText.toDoubleOrNull() == amount) MaterialTheme.colorScheme.primary
+                                    if (selected) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.surfaceVariant
                                 )
-                                .clickable { budgetText = if (amount % 1.0 == 0.0) amount.toInt().toString() else amount.toString() }
+                                .heightIn(min = 48.dp)
+                                .selectable(
+                                    selected = selected,
+                                    role = Role.RadioButton,
+                                    onClick = { budgetText = if (amount % 1.0 == 0.0) amount.toInt().toString() else amount.toString() },
+                                )
                                 .padding(horizontal = 16.dp, vertical = 9.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = Money.fmtCompact(amount),
                                 style = MaterialTheme.typography.labelLarge.copy(
-                                    color = if (budgetText.toDoubleOrNull() == amount) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.SemiBold,
                                 ),
                             )

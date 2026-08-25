@@ -5,6 +5,7 @@ import com.thrive.app.data.remote.NearbyStore
 import com.thrive.app.data.remote.SyncState
 import com.thrive.app.ui.savings.SavingsUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -163,5 +164,17 @@ class SavingsSearchTest {
         assertTrue(s.newThisWeek.none { it.id == "u1" })
         s.dailyPick?.let { assertTrue(it.urlVerified) }
         assertEquals(null, s.copy(coupons = listOf(unverified)).dailyPick)
+    }
+
+    @Test
+    fun `offline estimated offers remain usable without pretending to be verified`() {
+        val estimate = coupon("e1", title = "Estimated Milk", urlVerified = false).copy(
+            url = "https://walmart.com/search?q=milk",
+            estimated = true,
+        )
+        val s = state(listOf(estimate))
+        assertEquals(listOf("e1"), s.available.map { it.id })
+        assertTrue(s.showingEstimates)
+        assertFalse(s.available.first().urlVerified)
     }
 }

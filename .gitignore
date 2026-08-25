@@ -5,8 +5,8 @@ app/build/
 local.properties
 *.keystore
 *.jks
-# Local release keystore credentials (THRIVE_KEYSTORE_*) — never publish
-gradle.properties
+# Release credentials belong in user-level ~/.gradle/gradle.properties or
+# environment variables — never in the tracked project gradle.properties.
 
 # Built artifacts
 *.apk
@@ -25,6 +25,8 @@ progress.html
 
 # Node (backend)
 backend/node_modules/
+__pycache__/
+*.pyc
 
 # IDE
 .idea/

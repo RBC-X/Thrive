@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Google Sign-In backup: the user signs in with their Google account and the
@@ -35,6 +36,7 @@ object GoogleAccountStore {
     private const val KEY_EMAIL = "google_email"
     private const val KEY_PICTURE = "google_picture"
     private const val KEY_ACCOUNT_KEY = "google_account_key"
+    private const val KEY_REVISION_PREFIX = "google_backup_revision_"
 
     fun save(settings: SettingsStore, info: GoogleAccountInfo) {
         settings.putString(KEY_SUB, info.sub)
@@ -56,11 +58,23 @@ object GoogleAccountStore {
     }
 
     fun clear(settings: SettingsStore) {
+        val accountKey = settings.getString(KEY_ACCOUNT_KEY, "").orEmpty()
+        if (accountKey.isNotBlank()) settings.remove(KEY_REVISION_PREFIX + accountKey)
         settings.remove(KEY_SUB)
         settings.remove(KEY_NAME)
         settings.remove(KEY_EMAIL)
         settings.remove(KEY_PICTURE)
         settings.remove(KEY_ACCOUNT_KEY)
+    }
+
+    fun revision(settings: SettingsStore, accountKey: String): String? =
+        accountKey.takeIf { it.isNotBlank() }
+            ?.let { settings.getString(KEY_REVISION_PREFIX + it, null) }
+
+    fun saveRevision(settings: SettingsStore, accountKey: String, revision: String?) {
+        if (accountKey.isBlank()) return
+        val key = KEY_REVISION_PREFIX + accountKey
+        if (revision.isNullOrBlank()) settings.remove(key) else settings.putString(key, revision)
     }
 }
 
@@ -73,7 +87,11 @@ sealed class GoogleAuthResult {
     data class Failed(val reason: String) : GoogleAuthResult()
 }
 
-class GoogleBackup(private val settings: SettingsStore, private val baseUrlProvider: () -> String) {
+class GoogleBackup(
+    private val settings: SettingsStore,
+    private val baseUrlProvider: () -> String,
+    private val client: JsonHttpClient = ApiClient,
+) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
 
@@ -87,6 +105,19 @@ class GoogleBackup(private val settings: SettingsStore, private val baseUrlProvi
 
     private fun base(): String = baseUrlProvider().trimEnd('/')
 
+    private fun parseRevision(body: String): String? = runCatching {
+        val root = Json.parseToJsonElement(body).jsonObject
+        (root["revision"] as? kotlinx.serialization.json.JsonPrimitive)
+            ?.takeIf { it.isString }
+            ?.content
+            ?.takeIf { it.isNotBlank() }
+    }.getOrNull()
+
+    private fun revision(): String? = GoogleAccountStore.revision(settings, account().accountKey)
+
+    private fun saveRevision(value: String?) =
+        GoogleAccountStore.saveRevision(settings, account().accountKey, value)
+
     /**
      * Exchanges a Google ID token for the account identity the backend accepts
      * (profile + the stable accountKey). Called right after Google Sign-In so
@@ -96,7 +127,7 @@ class GoogleBackup(private val settings: SettingsStore, private val baseUrlProvi
         if (token.isBlank()) return@withContext GoogleAuthResult.Failed("Google sign-in returned no ID token.")
         val body = json.encodeToString(ExchangeRequest.serializer(), ExchangeRequest(token))
         val result = runCatching {
-            ApiClient.putJson("${base()}/api/v1/auth/google", body, ifMatch = null)
+            client.postJson("${base()}/api/v1/auth/google", body)
         }.getOrElse { return@withContext GoogleAuthResult.Failed("Couldn't reach the backup server — check your connection.") }
         when {
             result.code in 200..299 -> runCatching {
@@ -113,11 +144,14 @@ class GoogleBackup(private val settings: SettingsStore, private val baseUrlProvi
     suspend fun pull(token: String): PullResult = withContext(Dispatchers.IO) {
         if (!isSignedIn()) return@withContext PullResult.Unauthorized
         runCatching {
-            val result = ApiClient.get("${base()}/api/v1/account/backup", token = token)
+            val result = client.get("${base()}/api/v1/account/backup", token = token)
             when (result.code) {
                 in 200..299 -> runCatching {
                     val snapshot = json.decodeFromString(BackupSnapshot.serializer(), result.body)
-                    PullResult.Found(snapshot, result.etag?.trim('"') ?: "")
+                    val foundRevision = parseRevision(result.body) ?: result.etag?.trim('"')
+                    saveRevision(foundRevision)
+                    if (foundRevision == null) PullResult.Empty(null)
+                    else PullResult.Found(snapshot, foundRevision)
                 }.getOrElse { PullResult.ParseFailure }
                 401, 403 -> PullResult.Unauthorized
                 404 -> PullResult.Empty(null)
@@ -126,20 +160,62 @@ class GoogleBackup(private val settings: SettingsStore, private val baseUrlProvi
         }.getOrElse { PullResult.NetworkFailure }
     }
 
-    /** Pushes a full snapshot under the signed-in account (server merges per-section). */
+    /** Pushes a full snapshot with persisted optimistic-concurrency revisions. */
     suspend fun push(token: String, payload: BackupSnapshot): PushResult = withContext(Dispatchers.IO) {
         if (!isSignedIn()) return@withContext PushResult.Unauthorized
-        val body = json.encodeToString(BackupSnapshot.serializer(), payload)
-        val result = runCatching {
-            ApiClient.putJson("${base()}/api/v1/account/backup", body, ifMatch = "*", token = token)
-        }.getOrElse { return@withContext PushResult.NetworkFailure }
-        when {
-            result.code in 200..299 -> PushResult.Ok(result.etag?.trim('"') ?: "")
-            result.code == 401 || result.code == 403 -> PushResult.Unauthorized
-            result.code == 409 -> PushResult.Conflict(result.body.take(120))
-            else -> PushResult.HttpError(result.code, result.body.take(200))
+        var mergedPayload = payload
+        var attempt = 0
+        while (attempt < 3) {
+            val knownRevision = revision()
+            val body = json.encodeToString(BackupSnapshot.serializer(), mergedPayload)
+            val result = runCatching {
+                client.putJson(
+                    "${base()}/api/v1/account/backup",
+                    body,
+                    ifMatch = knownRevision ?: "*",
+                    token = token,
+                )
+            }.getOrElse { return@withContext PushResult.NetworkFailure }
+            when {
+                result.code in 200..299 -> {
+                    val newRevision = parseRevision(result.body)
+                        ?: result.etag?.trim('"')
+                        ?: knownRevision
+                        ?: ""
+                    saveRevision(newRevision)
+                    return@withContext PushResult.Ok(newRevision)
+                }
+                result.code == 401 || result.code == 403 -> return@withContext PushResult.Unauthorized
+                result.code == 409 -> {
+                    when (val remote = pull(token)) {
+                        is PullResult.Found -> {
+                            mergedPayload = merge(remote.snapshot, mergedPayload)
+                            attempt++
+                        }
+                        is PullResult.Empty -> {
+                            saveRevision(null)
+                            attempt++
+                        }
+                        is PullResult.Unauthorized -> return@withContext PushResult.Unauthorized
+                        is PullResult.NetworkFailure -> return@withContext PushResult.NetworkFailure
+                        else -> return@withContext PushResult.HttpError(409, "conflict and re-pull failed")
+                    }
+                }
+                else -> return@withContext PushResult.HttpError(result.code, result.body.take(200))
+            }
         }
+        PushResult.Conflict(revision().orEmpty())
     }
+
+    private fun merge(remote: BackupSnapshot, local: BackupSnapshot): BackupSnapshot = BackupSnapshot(
+        favorites = BackupMerge.favorites(remote.favorites, local.favorites),
+        pantry = BackupMerge.pantry(local.pantry, remote.pantry),
+        budget = when {
+            local.budget == null -> remote.budget
+            remote.budget == null -> local.budget
+            else -> BackupMerge.budget(local.budget, remote.budget)
+        },
+    )
 }
 
 @Serializable

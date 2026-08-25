@@ -48,19 +48,23 @@ data class SavingsUiState(
     val googleIdToken: String? = null,
 ) {
     /**
-     * Offers that are genuinely on sale (a real "was" price above the current
-     * price) AND carry a VERIFIED direct link to the exact product page. A
-     * store search URL is NOT a product link — a coupon that only has a search
-     * destination is hidden rather than shown with a fake "go to product"
-     * button. This is the "direct link or don't show it" rule: diversity of
-     * stores and products comes from the items that really resolve, and
-     * everything else is honestly hidden (counted in [hiddenUnverified]).
+     * Prefer current, retailer-verified deals whenever the server supplies
+     * them. Offline, show the bundled planning estimates instead of an empty
+     * screen; those cards are visibly marked "est." and open an honest retailer
+     * search, never a third-party product page presented as the store's offer.
      */
-    val available: List<Coupon> get() = coupons.filter {
-        it.urlVerified && !it.url.isNullOrBlank() && (it.priceBefore > it.priceAfter)
-    }
+    val available: List<Coupon>
+        get() {
+            val verified = coupons.filter {
+                it.urlVerified && !it.estimated && !it.url.isNullOrBlank() && it.priceBefore > it.priceAfter
+            }
+            if (verified.isNotEmpty()) return verified
+            return coupons.filter { it.estimated && !it.url.isNullOrBlank() && it.priceBefore > it.priceAfter }
+        }
 
-    /** How many feed offers are hidden (no verified direct product link). */
+    val showingEstimates: Boolean get() = available.isNotEmpty() && available.all { it.estimated }
+
+    /** How many feed rows are excluded from the active honest display tier. */
     val hiddenUnverified: Int get() = coupons.size - available.size
 
     val categories: List<String>
@@ -350,17 +354,25 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
 
     // ---- Google Sign-In backup ----
 
-    private val googleBackup = com.thrive.app.data.remote.GoogleBackup(app.settings) { repo.syncBaseUrl }
+    private val googleBackup = com.thrive.app.data.remote.GoogleBackup(
+        app.settings,
+        baseUrlProvider = { repo.syncBaseUrl },
+    )
 
     /** Signed-in Google account, or null. Exposed so Settings can show who's signed in. */
     fun googleAccount(): com.thrive.app.data.remote.GoogleAccountInfo = googleBackup.account()
 
-    /** True when the build is configured for Google Sign-In AND the user signed in. */
-    fun googleSignedIn(): Boolean = googleBackup.isSignedIn()
+    /** True only while a usable Google session token is available. */
+    fun googleSignedIn(): Boolean = googleBackup.isSignedIn() && !_state.value.googleIdToken.isNullOrBlank()
 
     fun googleSignOut() {
         googleBackup.signOut()
-        _state.update { it.copy(backupMsg = "Signed out of Google backup — your saved data stays on the server.") }
+        _state.update {
+            it.copy(
+                googleIdToken = null,
+                backupMsg = "Signed out of Google backup — your saved data stays on the server.",
+            )
+        }
     }
 
     /**
@@ -409,7 +421,21 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
                         )
                     }
                     _restored.tryEmit(merged)
-                    runCatching { googleBackup.push(idToken, merged) }
+                    when (val pushed = runCatching { googleBackup.push(idToken, merged) }
+                        .getOrDefault(PushResult.NetworkFailure)) {
+                        is PushResult.Ok -> _state.update {
+                            it.copy(backupMsg = "Signed in and backed up as ${exchanged.account.name.ifBlank { exchanged.account.email }}.")
+                        }
+                        is PushResult.Conflict -> _state.update {
+                            it.copy(backupMsg = "Signed in, but another device changed the backup. Tap Back up now to retry.")
+                        }
+                        is PushResult.Unauthorized -> _state.update {
+                            it.copy(googleIdToken = null, backupMsg = "Google session expired — sign in again.")
+                        }
+                        else -> _state.update {
+                            it.copy(backupMsg = "Signed in, but the backup server could not confirm the save.")
+                        }
+                    }
                 }
                 is com.thrive.app.data.remote.GoogleAuthResult.Failed -> {
                     _state.update { it.copy(backupMsg = exchanged.reason) }
@@ -421,7 +447,11 @@ class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : Vie
     /** Manual "Back up now" when signed in with Google — pushes every section. */
     fun googleBackupNow() {
         viewModelScope.launch {
-            val idToken = _state.value.googleIdToken ?: return@launch
+            val idToken = _state.value.googleIdToken
+            if (idToken.isNullOrBlank()) {
+                _state.update { it.copy(backupMsg = "Google session expired — sign in again.") }
+                return@launch
+            }
             _state.update { it.copy(backupMsg = "Backing up…") }
             val snapshot = BackupSnapshot(
                 favorites = repo.favoriteCouponIds(),

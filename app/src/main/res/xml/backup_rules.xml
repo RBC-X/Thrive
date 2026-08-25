@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- API keys and account metadata live in private preferences. Thrive has
+         its own explicit backup flow, so preferences must never leave-device
+         through Android Auto Backup. -->
+    <exclude domain="sharedpref" path="." />
+</full-backup-content>

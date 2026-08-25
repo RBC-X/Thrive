@@ -11,6 +11,10 @@
 #   bash tools/release.sh 1.3.0        # set an explicit version
 #   bash tools/release.sh 1.3.0 4      # explicit version + versionCode
 #   bash tools/release.sh --same       # rebuild current version as-is
+#
+# Keep THRIVE_KEYSTORE_* in ~/.gradle/gradle.properties or environment
+# variables. The project-local gradle.properties path is ignored, but the
+# user-level file is safer because it cannot be staged from this repository.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

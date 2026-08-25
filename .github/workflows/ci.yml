@@ -30,8 +30,12 @@ jobs:
 
       - name: Verify no signing secrets are present
         run: |
-          if [ -n "$THRIVE_KEYSTORE_PASSWORD" ] || [ -n "$THRIVE_KEYSTORE_ALIAS_PASSWORD" ]; then
+          if [ -n "$THRIVE_KEYSTORE_PASSWORD" ] || [ -n "$THRIVE_KEYSTORE_KEY_PASSWORD" ] || [ -n "$THRIVE_KEYSTORE_KEY_ALIAS" ]; then
             echo "CI must never see signing secrets" >&2
+            exit 1
+          fi
+          if grep -Eq '^THRIVE_KEYSTORE_(PASSWORD|KEY_PASSWORD|KEY_ALIAS)=' gradle.properties; then
+            echo "Signing credentials must never be stored in the tracked gradle.properties" >&2
             exit 1
           fi
           test -f app/build.gradle.kts
