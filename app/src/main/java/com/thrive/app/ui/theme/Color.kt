@@ -20,7 +20,7 @@ val Leaf = Color(0xFF4CAF50)
 val LeafSoft = Color(0xFFE3F5E4)
 
 // ---- Neutrals ----
-val Canvas = Color(0xFFF7F8F6)
+val Canvas = Color(0xFFFBF8F2)
 val Ink = Color(0xFF18211D)
 val InkSoft = Color(0xFF44534C)
 val OutlineSoft = Color(0xFFD6DDD8)

@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +52,7 @@ import com.thrive.app.ui.savings.CouponDetailScreen
 import com.thrive.app.ui.savings.SavingsScreen
 import com.thrive.app.ui.savings.SavingsViewModel
 import com.thrive.app.ui.settings.SettingsScreen
+import com.thrive.app.ui.onboarding.OnboardingScreen
 import com.thrive.app.ui.theme.LocalThriveColors
 import com.thrive.app.ui.theme.ThriveFont
 
@@ -67,10 +70,20 @@ fun ThriveRoot() {
     val app = LocalContext.current.applicationContext as com.thrive.app.ThriveApp
     val repo = remember { ThriveRepository(app, app.settings) }
     val nav = rememberNavController()
+    var onboardingComplete by remember { mutableStateOf(repo.isOnboardingComplete()) }
 
-    // Non-blocking initial sync: the bundled feed stays visible until the
-    // server responds, and nothing breaks if it can't be reached.
-    LaunchedEffect(repo) { repo.syncNow(force = false) }
+    // Non-blocking initial sync. Release builds discover the operator's current
+    // HTTPS endpoint automatically; users never need to see or type a server
+    // URL. The bundled feed remains available while discovery is offline.
+    LaunchedEffect(repo) {
+        if (onboardingComplete) com.thrive.app.update.OfflineAiWorker.schedule(app)
+        if (repo.syncBaseUrl.isBlank()) {
+            com.thrive.app.update.GithubUpdateChecker.discoverSyncServer()?.let { discovered ->
+                app.settings.putString(com.thrive.app.data.ThriveRepository.SYNC_URL_KEY, discovered)
+            }
+        }
+        repo.syncNow(force = false)
+    }
 
     // Always-up-to-date deals while the app stays open: re-sync every 30
     // minutes so a long session keeps showing the newest coupons and live
@@ -137,9 +150,31 @@ fun ThriveRoot() {
     ) { padding ->
         NavHost(
             navController = nav,
-            startDestination = "savings",
+            startDestination = if (onboardingComplete) "savings" else "onboarding",
             modifier = Modifier.padding(padding),
         ) {
+            composable("onboarding") {
+                OnboardingScreen(
+                    savingsVm = savingsVm,
+                    initialProfile = repo.loadHouseholdProfile(),
+                    onComplete = { profile ->
+                        repo.completeOnboarding(profile)
+                        onboardingComplete = true
+                        val weeklyBudget = if (profile.budgetCadence == com.thrive.app.data.model.BudgetCadence.WEEKLY) {
+                            profile.budgetAmount
+                        } else {
+                            profile.budgetAmount / 4.33
+                        }
+                        budgetVm.setBudget(weeklyBudget)
+                        budgetVm.setPeople(profile.householdSize)
+                        com.thrive.app.update.OfflineAiWorker.schedule(app)
+                        nav.navigate("savings") {
+                            popUpTo("onboarding") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
             composable("savings") { SavingsScreen(savingsVm, onOpenCoupon = { id -> nav.navigate("coupon/$id") }, onOpenSettings = { nav.navigate("settings") }) }
             composable("recipes") { RecipesScreen(recipesVm, onOpenRecipe = { id -> nav.navigate("recipe/$id") }) }
             composable("pantry") {

@@ -11,6 +11,9 @@ class SettingsStore(private val prefs: SharedPreferences) {
     fun putLong(key: String, value: Long) = prefs.edit { putLong(key, value) }
     fun getLong(key: String, def: Long) = prefs.getLong(key, def)
     fun putString(key: String, value: String) = prefs.edit { putString(key, value) }
+    /** Use for lifecycle-bound state that must reach disk before the process can stop. */
+    fun putStringImmediate(key: String, value: String): Boolean =
+        prefs.edit().putString(key, value).commit()
     fun getString(key: String, def: String? = null) = prefs.getString(key, def)
     fun putBoolean(key: String, value: Boolean) = prefs.edit { putBoolean(key, value) }
     fun getBoolean(key: String, def: Boolean) = prefs.getBoolean(key, def)

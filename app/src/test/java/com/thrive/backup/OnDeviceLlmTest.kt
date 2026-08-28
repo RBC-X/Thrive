@@ -88,6 +88,9 @@ class OnDeviceLlmTest {
     fun `model url is https and public host`() {
         assertTrue(OnDeviceLlm.MODEL_URL.startsWith("https://huggingface.co/"))
         assertTrue(OnDeviceLlm.MODEL_URL.contains(".task"))
+        assertTrue(OnDeviceLlm.MODEL_URL.contains("6c237a59eedeb06a821b21f0a59b03d346ac8bc3"))
+        assertTrue(OnDeviceLlm.EXPECTED_BYTES > OnDeviceLlm.MIN_VALID_BYTES)
+        assertTrue(OnDeviceLlm.EXPECTED_SHA256.matches(Regex("[0-9a-f]{64}")))
     }
 
     @Test

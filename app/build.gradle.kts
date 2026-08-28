@@ -30,8 +30,8 @@ android {
         applicationId = "com.thrive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
-        versionName = "1.6.3"
+        versionCode = 42
+        versionName = "1.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Google Sign-In web client ID (OAuth "Web application" client). Set it
         // in local.properties as GOOGLE_CLIENT_ID=... or as the environment
@@ -92,8 +92,10 @@ android {
             // the repository's cache/ETag behavior against a real Context.
             isIncludeAndroidResources = true
             all { test ->
-                test.maxHeapSize = "384m"
+                // Keep the test fork viable on the 8 GB Windows build host.
+                test.maxHeapSize = "256m"
                 test.maxParallelForks = 1
+                test.jvmArgs("-XX:+UseSerialGC", "-Xss256k", "-XX:MaxMetaspaceSize=256m")
             }
         }
     }

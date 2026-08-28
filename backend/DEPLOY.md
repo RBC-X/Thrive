@@ -4,8 +4,33 @@ The app talks to one small Node server (`backend/`) over HTTPS. Live Kroger
 prices and cross-device backup work only while that server is reachable. This
 guide makes it run **24/7 independent of your PC** — pick ONE option.
 
-> The app contains **no keys**. The Kroger secret and admin token live in the
-> server's environment. Never put them in the app or in a public repo.
+> The app contains **no secret keys**. Retailer secrets, the account encryption
+> key, and the admin token live in the server's environment. Never put them in
+> the APK or in a public repo.
+
+## Required account security settings
+
+Google accounts use short-lived Thrive access tokens plus rotating refresh
+tokens. Account profiles and synced state are encrypted with AES-256-GCM inside
+SQLite; only random session-token hashes and a one-way Google subject hash are
+stored outside the encrypted blobs.
+
+The account routes require Node 22.13+ and both settings below. The server can
+still serve public deal feeds when they are absent, but Google sign-in returns
+a configuration error instead of accepting an insecure fallback.
+
+```bash
+# Google OAuth Web client ID whose audience this backend accepts
+THRIVE_GOOGLE_CLIENT_ID=000000000000-example.apps.googleusercontent.com
+
+# Generate once, store in the server's secret manager/.env, and back it up.
+# Losing or changing this key makes the encrypted account database unreadable.
+THRIVE_DATA_ENCRYPTION_KEY=$(openssl rand -base64 32)
+```
+
+The database defaults to `data/thrive-accounts.sqlite` (beside the backup
+directory). Override it with `THRIVE_ACCOUNT_DB` when needed. Back up the
+database and encryption key separately. Never commit either one.
 
 ---
 
@@ -24,11 +49,11 @@ tiny and does a handful of API calls per minute).
 scp -r backend ubuntu@YOUR_SERVER_IP:~/
 ```
 
-**3. SSH in and install Node 20+:**
+**3. SSH in and install Node 22.13+:**
 
 ```bash
 ssh ubuntu@YOUR_SERVER_IP
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
@@ -41,6 +66,8 @@ KROGER_CLIENT_ID=your_client_id
 KROGER_CLIENT_SECRET=your_client_secret
 KROGER_ZIP=45202
 THRIVE_ADMIN_TOKEN=long-random-string      # optional, for the admin deals endpoint
+THRIVE_GOOGLE_CLIENT_ID=your_web_oauth_client_id
+THRIVE_DATA_ENCRYPTION_KEY=your_32_byte_base64_key
 PORT=4000
 EOF
 ```

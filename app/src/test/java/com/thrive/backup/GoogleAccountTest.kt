@@ -3,6 +3,7 @@ package com.thrive.backup
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.thrive.app.data.local.SettingsStore
+import com.thrive.app.data.local.SecureValueStore
 import com.thrive.app.data.remote.GoogleAccountInfo
 import com.thrive.app.data.remote.GoogleAuthResult
 import com.thrive.app.data.remote.GoogleBackup
@@ -34,9 +35,14 @@ class GoogleAccountTest {
         var postResult = HttpResult(500, "", null)
         var getResult = HttpResult(404, "", null)
         val putResults = ArrayDeque<HttpResult>()
+        val tokens = mutableListOf<String?>()
+        val postResults = ArrayDeque<HttpResult>()
+        var deleteResult = HttpResult(501, "", null)
+        val putBodies = mutableListOf<String>()
 
         override suspend fun get(url: String, ifNoneMatch: String?, token: String?): HttpResult {
             methods += "GET"
+            tokens += token
             return getResult
         }
 
@@ -47,14 +53,31 @@ class GoogleAccountTest {
             token: String?,
         ): HttpResult {
             methods += "PUT"
+            putBodies += jsonBody
             ifMatches += ifMatch
+            tokens += token
             return putResults.removeFirst()
         }
 
         override suspend fun postJson(url: String, jsonBody: String, token: String?): HttpResult {
             methods += "POST"
-            return postResult
+            tokens += token
+            return if (postResults.isNotEmpty()) postResults.removeFirst() else postResult
         }
+
+        override suspend fun delete(url: String, token: String?): HttpResult {
+            methods += "DELETE"
+            tokens += token
+            return deleteResult
+        }
+    }
+
+    private class MemorySecureStore : SecureValueStore {
+        private val values = mutableMapOf<String, String>()
+        override fun put(key: String, value: String) { values[key] = value }
+        override fun get(key: String): String? = values[key]
+        override fun remove(key: String) { values.remove(key) }
+        fun rawValues(): Collection<String> = values.values
     }
 
     private fun store(): SettingsStore {
@@ -130,17 +153,20 @@ class GoogleAccountTest {
         val http = FakeHttpClient().apply {
             postResult = HttpResult(
                 200,
-                """{"sub":"google-123","name":"Ada","email":"ada@example.com","accountKey":"g0123456789abcde"}""",
+                """{"sub":"google-123","name":"Ada","email":"ada@example.com","accountKey":"g0123456789abcde","accessToken":"access-1","refreshToken":"refresh-1","accessTokenExpiresAt":9999999999999}""",
                 null,
             )
         }
-        val backup = GoogleBackup(settings, { "https://sync.example" }, http)
+        val secure = MemorySecureStore()
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http, secure)
 
         val result = backup.exchange("google-id-token")
 
         assertTrue(result is GoogleAuthResult.Ok)
         assertEquals(listOf("POST"), http.methods)
-        assertEquals("google-123", GoogleAccountStore.load(settings).sub)
+        assertEquals("google-123", backup.account().sub)
+        assertEquals("", GoogleAccountStore.load(settings).sub)
+        assertTrue(backup.isSignedIn())
     }
 
     @Test
@@ -175,5 +201,81 @@ class GoogleAccountTest {
         GoogleAccountStore.clear(settings)
 
         assertEquals(null, GoogleAccountStore.revision(settings, accountKey))
+    }
+
+    @Test
+    fun expiredSessionRefreshesAndUsesOpaqueAccessToken() = runBlocking {
+        val settings = store()
+        val secure = MemorySecureStore()
+        val http = FakeHttpClient().apply {
+            postResults += HttpResult(
+                200,
+                """{"sub":"google-123","name":"Ada","email":"ada@example.com","accountKey":"g0123456789abcde","accessToken":"expired","refreshToken":"refresh-1","accessTokenExpiresAt":1}""",
+                null,
+            )
+            postResults += HttpResult(
+                200,
+                """{"accessToken":"access-2","refreshToken":"refresh-2","accessTokenExpiresAt":9999999999999}""",
+                null,
+            )
+            getResult = HttpResult(200, """{"favorites":[],"revision":"r1"}""", null)
+        }
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http, secure)
+
+        assertTrue(backup.exchange("google-id-token") is GoogleAuthResult.Ok)
+        assertTrue(backup.pull() is com.thrive.app.data.remote.PullResult.Found)
+        assertEquals(listOf("POST", "POST", "GET"), http.methods)
+        assertEquals("access-2", http.tokens.last())
+        assertEquals("refresh-2", backup.session()?.refreshToken)
+    }
+
+    @Test
+    fun conflictMergeKeepsDeletionTombstones() = runBlocking {
+        val settings = store()
+        val secure = MemorySecureStore()
+        val http = FakeHttpClient().apply {
+            postResult = HttpResult(
+                200,
+                """{"sub":"google-123","accountKey":"g0123456789abcde","accessToken":"access-1","refreshToken":"refresh-1","accessTokenExpiresAt":9999999999999}""",
+                null,
+            )
+            putResults += HttpResult(409, "{}", null)
+            putResults += HttpResult(200, """{"ok":true,"revision":"r2"}""", null)
+            getResult = HttpResult(
+                200,
+                """{"favorites":["removed-deal"],"deletedFavoriteIds":["removed-deal"],"revision":"r1"}""",
+                null,
+            )
+        }
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http, secure)
+        assertTrue(backup.exchange("google-id-token") is GoogleAuthResult.Ok)
+
+        val result = backup.push(
+            BackupSnapshot(favorites = setOf("removed-deal"), deletedFavoriteIds = setOf("removed-deal")),
+        )
+
+        assertTrue(result is PushResult.Ok)
+        assertTrue(http.putBodies.last().contains("deletedFavoriteIds"))
+        assertFalse(http.putBodies.last().contains("\"favorites\":[\"removed-deal\"]"))
+    }
+
+    @Test
+    fun accountDeletionClearsEncryptedLocalSessionAfterServerConfirmation() = runBlocking {
+        val settings = store()
+        val secure = MemorySecureStore()
+        val http = FakeHttpClient().apply {
+            postResult = HttpResult(
+                200,
+                """{"sub":"google-123","accountKey":"g0123456789abcde","accessToken":"access-1","refreshToken":"refresh-1","accessTokenExpiresAt":9999999999999}""",
+                null,
+            )
+            deleteResult = HttpResult(200, """{"ok":true,"deleted":true}""", null)
+        }
+        val backup = GoogleBackup(settings, { "https://sync.example" }, http, secure)
+        assertTrue(backup.exchange("google-id-token") is GoogleAuthResult.Ok)
+
+        assertTrue(backup.deleteAccount())
+        assertFalse(backup.isSignedIn())
+        assertEquals("DELETE", http.methods.last())
     }
 }

@@ -10,12 +10,8 @@ import com.thrive.app.ai.TripPlan
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.BudgetState
 import com.thrive.app.data.model.ShoppingItem
-import com.thrive.app.data.remote.BackupMerge
-import com.thrive.app.data.remote.PullResult
-import com.thrive.app.data.remote.StateBackup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,45 +45,13 @@ class BudgetViewModel(app: Application, private val repo: ThriveRepository) : An
     })
     val state: StateFlow<BudgetUiState> = _state.asStateFlow()
 
-    // Anonymous backup: budget + shopping list sync under the backup code.
-    private val backup = StateBackup((app as com.thrive.app.ThriveApp).settings) { repo.syncBaseUrl }
-    private var pushJob: Job? = null
-
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
-        // Non-blocking: pull budget saved under this device's backup code and
-        // merge add-only, so the list survives reinstalls. Only a confirmed
-        // server answer merges; offline/insecure failures stay silent.
-        viewModelScope.launch {
-            when (val result = backup.pull(backup.activeCode())) {
-                is PullResult.Found -> {
-                    val remote = result.snapshot.budget
-                    if (remote != null) {
-                        val local = repo.loadBudget()
-                        val merged = BackupMerge.budget(local, remote)
-                        if (merged != local) {
-                            repo.saveBudget(merged)
-                            _state.update {
-                                it.copy(budget = merged.budget, people = merged.people, items = merged.items)
-                            }
-                        }
-                    }
-                }
-                else -> { /* keep local budget */ }
-            }
-        }
     }
 
     /** Debounced budget-only push so a burst of edits is one upload. */
     private fun schedulePush() {
-        pushJob?.cancel()
-        pushJob = viewModelScope.launch {
-            delay(1_500)
-            val s = _state.value
-            runCatching {
-                backup.pushBudget(BudgetState(budget = s.budget, people = s.people, items = s.items))
-            }
-        }
+        repo.scheduleAccountSync()
     }
 
     /** Applies a restored/merged budget state (from Settings restore). */

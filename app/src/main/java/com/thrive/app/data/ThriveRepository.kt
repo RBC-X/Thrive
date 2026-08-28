@@ -7,10 +7,13 @@ import com.thrive.app.data.model.BudgetState
 import com.thrive.app.data.model.CatalogItem
 import com.thrive.app.data.model.Coupon
 import com.thrive.app.data.model.Deal
+import com.thrive.app.data.model.HouseholdProfile
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.model.Recipe
 import com.thrive.app.data.model.ShoppingItem
 import com.thrive.app.data.remote.ApiClient
+import com.thrive.app.data.remote.BackupSnapshot
+import com.thrive.app.data.remote.GoogleBackup
 import com.thrive.app.data.remote.HttpResult
 import com.thrive.app.data.remote.SyncPayload
 import com.thrive.app.data.remote.SyncState
@@ -19,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,6 +79,9 @@ class ThriveRepository(
     // Sync is serialized so rapid refreshes and simultaneous initial/manual
     // syncs can't interleave reads/writes or double-fire the 304 retry.
     private val syncMutex = Mutex()
+    private val accountSyncMutex = Mutex()
+    private val googleBackup by lazy { GoogleBackup(settings, baseUrlProvider = { syncBaseUrl }) }
+    private var accountPushJob: Job? = null
 
     private var hydrationJob: Job? = null
 
@@ -87,6 +94,44 @@ class ThriveRepository(
     /** Test hook: wait until the persisted cache has been restored. */
     internal suspend fun awaitHydration() {
         hydrationJob?.join()
+    }
+
+    /** One shared encrypted account client for every screen and mutation. */
+    fun accountBackup(): GoogleBackup = googleBackup
+
+    fun accountSnapshot(): BackupSnapshot = BackupSnapshot(
+        favorites = favoriteCouponIds(),
+        recipeFavorites = favoriteRecipeIds(),
+        pantry = loadPantry(),
+        budget = loadBudget(),
+        householdProfile = loadHouseholdProfile(),
+        seenDealIds = seenDealIds(),
+        feedRevision = dealFeedRevision(),
+        deletedFavoriteIds = tombstones(KEY_DELETED_FAVORITES),
+        deletedRecipeFavoriteIds = tombstones(KEY_DELETED_RECIPE_FAVORITES),
+        deletedPantryItemIds = tombstones(KEY_DELETED_PANTRY),
+        deletedShoppingItemIds = tombstones(KEY_DELETED_SHOPPING),
+    )
+
+    /** Debounced account upload used by every local state mutation. */
+    fun scheduleAccountSync() {
+        if (!googleBackup.isSignedIn()) return
+        accountPushJob?.cancel()
+        accountPushJob = scope.launch {
+            delay(1_500)
+            accountSyncMutex.withLock { googleBackup.push(accountSnapshot()) }
+        }
+    }
+
+    suspend fun syncAccountNow() = accountSyncMutex.withLock {
+        googleBackup.push(accountSnapshot())
+    }
+
+    fun restoreAccountTombstones(snapshot: BackupSnapshot) {
+        mergeTombstones(KEY_DELETED_FAVORITES, snapshot.deletedFavoriteIds)
+        mergeTombstones(KEY_DELETED_RECIPE_FAVORITES, snapshot.deletedRecipeFavoriteIds)
+        mergeTombstones(KEY_DELETED_PANTRY, snapshot.deletedPantryItemIds)
+        mergeTombstones(KEY_DELETED_SHOPPING, snapshot.deletedShoppingItemIds)
     }
 
     /**
@@ -298,15 +343,18 @@ class ThriveRepository(
 
     fun savePantry(items: List<PantryItem>) {
         settings.putString(KEY_PANTRY, json.encodeToString(ListSerializer(PantryItem.serializer()), items))
+        scheduleAccountSync()
     }
 
     fun addPantryItem(item: PantryItem): PantryItem {
         val withId = if (item.id.isBlank()) item.copy(id = UUID.randomUUID().toString()) else item
+        removeTombstone(KEY_DELETED_PANTRY, withId.id)
         savePantry(loadPantry() + withId)
         return withId
     }
 
     fun removePantryItem(id: String) {
+        addTombstone(KEY_DELETED_PANTRY, id)
         savePantry(loadPantry().filterNot { it.id == id })
     }
 
@@ -324,16 +372,19 @@ class ThriveRepository(
 
     fun saveBudget(state: BudgetState) {
         settings.putString(KEY_BUDGET, json.encodeToString(BudgetState.serializer(), state))
+        scheduleAccountSync()
     }
 
     fun addShoppingItem(item: ShoppingItem): ShoppingItem {
         val withId = if (item.id.isBlank()) item.copy(id = UUID.randomUUID().toString()) else item
+        removeTombstone(KEY_DELETED_SHOPPING, withId.id)
         val state = loadBudget()
         saveBudget(state.copy(items = state.items + withId))
         return withId
     }
 
     fun removeShoppingItem(id: String) {
+        addTombstone(KEY_DELETED_SHOPPING, id)
         val state = loadBudget()
         saveBudget(state.copy(items = state.items.filterNot { it.id == id }))
     }
@@ -345,6 +396,7 @@ class ThriveRepository(
 
     fun clearShoppingList() {
         val state = loadBudget()
+        mergeTombstones(KEY_DELETED_SHOPPING, state.items.map { it.id }.toSet())
         saveBudget(state.copy(items = emptyList()))
     }
 
@@ -352,14 +404,17 @@ class ThriveRepository(
 
     fun toggleCouponFavorite(id: String): Boolean {
         val favs = favoriteCouponIds().toMutableSet()
-        if (!favs.add(id)) favs.remove(id)
+        if (favs.add(id)) removeTombstone(KEY_DELETED_FAVORITES, id)
+        else { favs.remove(id); addTombstone(KEY_DELETED_FAVORITES, id) }
         settings.putString(KEY_FAV_COUPONS, favs.joinToString(","))
+        scheduleAccountSync()
         return id in favs
     }
 
     /** Replaces the full coupon-favorites set (used by backup merge/restore). */
     fun saveCouponFavorites(favs: Set<String>) {
         settings.putString(KEY_FAV_COUPONS, favs.joinToString(","))
+        scheduleAccountSync()
     }
 
     fun favoriteCouponIds(): Set<String> =
@@ -367,30 +422,176 @@ class ThriveRepository(
 
     fun toggleRecipeFavorite(id: String): Boolean {
         val favs = favoriteRecipeIds().toMutableSet()
-        if (!favs.add(id)) favs.remove(id)
+        if (favs.add(id)) removeTombstone(KEY_DELETED_RECIPE_FAVORITES, id)
+        else { favs.remove(id); addTombstone(KEY_DELETED_RECIPE_FAVORITES, id) }
         settings.putString(KEY_FAV_RECIPES, favs.joinToString(","))
+        scheduleAccountSync()
         return id in favs
     }
 
     fun favoriteRecipeIds(): Set<String> =
         settings.getString(KEY_FAV_RECIPES, "").orEmpty().split(",").filter { it.isNotBlank() }.toSet()
 
+    /** Replaces the full recipe-favorites set (used by account restore). */
+    fun saveRecipeFavorites(favs: Set<String>) {
+        settings.putString(KEY_FAV_RECIPES, favs.joinToString(","))
+        scheduleAccountSync()
+    }
+
+    // ---- Household profile / onboarding ----
+
+    fun loadHouseholdProfile(): HouseholdProfile {
+        val raw = settings.getString(KEY_HOUSEHOLD_PROFILE, null) ?: return HouseholdProfile()
+        return runCatching { json.decodeFromString(HouseholdProfile.serializer(), raw).normalized() }
+            .getOrDefault(HouseholdProfile())
+    }
+
+    fun saveHouseholdProfile(profile: HouseholdProfile, markModified: Boolean = true) {
+        val normalized = profile.normalized().let {
+            if (markModified && it.isOnboardingComplete) it.copy(onboardingCompletedAt = System.currentTimeMillis()) else it
+        }
+        settings.putString(
+            KEY_HOUSEHOLD_PROFILE,
+            json.encodeToString(HouseholdProfile.serializer(), normalized),
+        )
+        scheduleAccountSync()
+    }
+
+    fun isOnboardingComplete(): Boolean = loadHouseholdProfile().isOnboardingComplete
+
+    fun completeOnboarding(profile: HouseholdProfile) {
+        saveHouseholdProfile(
+            profile.copy(
+                onboardingVersion = CURRENT_ONBOARDING_VERSION,
+                onboardingCompletedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    // ---- Deal read state ----
+
+    /**
+     * Returns only catalog ids that arrived after the persisted baseline.
+     * The first catalog ever observed becomes the baseline and therefore
+     * returns zero "new" items instead of labeling the whole bundled feed new.
+     */
+    @Synchronized
+    fun unseenDealIds(currentIds: Collection<String>, feedRevision: String? = null): Set<String> {
+        val clean = sanitizeDealIds(currentIds)
+        val state = loadDealReadState()
+        if (!state.initialized) {
+            saveDealReadState(
+                DealReadState(
+                    initialized = true,
+                    seenIds = clean.takeLast(MAX_SEEN_DEAL_IDS),
+                    feedRevision = feedRevision,
+                ),
+            )
+            return emptySet()
+        }
+        return clean.asSequence().filterNot { it in state.seenIds }.toCollection(linkedSetOf())
+    }
+
+    /** Persist a viewed catalog immediately; safe to call during ON_STOP. */
+    @Synchronized
+    fun markDealsSeen(ids: Collection<String>, feedRevision: String? = null) {
+        val state = loadDealReadState()
+        val merged = LinkedHashSet<String>(state.seenIds.size + ids.size).apply {
+            addAll(state.seenIds)
+            addAll(sanitizeDealIds(ids))
+        }.toList().takeLast(MAX_SEEN_DEAL_IDS)
+        saveDealReadState(
+            DealReadState(
+                initialized = true,
+                seenIds = merged,
+                feedRevision = feedRevision ?: state.feedRevision,
+            ),
+        )
+    }
+
+    fun seenDealIds(): Set<String> = loadDealReadState().seenIds.toSet()
+
+    fun dealFeedRevision(): String? = loadDealReadState().feedRevision
+
+    /** Restores account read state without allowing unbounded server data. */
+    @Synchronized
+    fun restoreDealReadState(ids: Collection<String>, feedRevision: String?) {
+        markDealsSeen(ids, feedRevision)
+    }
+
+    private fun sanitizeDealIds(ids: Collection<String>): List<String> = ids.asSequence()
+        .map(String::trim)
+        .filter { it.isNotEmpty() && it.length <= 160 }
+        .distinct()
+        .take(MAX_SEEN_DEAL_IDS)
+        .toList()
+
+    private fun loadDealReadState(): DealReadState {
+        val raw = settings.getString(KEY_DEAL_READ_STATE, null) ?: return DealReadState()
+        return runCatching { json.decodeFromString(DealReadState.serializer(), raw) }
+            .getOrDefault(DealReadState())
+    }
+
+    private fun saveDealReadState(state: DealReadState) {
+        settings.putStringImmediate(
+            KEY_DEAL_READ_STATE,
+            json.encodeToString(DealReadState.serializer(), state),
+        )
+        scheduleAccountSync()
+    }
+
+    private fun tombstones(key: String): Set<String> =
+        settings.getString(key, "").orEmpty().split(',').asSequence()
+            .map(String::trim).filter { it.isNotEmpty() && it.length <= 160 }.take(MAX_TOMBSTONES).toSet()
+
+    private fun saveTombstones(key: String, ids: Collection<String>) {
+        settings.putString(key, ids.asSequence().map(String::trim)
+            .filter { it.isNotEmpty() && it.length <= 160 }.distinct().take(MAX_TOMBSTONES).joinToString(","))
+    }
+
+    private fun addTombstone(key: String, id: String) = mergeTombstones(key, setOf(id))
+
+    private fun removeTombstone(key: String, id: String) {
+        val next = tombstones(key) - id
+        saveTombstones(key, next)
+    }
+
+    private fun mergeTombstones(key: String, ids: Collection<String>) {
+        saveTombstones(key, tombstones(key) + ids)
+    }
+
     companion object {
         private const val KEY_PANTRY = "pantry_items"
         private const val KEY_BUDGET = "budget_state"
         private const val KEY_FAV_COUPONS = "fav_coupons"
         private const val KEY_FAV_RECIPES = "fav_recipes"
+        private const val KEY_HOUSEHOLD_PROFILE = "household_profile"
+        private const val KEY_DEAL_READ_STATE = "deal_read_state"
+        private const val KEY_DELETED_FAVORITES = "account_deleted_favorites"
+        private const val KEY_DELETED_RECIPE_FAVORITES = "account_deleted_recipe_favorites"
+        private const val KEY_DELETED_PANTRY = "account_deleted_pantry"
+        private const val KEY_DELETED_SHOPPING = "account_deleted_shopping"
         private const val KEY_SYNC_URL = "sync_base_url"
         private const val KEY_SYNC_ETAG = "sync_etag"
         private const val KEY_LAST_SYNC_AT = "last_sync_at"
         private const val KEY_LOC_LAT = "loc_lat"
         private const val KEY_LOC_LNG = "loc_lng"
         const val SYNC_URL_KEY = KEY_SYNC_URL
+        const val CURRENT_ONBOARDING_VERSION = 1
+        const val MAX_SEEN_DEAL_IDS = 10_000
+        const val MAX_TOMBSTONES = 10_000
 
         /** Millis when the last successful sync landed (persisted). */
         fun lastSyncAt(settings: SettingsStore): Long = settings.getLong(KEY_LAST_SYNC_AT, 0L)
     }
 }
+
+@Serializable
+private data class DealReadState(
+    val initialized: Boolean = false,
+    val seenIds: List<String> = emptyList(),
+    val feedRevision: String? = null,
+)
 
 /** Bump to invalidate previously cached payloads after a format change. */
 private const val SYNC_CACHE_VERSION = 2

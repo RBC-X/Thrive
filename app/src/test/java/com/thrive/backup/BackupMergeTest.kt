@@ -1,6 +1,7 @@
 package com.thrive.backup
 
 import com.thrive.app.data.model.BudgetState
+import com.thrive.app.data.model.HouseholdProfile
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.model.ShoppingItem
 import com.thrive.app.data.remote.BackupMerge
@@ -89,5 +90,20 @@ class BackupMergeTest {
     fun budgetMergeWithNullRemoteReturnsLocal() {
         val local = BudgetState(budget = 20.0, people = 2, items = listOf(shopItem("x")))
         assertEquals(local, BackupMerge.budget(local, null))
+    }
+
+    @Test
+    fun profileMergeUsesMostRecentlyCompletedProfile() {
+        val local = HouseholdProfile(budgetAmount = 50.0, onboardingVersion = 1, onboardingCompletedAt = 100L)
+        val remote = HouseholdProfile(budgetAmount = 75.0, onboardingVersion = 1, onboardingCompletedAt = 200L)
+        assertEquals(75.0, BackupMerge.householdProfile(local, remote)?.budgetAmount ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun seenDealMergeIsUnion() {
+        assertEquals(
+            setOf("old", "shared", "new"),
+            BackupMerge.seenDealIds(setOf("shared", "new"), setOf("old", "shared")),
+        )
     }
 }

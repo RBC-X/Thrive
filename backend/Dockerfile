@@ -4,10 +4,10 @@
 # Run:        docker run -p 4000:4000 -e KROGER_CLIENT_ID=... -e KROGER_CLIENT_SECRET=... thrive-backend
 # Compose:    see backend/docker-compose.yml
 #
-# The container is stateless: backup data is written to /data (mount a volume
-# to persist it across restarts). Secrets come from the environment or a
-# mounted .env — never bake them into the image.
-FROM node:20-alpine
+# Persistent anonymous backups and the encrypted account database are written
+# to /data (mount a volume to retain them across restarts). Secrets come from
+# the environment or a mounted .env — never bake them into the image.
+FROM node:24-alpine
 
 WORKDIR /app
 COPY package.json package-lock.json* ./

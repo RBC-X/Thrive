@@ -1,22 +1,10 @@
 package com.thrive.app.ui.settings
 
 import android.Manifest
-import android.app.Application
-import android.content.pm.PackageManager
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.thrive.app.BuildConfig
-import com.thrive.app.data.remote.googleSignInConfigured
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,1358 +14,470 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.CloudUpload
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Kitchen
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material.icons.rounded.Restore
-import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Wallet
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.rememberCoroutineScope
-import com.thrive.app.ai.AiService
-import com.thrive.app.data.local.SettingsStore
-import com.thrive.app.data.remote.BackupPolicy
-import com.thrive.app.data.remote.SyncState
+import com.thrive.app.BuildConfig
+import com.thrive.app.ai.OnDeviceLlm
+import com.thrive.app.data.LocationProvider
+import com.thrive.app.data.ThriveRepository
+import com.thrive.app.data.model.BudgetCadence
+import com.thrive.app.data.model.HouseholdProfile
 import com.thrive.app.data.remote.SyncStatus
+import com.thrive.app.ui.account.GoogleSignInButton
+import com.thrive.app.ui.budget.BudgetViewModel
 import com.thrive.app.ui.savings.SavingsViewModel
-import com.thrive.app.ui.theme.LocalThriveColors
-import com.thrive.app.ui.theme.ThriveFont
 import com.thrive.app.update.GithubUpdateChecker
+import com.thrive.app.update.ReEngagement
 import com.thrive.app.update.UpdateBus
-import com.thrive.app.util.Clipboard
-import com.thrive.app.util.Money
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-private fun syncStatusLabel(sync: SyncState, message: String?): String {
-    message?.let { return it }
-    return when (sync.status) {
-        SyncStatus.OK -> "Live feed"
-        SyncStatus.ERROR -> "Last sync failed — offline feed"
-        SyncStatus.SYNCING -> "…"
-        SyncStatus.OFFLINE -> "Offline feed"
-    }
+private enum class SettingsPage(val title: String, val description: String, val icon: ImageVector) {
+    ACCOUNT("Account", "Sign-in and secure data sync", Icons.Rounded.AccountCircle),
+    BUDGET("Budget", "Weekly or monthly spending target", Icons.Rounded.Wallet),
+    APPLIANCES("Appliances", "Equipment available in your kitchen", Icons.Rounded.Kitchen),
+    SECURITY("Security", "Privacy, location, and local data", Icons.Rounded.Security),
+    UPDATES("Updates", "Deals, app updates, and offline AI", Icons.Rounded.SystemUpdate),
+    ABOUT("About Thrive", "Version, purpose, and privacy", Icons.Rounded.Info),
 }
+
+private val applianceChoices = listOf(
+    "Stovetop", "Oven", "Microwave", "Air fryer", "Slow cooker", "Pressure cooker", "Blender", "Grill",
+)
 
 @Composable
 fun SettingsScreen(
-    repo: com.thrive.app.data.ThriveRepository,
+    repo: ThriveRepository,
     savingsVm: SavingsViewModel,
-    budgetVm: com.thrive.app.ui.budget.BudgetViewModel,
+    budgetVm: BudgetViewModel,
     onBack: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val app = context.applicationContext as com.thrive.app.ThriveApp
-    val settings = app.settings
-    val ai = AiService(settings)
-    val savingsState by savingsVm.state.collectAsState()
-    // Listen to the SHARED repository (the one the Savings VM also uses), so a
-    // sync started here is visible everywhere the moment it finishes — not just
-    // after the next periodic worker tick.
-    var syncStatus by remember { mutableStateOf(repo.syncState.value) }
-    LaunchedEffect(repo) {
-        repo.syncState.collect { s -> syncStatus = s }
+    var page by remember { mutableStateOf<SettingsPage?>(null) }
+    var profile by remember { mutableStateOf(repo.loadHouseholdProfile()) }
+    val saveProfile: (HouseholdProfile) -> Unit = { next ->
+        profile = next
+        repo.saveHouseholdProfile(next)
     }
 
-    var aiKey by remember { mutableStateOf(ai.apiKey) }
-    var aiUrl by remember { mutableStateOf(ai.baseUrl) }
-    var aiModel by remember { mutableStateOf(ai.model) }
-    var aiEnabled by remember { mutableStateOf(ai.isEnabled) }
-    var syncUrl by remember { mutableStateOf(repo.syncBaseUrl) }
-    var syncing by remember { mutableStateOf(false) }
-    var syncMessage by remember { mutableStateOf<String?>(null) }
-    var checkingUpdates by remember { mutableStateOf(false) }
-    var updateCheckMsg by remember { mutableStateOf<String?>(null) }
-    var restoreCode by remember { mutableStateOf("") }
-    var remindersEnabled by remember {
-        mutableStateOf(app.settings.getBoolean(com.thrive.app.update.ReEngagement.KEY_ENABLED, true))
-    }
-    var locMessage by remember { mutableStateOf<String?>(null) }
-    var locWorking by remember { mutableStateOf(false) }
-    var locDenied by remember { mutableStateOf(false) }
-    var appliances by remember { mutableStateOf(settings.getAppliances()) }
-    val applianceOptions = listOf("Air fryer", "Slow cooker", "Oven", "Stovetop", "Microwave")
-    var publicServer by remember { mutableStateOf<String?>(null) }
-    var discoveringServer by remember { mutableStateOf(false) }
-    var serverMsg by remember { mutableStateOf<String?>(null) }
-    // Google Sign-In backup: a card above the legacy code section. Hidden when
-    // the build has no client ID configured. The signed-in account comes from
-    // the savings VM (persisted); the ID token lives only in the VM.
-    val googleConfigured = googleSignInConfigured()
-    val googleAccount = savingsVm.googleAccount()
-    val googleSignedIn = savingsVm.googleSignedIn()
-    val googleSignInClient = remember {
-        if (googleConfigured) {
-            val opts = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(BuildConfig.GOOGLE_CLIENT_ID)
-                .requestEmail()
-                .build()
-            GoogleSignIn.getClient(context, opts)
-        } else null
-    }
-    val googleSignInLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val data = result.data ?: return@rememberLauncherForActivityResult
-        try {
-            val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-            val idToken: String? = account.idToken
-            if (idToken.isNullOrBlank()) {
-                savingsVm.setBackupMsg("Google sign-in returned no ID token — try again.")
-            } else {
-                savingsVm.googleCompleteSignIn(idToken)
-            }
-        } catch (e: ApiException) {
-            savingsVm.setBackupMsg("Google sign-in was cancelled or failed.")
-        }
-    }
-    // Grocery budget editing: shown as a card with an edit dialog, always
-    // available so the user can change their trip budget any time (not only
-    // during first-time onboarding).
-    val budgetState by budgetVm.state.collectAsState()
-    var showBudgetEdit by remember { mutableStateOf(false) }
-    val accents = LocalThriveColors.current
-
-    // Backup only sends the code over HTTPS (or loopback in debug builds). On a
-    // plain HTTP non-loopback URL the card below is honest: backup is off.
-    val backupPermitted = BackupPolicy.isPermitted(syncUrl, BuildConfig.DEBUG)
-
-    val scope = rememberCoroutineScope()
-
-    val notificationPermission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                Toast.makeText(context, "Update notifications on", Toast.LENGTH_SHORT).show()
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            SettingsTopBar(page?.title ?: "Settings", onBack = { if (page == null) onBack() else page = null })
+            when (page) {
+                null -> SettingsHome(onOpen = { page = it })
+                SettingsPage.ACCOUNT -> AccountSettings(savingsVm)
+                SettingsPage.BUDGET -> BudgetSettings(profile, saveProfile, budgetVm)
+                SettingsPage.APPLIANCES -> AppliancesSettings(profile, saveProfile)
+                SettingsPage.SECURITY -> SecuritySettings(repo)
+                SettingsPage.UPDATES -> UpdatesSettings(repo)
+                SettingsPage.ABOUT -> AboutSettings()
             }
         }
-
-    // Nearby deals: approximate location is asked in context (never at launch),
-    // the app is fully usable after denial, and Settings offers re-enable.
-    val locationPermission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                scope.launch {
-                    locWorking = true
-                    locMessage = "Finding your nearest stores…"
-                    val loc = com.thrive.app.data.LocationProvider.lastKnownLocation(context)
-                    locWorking = false
-                    if (loc != null) {
-                        locMessage = null
-                        repo.setLocation(loc.first, loc.second)
-                        locDenied = false
-                        Toast.makeText(context, "Nearby deals on — deals ranked by distance", Toast.LENGTH_LONG).show()
-                    } else {
-                        locMessage = "Can't get a location fix yet — deals are shown unranked. Try again in a moment."
-                    }
-                }
-            } else {
-                locDenied = true
-                locMessage = "Location off — Thrive shows all deals, not ranked by distance."
-            }
-        }
-
-    fun enableNearby() {
-        if (locWorking) return
-        if (!com.thrive.app.data.LocationProvider.hasPermission(context)) {
-            locDenied = false
-            locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-        } else {
-            scope.launch {
-                locWorking = true
-                locMessage = "Finding your nearest stores…"
-                val loc = com.thrive.app.data.LocationProvider.lastKnownLocation(context)
-                locWorking = false
-                if (loc != null) {
-                    locMessage = null
-                    repo.setLocation(loc.first, loc.second)
-                    Toast.makeText(context, "Nearby deals on — deals ranked by distance", Toast.LENGTH_LONG).show()
-                } else {
-                    locMessage = "Can't get a location fix yet — deals are shown unranked. Try again in a moment."
-                }
-            }
-        }
-    }
-
-    fun openAppSettings() {
-        val intent = android.content.Intent(
-            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            android.net.Uri.fromParts("package", context.packageName, null)
-        )
-        context.startActivity(intent)
-    }
-    fun requestNotifications() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-            if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    // One-tap connect: read the operator's public backup server from the
-    // latest GitHub release (tools/tunnel.sh publishes it there). Users never
-    // type IPs or URLs.
-    LaunchedEffect(Unit) {
-        if (syncUrl.isBlank()) {
-            discoveringServer = true
-            val found = withContext(Dispatchers.IO) {
-                com.thrive.app.update.GithubUpdateChecker.discoverSyncServer()
-            }
-            publicServer = found
-            discoveringServer = false
-        }
-    }
-
-    fun runSync() {
-        if (syncing) return
-        syncing = true
-        syncMessage = null
-        scope.launch {
-            settings.putString(com.thrive.app.data.ThriveRepository.SYNC_URL_KEY, syncUrl.trim())
-            repo.syncNow(force = true)
-            syncing = false
-            val s = repo.syncState.value
-            syncStatus = s
-            syncMessage = when (s.status) {
-                com.thrive.app.data.remote.SyncStatus.OK -> "Synced · ${s.source.joinToString(", ")} · ${if (s.lastSyncedAt != null) "${(System.currentTimeMillis() - s.lastSyncedAt) / 1000}s ago" else ""}"
-                com.thrive.app.data.remote.SyncStatus.ERROR -> "Sync failed: ${s.error ?: "no server reachable"}. Bundled feed still active."
-                else -> "No server configured — bundled feed active."
-            }
-            if (syncUrl == publicServer) {
-                serverMsg = when (s.status) {
-                    com.thrive.app.data.remote.SyncStatus.OK -> "Public backup server verified and connected."
-                    com.thrive.app.data.remote.SyncStatus.ERROR ->
-                        "Couldn't verify the public backup server. Bundled offline features are still available."
-                    else -> "No public backup server is available right now."
-                }
-            }
-        }
-    }
-
-    fun connectToPublicServer() {
-        val url = publicServer ?: return
-        syncUrl = url
-        serverMsg = "Checking the public backup server…"
-        runSync()
-    }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 40.dp),
-    ) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                }
-                Text(
-                    text = "Settings",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = ThriveFont,
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
-                )
-            }
-        }
-
-        // ── Account ──────────────────────────────────────────────────────────
-        item { SettingsSectionHeader("Account") }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text("AI assistant", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Thrive works fully offline with its built-in recipe & deal engine. " +
-                        "Connect any OpenAI-compatible API (OpenAI, Groq, OpenRouter, local " +
-                        "servers) and the pantry AI becomes a genuine generative AI: it " +
-                        "writes brand-new recipes from what you have, plus adds richer tips " +
-                        "and insights. Without a key, the built-in engine still cooks from " +
-                        "your pantry offline.",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-            }
-        }
-
-        item {
-            val llm = app.onDeviceLlm
-            val llmState by llm.state.collectAsState()
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text("On-device AI — no keys", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                when (val s = llmState) {
-                    is com.thrive.app.ai.OnDeviceLlm.State.Ready -> {
-                        Text(
-                            text = "A real language model is installed on this phone (546 MB). " +
-                                "Pantry recipes are now written by it — fully offline, no account, " +
-                                "no API key.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { llm.deleteModel() }) {
-                            Text("Remove model")
-                        }
-                    }
-                    is com.thrive.app.ai.OnDeviceLlm.State.Downloading -> {
-                        Text(
-                            text = "Downloading the on-device AI model (546 MB)… keep the app open. " +
-                                "You can keep using Thrive while it downloads.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        LinearProgressIndicator(
-                            progress = { s.progress },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "${(s.progress * 100).toInt()}% downloaded",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { llm.cancelDownload() }) {
-                            Text("Cancel download")
-                        }
-                    }
-                    is com.thrive.app.ai.OnDeviceLlm.State.Failed -> {
-                        Text(
-                            text = s.reason,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.error),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { llm.startDownload() }) {
-                            Text("Try again")
-                        }
-                    }
-                    else -> {
-                        Text(
-                            text = "Download a small language model (546 MB, one-time) so recipes are " +
-                                "written by a real AI on your phone — no API keys, works offline. " +
-                                "Newer phones recommended; Thrive works fully without it.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { llm.startDownload() }) {
-                            Text("Download 546 MB model")
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Appliances ──────────────────────────────────────────────────────
-        item { SettingsSectionHeader("Appliances") }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(
-                    text = "Which appliances do you have? The weekly planner uses these to " +
-                        "pick recipes your kitchen can actually make. You can change this any time.",
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-                Spacer(Modifier.height(10.dp))
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(applianceOptions.size) { i ->
-                        val name = applianceOptions[i]
-                        val selected = name.lowercase() in appliances
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(
-                                    if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                .clickable {
-                                    appliances = if (selected) appliances - name.lowercase()
-                                    else appliances + name.lowercase()
-                                    settings.setAppliances(appliances)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                        ) {
-                            Text(
-                                text = name,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text("Sync server", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Live prices and cross-device backup need a compatible Thrive sync service. " +
-                        "If your administrator gave you a secure HTTPS address, enter it below. " +
-                        "Without one, Savings, Recipes, Pantry, Budget, and weekly planning keep " +
-                        "working offline; backup clearly remains unavailable.",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                OutlinedTextField(
-                    value = syncUrl,
-                    onValueChange = { syncUrl = it },
-                    label = { Text("Sync API base URL") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                )
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = { runSync() },
-                        enabled = !syncing,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
-                    ) {
-                        Icon(Icons.Rounded.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (syncing) "Syncing…" else "Sync now")
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = syncStatusLabel(syncStatus, syncMessage),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (syncStatus.status == com.thrive.app.data.remote.SyncStatus.ERROR)
-                                Color(0xFFB33A1F) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "Offline-first: until a sync succeeds (or if the server is unreachable), Thrive uses its bundled feed with no feature loss.",
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text("Nearby deals", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Share your ${com.thrive.app.data.LocationProvider.ACCURACY_LABEL} so Thrive " +
-                        "ranks deals by the nearest store and shows how far each one is. It only goes " +
-                        "to the sync server you chose above, and you can turn it off any time.",
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-                Spacer(Modifier.height(8.dp))
-                val locOn = syncStatus.hasNearby || repo.sharedLocation != null
-                if (locOn) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = accents.leaf,
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Location on — deals ranked by distance",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = accents.leaf,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
-                    }
-                    if (syncStatus.nearbyStores.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = "Nearest stores: " + syncStatus.nearbyStores.joinToString(" · ") {
-                                "${it.store} ${com.thrive.app.util.Distances.mi(it.distMi)}"
-                            },
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = { scope.launch { repo.clearLocation() } }) {
-                        Text("Turn off nearby deals", color = Color(0xFFB33A1F))
-                    }
-                } else if (locDenied && !com.thrive.app.data.LocationProvider.hasPermission(context)) {
-                    Text(
-                        text = "Location is off in system settings — deals aren't ranked by distance.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFB33A1F),
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row {
-                        Button(
-                            onClick = { openAppSettings() },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        ) {
-                            Text("Open app settings")
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        TextButton(onClick = { enableNearby() }) {
-                            Text("Try again")
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = { enableNearby() },
-                        enabled = !locWorking,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
-                    ) {
-                        Icon(Icons.Rounded.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (locWorking) "Finding nearest stores…" else "Use approximate location")
-                    }
-                }
-                if (locMessage != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = locMessage!!,
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    )
-                }
-            }
-        }
-
-        if (publicServer != null) {
-            item {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                    Text("Public backup server", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Thrive runs a free public backup server you can connect to with one " +
-                            "tap — no account, no URL to type.",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        enabled = syncUrl != publicServer,
-                        onClick = { connectToPublicServer() },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
-                    ) {
-                        Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (syncUrl == publicServer && syncStatus.status == com.thrive.app.data.remote.SyncStatus.OK)
-                                "Connected"
-                            else
-                                "Connect to public backup server"
-                        )
-                    }
-                    if (serverMsg != null) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = serverMsg!!,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text("Backup & sync", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = if (googleConfigured)
-                        "Sign in with Google to carry your saved deals, pantry, and shopping list " +
-                            "to any device — or use a backup code to move between devices without " +
-                            "an account. Both need a secure (HTTPS) sync server."
-                    else
-                        "Your saved deals, pantry, and shopping list sync free between your own " +
-                            "devices with a backup code — no account or email. Backup requires a " +
-                            "secure (HTTPS) sync server.",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-                if (!backupPermitted) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = if (syncUrl.isBlank())
-                            "Backup is unavailable: no sync server is configured. Set an HTTPS " +
-                                "Sync API base URL above to turn it on."
-                        else
-                            "Backup is off: the current server URL isn't a secure HTTPS endpoint " +
-                                "(or isn't the emulator loopback in a debug build). Codes are never " +
-                                "sent over plain HTTP.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFB33A1F),
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    )
-                }
-            }
-        }
-
-        if (googleConfigured) {
-            item {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                if (googleSignedIn) accents.leafSoft.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
-                            )
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (googleSignedIn) accents.leafSoft else accents.berrySoft),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = if (googleSignedIn) "✓" else "G",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = if (googleSignedIn) accents.leaf else accents.berry,
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = if (googleSignedIn)
-                                    (googleAccount.name.ifBlank { googleAccount.email }.ifBlank { "Google account" })
-                                else
-                                    "Sign in with Google",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                            )
-                            Text(
-                                text = if (googleSignedIn)
-                                    "Your saved deals, pantry, and list live in this account — " +
-                                        "sign in on any device to bring them with you."
-                                else
-                                    "Back up your saved deals, pantry, and shopping list to your " +
-                                        "Google account — no code to remember, and it follows you " +
-                                        "to any device you sign into.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    if (googleSignedIn) {
-                        Row {
-                            Button(
-                                enabled = backupPermitted,
-                                onClick = { savingsVm.googleBackupNow() },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Back up now")
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            OutlinedButton(
-                                onClick = { savingsVm.googleSignOut() },
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("Sign out")
-                            }
-                        }
-                    } else {
-                        Button(
-                            enabled = backupPermitted && googleSignInClient != null,
-                            onClick = { googleSignInClient?.signInIntent?.let { googleSignInLauncher.launch(it) } },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = accents.berry),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Continue with Google", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-                        }
-                        if (!backupPermitted) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "Connect a secure (HTTPS) sync server above to turn on Google backup.",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Your code: ",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = savingsState.backupCode.ifBlank { "…" },
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = ThriveFont,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp,
-                        ),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(
-                        enabled = backupPermitted,
-                        onClick = {
-                            val ok = Clipboard.copy(context, "Thrive backup code", savingsState.backupCode)
-                            savingsVm.setBackupMsg(if (ok) "Backup code copied." else "Copy blocked on this device — write the code down.")
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    ) {
-                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Copy")
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    enabled = backupPermitted,
-                    onClick = { savingsVm.backupNow() },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
-                ) {
-                    Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Back up now")
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = restoreCode,
-                        onValueChange = { restoreCode = it },
-                        label = { Text("Restore from a code") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    OutlinedButton(
-                        enabled = backupPermitted,
-                        onClick = { savingsVm.restoreBackup(restoreCode) },
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp),
-                    ) {
-                        Icon(Icons.Rounded.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Restore")
-                    }
-                }
-                savingsState.backupMsg?.let { msg ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = msg,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (msg.contains("failed") || msg.contains("Couldn't") || msg.contains("doesn't"))
-                                Color(0xFFB33A1F) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(10.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 20.dp))
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .clickable { aiEnabled = !aiEnabled }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accents.berrySoft),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = accents.berry, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = "AI enrichment",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        )
-                        Text(
-                            text = if (aiEnabled) "Tips will be added to meals & plans" else "Using built-in engine only",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                    }
-                    Switch(
-                        checked = aiEnabled,
-                        onCheckedChange = { aiEnabled = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accents.berry),
-                    )
-                }
-            }
-        }
-
-        if (aiEnabled) {
-            item {
-                Column(Modifier.padding(horizontal = 20.dp)) {
-                    OutlinedTextField(
-                        value = aiKey,
-                        onValueChange = { aiKey = it },
-                        label = { Text("API key") },
-                        placeholder = { Text("sk-…") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = aiUrl,
-                        onValueChange = { aiUrl = it },
-                        label = { Text("Base URL (OpenAI-compatible)") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = aiModel,
-                        onValueChange = { aiModel = it },
-                        label = { Text("Model") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            settings.putString(AiService.KEY_API_KEY, aiKey.trim())
-                            settings.putString(AiService.KEY_BASE_URL, aiUrl.trim())
-                            settings.putString(AiService.KEY_MODEL, aiModel.trim())
-                            Toast.makeText(context, "AI settings saved", Toast.LENGTH_SHORT).show()
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accents.berry),
-                    ) {
-                        Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Save AI settings")
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Your key stays on this device. Requests go directly to your chosen endpoint.",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    )
-                }
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(18.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 20.dp))
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                Text("Data", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        listOf(
-                            "pantry_items", "budget_state", "fav_coupons", "fav_recipes",
-                        ).forEach { settings.remove(it) }
-                        Toast.makeText(context, "Pantry, list & favorites cleared", Toast.LENGTH_SHORT).show()
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Icon(Icons.Rounded.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Clear my data")
-                }
-            }
-        }
-
-        // ── Budget ──────────────────────────────────────────────────────────
-        item { SettingsSectionHeader("Budget") }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Grocery budget", style = MaterialTheme.typography.titleMedium)
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .clickable { showBudgetEdit = true }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accents.berrySoft),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.Edit, contentDescription = null, tint = accents.berry, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = if (budgetState.budget > 0)
-                                "${Money.fmt(budgetState.budget)} for ${budgetState.people} ${if (budgetState.people == 1) "person" else "people"}"
-                            else
-                                "No budget set yet",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        )
-                        Text(
-                            text = "Change your shopping budget or people count any time — your list and " +
-                                "trip plan update to match.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Rounded.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                }
-            }
-        }
-
-        // ── Updates ─────────────────────────────────────────────────────────
-        item { SettingsSectionHeader("Updates") }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Updates", style = MaterialTheme.typography.titleMedium)
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = {
-                            if (!checkingUpdates) {
-                                checkingUpdates = true
-                                updateCheckMsg = null
-                                scope.launch {
-                                    val found = GithubUpdateChecker.checkLatest()
-                                    checkingUpdates = false
-                                    if (found == null) {
-                                        updateCheckMsg = "You're on the latest version (${BuildConfig.VERSION_NAME})."
-                                    } else {
-                                        updateCheckMsg = "Update available: v${found.versionName}"
-                                        UpdateBus.publish(found)
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !checkingUpdates,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accents.leaf),
-                    ) {
-                        Icon(Icons.Rounded.SystemUpdate, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (checkingUpdates) "Checking…" else "Check for updates")
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = updateCheckMsg ?: "Checks GitHub releases every 15 minutes.",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .clickable { requestNotifications() }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accents.dealSoft),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.Info, contentDescription = null, tint = accents.deal, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = "Update notifications",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        )
-                        Text(
-                            text = "Get a heads-up when a new Thrive version is ready. You can turn this " +
-                                "on or off any time — the app works fully without it.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = Build.VERSION.SDK_INT < 33 ||
-                            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-                            PackageManager.PERMISSION_GRANTED,
-                        onCheckedChange = { requestNotifications() },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accents.deal),
-                    )
-                }
-            }
-        }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accents.leafSoft),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Rounded.NotificationsActive,
-                            contentDescription = null,
-                            tint = accents.leaf,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = "Deal reminders",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        )
-                        Text(
-                            text = "If you haven't opened Thrive in over 42 hours, a short reminder " +
-                                "brings you back to fresh deals. At most one per absence — no spam.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = remindersEnabled,
-                        onCheckedChange = { on ->
-                            remindersEnabled = on
-                            app.settings.putBoolean(com.thrive.app.update.ReEngagement.KEY_ENABLED, on)
-                            if (on && Build.VERSION.SDK_INT >= 33 &&
-                                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                PackageManager.PERMISSION_GRANTED
-                            ) {
-                                // Reminders need the same permission as update alerts.
-                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accents.leaf),
-                    )
-                }
-            }
-        }
-
-        // ── About ───────────────────────────────────────────────────────────
-        item { SettingsSectionHeader("About Thrive") }
-
-        item {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("About Thrive", style = MaterialTheme.typography.titleMedium)
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "Thrive helps families save on groceries, cook affordable meals, " +
-                        "use what they have, and shop on a plan. Version ${BuildConfig.VERSION_NAME}. " +
-                        "Deals are illustrative demo data refreshed in-app.",
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-            }
-        }
-    }
-
-    if (showBudgetEdit) {
-        BudgetEditDialog(
-            budget = budgetState.budget,
-            people = budgetState.people,
-            onDismiss = { showBudgetEdit = false },
-            onSave = { newBudget, newPeople ->
-                budgetVm.setBudget(newBudget)
-                budgetVm.setPeople(newPeople)
-                // A changed budget invalidates any computed trip plan so the
-                // user re-runs "Find me the best deals" against the new numbers.
-                budgetVm.clearPlanForEdit()
-                showBudgetEdit = false
-                Toast.makeText(context, "Budget updated — your list and plan adjust", Toast.LENGTH_SHORT).show()
-            },
-        )
     }
 }
 
-// ---------------------------------------------------------------------------
-// Section headers used to group settings by category
-// ---------------------------------------------------------------------------
-
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    val accents = LocalThriveColors.current
+private fun SettingsTopBar(title: String, onBack: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(accents.deal),
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = ThriveFont,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            ),
-        )
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") }
+        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
-// ---------------------------------------------------------------------------
-// Grocery budget editing (Settings → Grocery budget)
-// ---------------------------------------------------------------------------
+@Composable
+private fun SettingsHome(onOpen: (SettingsPage) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            Text("Your Thrive", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+            Text(
+                "Keep your household, privacy, and app preferences in one place.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+        items(SettingsPage.entries) { entry ->
+            Card(
+                onClick = { onOpen(entry) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                ListItem(
+                    headlineContent = { Text(entry.title, style = MaterialTheme.typography.titleMedium) },
+                    supportingContent = { Text(entry.description, style = MaterialTheme.typography.bodyMedium) },
+                    leadingContent = {
+                        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                            Icon(entry.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                        }
+                    },
+                    trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
+                )
+            }
+        }
+    }
+}
 
 @Composable
-private fun BudgetEditDialog(
-    budget: Double,
-    people: Int,
-    onDismiss: () -> Unit,
-    onSave: (Double, Int) -> Unit,
-) {
-    val accents = LocalThriveColors.current
-    var budgetText by remember { mutableStateOf(if (budget > 0) Money.fmt(budget).removePrefix("$") else "") }
-    var peopleCount by remember { mutableStateOf(people.coerceIn(1, 12)) }
-    val quickAmounts = listOf(40.0, 75.0, 100.0, 150.0)
+private fun AccountSettings(savingsVm: SavingsViewModel) {
+    val state by savingsVm.state.collectAsState()
+    val account = savingsVm.googleAccount()
+    val signedIn = savingsVm.googleSignedIn()
+    var confirmDelete by remember { mutableStateOf(false) }
+    SettingsList {
+        hero(
+            Icons.Rounded.AccountCircle,
+            if (account.email.isNotBlank()) account.name.ifBlank { account.email } else "Your account",
+            if (signedIn) "Your Thrive data can securely follow you across signed-in devices." else "Sign in with Google to protect and synchronize your household data.",
+        )
+        item {
+            if (signedIn) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatusRow(Icons.Rounded.CloudDone, "Signed in", account.email.ifBlank { "Google account" })
+                    Button(onClick = { savingsVm.googleBackupNow() }, modifier = Modifier.fillMaxWidth()) { Text("Sync now") }
+                    OutlinedButton(onClick = { savingsVm.googleSignOut() }, modifier = Modifier.fillMaxWidth()) { Text("Sign out") }
+                    if (!confirmDelete) {
+                        TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Delete account and server data", color = MaterialTheme.colorScheme.error)
+                        }
+                    } else {
+                        Text(
+                            "This permanently removes your encrypted Thrive account and every server session. Local data stays on this phone.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        OutlinedButton(
+                            onClick = { confirmDelete = false; savingsVm.googleDeleteAccount() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Confirm permanent deletion", color = MaterialTheme.colorScheme.error) }
+                        TextButton(onClick = { confirmDelete = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+                    }
+                }
+            } else GoogleSignInButton(savingsVm)
+        }
+        state.backupMsg?.takeIf { it.isNotBlank() }?.let { message ->
+            item { Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        item { PrivacyNote("Google confirms who you are. Thrive stores app data in its own encrypted database; private server keys are never placed inside the app.") }
+    }
+}
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(26.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = "Grocery budget",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = ThriveFont,
-                    fontWeight = FontWeight.ExtraBold,
-                ),
+@Composable
+private fun BudgetSettings(profile: HouseholdProfile, save: (HouseholdProfile) -> Unit, budgetVm: BudgetViewModel) {
+    var text by remember(profile.budgetAmount) { mutableStateOf(profile.budgetAmount.takeIf { it > 0 }?.let { "%.0f".format(it) } ?: "") }
+    var cadence by remember(profile.budgetCadence) { mutableStateOf(profile.budgetCadence) }
+    var people by remember(profile.householdSize) { mutableIntStateOf(profile.householdSize.coerceIn(1, 12)) }
+    SettingsList {
+        hero(Icons.Rounded.Wallet, "Your grocery budget", "Thrive uses this target to make plans and deal suggestions more useful.")
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FilterChip(cadence == BudgetCadence.WEEKLY, { cadence = BudgetCadence.WEEKLY }, { Text("Weekly") }, modifier = Modifier.weight(1f))
+                FilterChip(cadence == BudgetCadence.MONTHLY, { cadence = BudgetCadence.MONTHLY }, { Text("Monthly") }, modifier = Modifier.weight(1f))
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it.filter { ch -> ch.isDigit() || ch == '.' }.take(7) },
+                label = { Text(if (cadence == BudgetCadence.WEEKLY) "Weekly budget" else "Monthly budget") },
+                prefix = { Text("$") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "How much can you spend per shopping trip?",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = budgetText,
-                    onValueChange = { input ->
-                        val cleaned = input.filter { it.isDigit() || it == '.' }
-                        if (cleaned.length <= 6) budgetText = cleaned
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("e.g. 75") },
-                    leadingIcon = { Text("$", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                    ),
-                )
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    quickAmounts.forEach { amount ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(
-                                    if (budgetText.toDoubleOrNull() == amount) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                .clickable { budgetText = if (amount % 1.0 == 0.0) amount.toInt().toString() else amount.toString() }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
+        }
+        item {
+            Text("Household size", style = MaterialTheme.typography.titleMedium)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton({ people = (people - 1).coerceAtLeast(1) }, enabled = people > 1) { Text("−") }
+                Text(people.toString(), style = MaterialTheme.typography.headlineMedium)
+                OutlinedButton({ people = (people + 1).coerceAtMost(12) }, enabled = people < 12) { Text("+") }
+            }
+        }
+        item {
+            Button(
+                onClick = {
+                    val amount = text.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                    save(profile.copy(budgetAmount = amount, budgetCadence = cadence, householdSize = people))
+                    budgetVm.setBudget(if (cadence == BudgetCadence.WEEKLY) amount else amount / 4.33)
+                    budgetVm.setPeople(people)
+                },
+                enabled = (text.toDoubleOrNull() ?: 0.0) > 0,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Save budget") }
+            ChangeLaterNote()
+        }
+    }
+}
+
+@Composable
+private fun AppliancesSettings(profile: HouseholdProfile, save: (HouseholdProfile) -> Unit) {
+    var selected by remember(profile.appliances) { mutableStateOf(profile.appliances) }
+    SettingsList {
+        hero(Icons.Rounded.Kitchen, "Kitchen appliances", "Recipe plans use only the equipment you select here.")
+        applianceChoices.chunked(2).forEach { choices ->
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    choices.forEach { choice ->
+                        OutlinedCard(
+                            onClick = { selected = if (choice in selected) selected - choice else selected + choice },
+                            modifier = Modifier.weight(1f),
                         ) {
-                            Text(
-                                text = Money.fmtCompact(amount),
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    color = if (budgetText.toDoubleOrNull() == amount) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                            )
+                            Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(choice, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                                if (choice in selected) Icon(Icons.Rounded.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = "How many people are you shopping for?",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                )
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { peopleCount = (peopleCount - 1).coerceAtLeast(1) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                    ) {
-                        Text("−", style = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary))
-                    }
-                    Text(
-                        text = "$peopleCount",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontFamily = ThriveFont,
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { peopleCount = (peopleCount + 1).coerceAtMost(12) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                    ) {
-                        Text("+", style = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary))
-                    }
-                }
             }
-        },
-        confirmButton = {
+        }
+        item {
+            Button(onClick = { save(profile.copy(appliances = selected)) }, modifier = Modifier.fillMaxWidth()) { Text("Save appliances") }
+            ChangeLaterNote()
+        }
+    }
+}
+
+@Composable
+private fun SecuritySettings(repo: ThriveRepository) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var hasLocation by remember { mutableStateOf(LocationProvider.hasPermission(context)) }
+    var working by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasLocation = granted
+        if (granted) scope.launch {
+            working = true
+            LocationProvider.lastKnownLocation(context)?.let { repo.setLocation(it.first, it.second) }
+            working = false
+        }
+    }
+    SettingsList {
+        hero(Icons.Rounded.Lock, "Privacy by design", "Your signed-in household data is encrypted before it is stored on the Thrive PC server.")
+        item { PrivacyNote("Passwords and private provider keys are not shown in Thrive and are never embedded in the APK. Local session credentials are protected by Android Keystore.") }
+        item {
+            HorizontalDivider()
+            Text("Nearby deals", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 14.dp))
+            Text("Approximate location helps rank stores. Thrive works normally when location is off.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.LocationOn, null, tint = MaterialTheme.colorScheme.primary)
+                    Text(if (hasLocation) "Location on" else "Location off")
+                }
+                Switch(
+                    checked = hasLocation,
+                    onCheckedChange = { on ->
+                        if (on) launcher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        else scope.launch { repo.clearLocation(); hasLocation = false }
+                    },
+                    enabled = !working,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdatesSettings(repo: ThriveRepository) {
+    val context = LocalContext.current
+    val app = context.applicationContext as com.thrive.app.ThriveApp
+    val sync by repo.syncState.collectAsState()
+    val llmState by app.onDeviceLlm.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    var checking by remember { mutableStateOf(false) }
+    var updateMessage by remember { mutableStateOf<String?>(null) }
+    var reminders by remember { mutableStateOf(app.settings.getBoolean(ReEngagement.KEY_ENABLED, true)) }
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) reminders = false }
+    SettingsList {
+        hero(Icons.Rounded.SystemUpdate, "Updates", "Thrive refreshes deals in the background and checks for new app versions.")
+        item {
+            StatusRow(
+                Icons.Rounded.Refresh,
+                "Deal refresh",
+                when (sync.status) {
+                    SyncStatus.OK -> "Current"
+                    SyncStatus.SYNCING -> "Refreshing…"
+                    SyncStatus.ERROR -> "Using saved deals; retry scheduled"
+                    SyncStatus.OFFLINE -> "Using saved deals"
+                },
+            )
+            OutlinedButton(onClick = { scope.launch { repo.syncNow(force = true) } }, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
+                Text("Refresh deals", modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+        item {
+            HorizontalDivider()
+            Spacer(Modifier.height(14.dp))
+            StatusRow(Icons.Rounded.AutoAwesome, "Offline AI", aiStatus(llmState))
+            if (llmState is OnDeviceLlm.State.Downloading) {
+                LinearProgressIndicator(progress = { (llmState as OnDeviceLlm.State.Downloading).progress }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            }
+            Text(
+                "The offline assistant prepares automatically after setup on a suitable connection. Thrive's built-in planning tools keep working while it downloads or if this phone cannot run it.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            if (llmState is OnDeviceLlm.State.Failed || llmState is OnDeviceLlm.State.NotDownloaded) {
+                OutlinedButton(onClick = { com.thrive.app.update.OfflineAiWorker.schedule(app) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Retry offline AI setup") }
+            }
+            if (llmState is OnDeviceLlm.State.Ready) {
+                TextButton(onClick = { app.onDeviceLlm.deleteModel() }, modifier = Modifier.fillMaxWidth()) { Text("Remove offline AI files") }
+            }
+        }
+        item {
+            HorizontalDivider()
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Update notifications", style = MaterialTheme.typography.titleMedium)
+                    Text("A quiet alert when a new Thrive version is ready.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = reminders, onCheckedChange = { enabled ->
+                    reminders = enabled
+                    app.settings.putBoolean(ReEngagement.KEY_ENABLED, enabled)
+                    if (enabled && Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                })
+            }
+        }
+        item {
             Button(
                 onClick = {
-                    val value = budgetText.toDoubleOrNull()
-                    if (value != null && value > 0) onSave(value, peopleCount)
+                    checking = true
+                    scope.launch {
+                        val update = GithubUpdateChecker.checkLatest()
+                        checking = false
+                        if (update == null) updateMessage = "You're up to date."
+                        else { updateMessage = "Version ${update.versionName} is available."; UpdateBus.publish(update) }
+                    }
                 },
-                enabled = (budgetText.toDoubleOrNull() ?: 0.0) > 0,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accents.deal),
-            ) {
-                Text("Save budget", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
+                enabled = !checking,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (checking) "Checking…" else "Check for app update") }
+            updateMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun AboutSettings() {
+    SettingsList {
+        hero(Icons.Rounded.Info, "Thrive", "A practical grocery savings and meal-planning companion built for real households.")
+        item {
+            StatusRow(Icons.Rounded.Info, "Version", BuildConfig.VERSION_NAME)
+            Spacer(Modifier.height(12.dp))
+            PrivacyNote("Deal prices can change. Thrive labels planning estimates clearly and opens the retailer so you can confirm the live price before buying.")
+            Text("Privacy", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            Text("Thrive collects only the information needed for the features you use. Account data stays on the configured Thrive server and is not sold.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Open-source notices and third-party model licenses are included with the app distribution.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingsList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        content = content,
     )
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.hero(icon: ImageVector, title: String, body: String) {
+    item {
+        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusRow(icon: ImageVector, title: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun PrivacyNote(text: String) {
+    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(14.dp))
+    }
+}
+
+@Composable
+private fun ChangeLaterNote() {
+    Text("You can change this anytime in Settings.", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium), color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+}
+
+private fun aiStatus(state: OnDeviceLlm.State): String = when (state) {
+    OnDeviceLlm.State.NotDownloaded -> "Waiting to prepare"
+    is OnDeviceLlm.State.Downloading -> "Preparing ${((state.progress * 100).toInt()).coerceIn(0, 100)}%"
+    OnDeviceLlm.State.Ready -> "Ready on this phone"
+    is OnDeviceLlm.State.Failed -> "Setup paused; Thrive still works"
 }

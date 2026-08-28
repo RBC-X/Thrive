@@ -4,7 +4,7 @@
  * Regression tests that prove critical security properties survive refactoring.
  * Each test asserts a real observable behavior, not a code pattern.
  */
-const { describe, it } = require("node:test");
+const { after, describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("http");
 
@@ -34,6 +34,8 @@ function close() {
     server = null;
   });
 }
+
+after(close);
 
 async function get(path) {
   const res = await fetch(`${BASE}${path}`);

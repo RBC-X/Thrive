@@ -1,0 +1,51 @@
+param(
+    [int]$Port = 4000
+)
+
+$ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.Security
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$backendDir = Join-Path $projectRoot "backend"
+$stateDir = Join-Path $env:LOCALAPPDATA "ThriveServer"
+$secretPath = Join-Path $stateDir "account-key.dpapi"
+$databasePath = Join-Path $stateDir "thrive-accounts.sqlite"
+$backupDir = Join-Path $stateDir "anonymous-backups"
+
+New-Item -ItemType Directory -Force -Path $stateDir, $backupDir | Out-Null
+
+if (-not (Test-Path -LiteralPath $secretPath)) {
+    $plainKey = New-Object byte[] 32
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($plainKey) } finally { $rng.Dispose() }
+    $protectedKey = [System.Security.Cryptography.ProtectedData]::Protect(
+        $plainKey,
+        $null,
+        [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+    )
+    [System.IO.File]::WriteAllBytes($secretPath, $protectedKey)
+    [Array]::Clear($plainKey, 0, $plainKey.Length)
+}
+
+$protectedBytes = [System.IO.File]::ReadAllBytes($secretPath)
+$keyBytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
+    $protectedBytes,
+    $null,
+    [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+)
+
+try {
+    $env:THRIVE_DATA_ENCRYPTION_KEY = [Convert]::ToBase64String($keyBytes)
+    $env:THRIVE_ACCOUNT_DB = $databasePath
+    $env:THRIVE_BACKUP_DIR = $backupDir
+    $env:HOST = "127.0.0.1"
+    $env:PORT = $Port.ToString()
+    Set-Location -LiteralPath $backendDir
+    $node = Join-Path $env:ProgramFiles "nodejs\node.exe"
+    if (-not (Test-Path -LiteralPath $node)) {
+        $node = (Get-Command node.exe -ErrorAction Stop).Source
+    }
+    & $node server.js
+} finally {
+    [Array]::Clear($keyBytes, 0, $keyBytes.Length)
+    Remove-Item Env:THRIVE_DATA_ENCRYPTION_KEY -ErrorAction SilentlyContinue
+}

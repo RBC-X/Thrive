@@ -2,14 +2,18 @@ package com.thrive.app.update
 
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.thrive.app.ThriveApp
 import com.thrive.app.data.ThriveRepository
+import com.thrive.app.data.remote.SyncStatus
 import java.util.concurrent.TimeUnit
 
 /**
@@ -29,12 +33,20 @@ class DealSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val app = applicationContext as? ThriveApp ?: return Result.failure()
         val repo = ThriveRepository(app, app.settings)
-        // Skip when nothing is configured (no sync server) — the worker would
-        // otherwise just spin on OFFLINE forever. syncNow is cheap in that
-        // state, but there is no point waking the network for nothing.
-        if (repo.syncBaseUrl.isBlank()) return Result.success()
+        // Release users never see technical server controls. Discover the
+        // operator's currently published HTTPS endpoint automatically.
+        if (repo.syncBaseUrl.isBlank()) {
+            val discovered = GithubUpdateChecker.discoverSyncServer()
+            if (discovered.isNullOrBlank()) return if (runAttemptCount < 4) Result.retry() else Result.success()
+            app.settings.putString(ThriveRepository.SYNC_URL_KEY, discovered)
+        }
         repo.syncNow(force = false)
-        return Result.success()
+        return when (repo.syncState.value.status) {
+            SyncStatus.OK -> Result.success()
+            SyncStatus.ERROR -> if (runAttemptCount < 4) Result.retry() else Result.failure()
+            SyncStatus.OFFLINE -> if (runAttemptCount < 4) Result.retry() else Result.success()
+            SyncStatus.SYNCING -> Result.retry()
+        }
     }
 
     companion object {
@@ -46,7 +58,10 @@ class DealSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
         /** Registers the 30-minute recurring deal sync. */
         fun schedule(context: Context) {
-            val periodic = PeriodicWorkRequestBuilder<DealSyncWorker>(30, TimeUnit.MINUTES).build()
+            val periodic = PeriodicWorkRequestBuilder<DealSyncWorker>(30, TimeUnit.MINUTES)
+                .setConstraints(networkConstraints())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 PERIODIC_WORK,
                 ExistingPeriodicWorkPolicy.KEEP,
@@ -66,8 +81,15 @@ class DealSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
             WorkManager.getInstance(context).enqueueUniqueWork(
                 RESUME_WORK,
                 ExistingWorkPolicy.KEEP,
-                OneTimeWorkRequestBuilder<DealSyncWorker>().build(),
+                OneTimeWorkRequestBuilder<DealSyncWorker>()
+                    .setConstraints(networkConstraints())
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .build(),
             )
         }
+
+        private fun networkConstraints(): Constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
     }
 }

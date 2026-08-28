@@ -4,4 +4,5 @@
          its own explicit backup flow, so preferences must never leave-device
          through Android Auto Backup. -->
     <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="thrive-llm/" />
 </full-backup-content>

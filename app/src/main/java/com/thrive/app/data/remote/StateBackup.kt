@@ -3,6 +3,7 @@ package com.thrive.app.data.remote
 import com.thrive.app.BuildConfig
 import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.data.model.BudgetState
+import com.thrive.app.data.model.HouseholdProfile
 import com.thrive.app.data.model.PantryItem
 import com.thrive.app.data.model.ShoppingItem
 import kotlinx.coroutines.Dispatchers
@@ -29,12 +30,22 @@ import java.security.SecureRandom
 @Serializable
 data class BackupSnapshot(
     val favorites: Set<String> = emptySet(),
+    val recipeFavorites: Set<String> = emptySet(),
     val pantry: List<PantryItem> = emptyList(),
     val budget: BudgetState? = null,
+    val householdProfile: HouseholdProfile? = null,
+    val seenDealIds: Set<String> = emptySet(),
+    val feedRevision: String? = null,
+    val deletedFavoriteIds: Set<String> = emptySet(),
+    val deletedRecipeFavoriteIds: Set<String> = emptySet(),
+    val deletedPantryItemIds: Set<String> = emptySet(),
+    val deletedShoppingItemIds: Set<String> = emptySet(),
 )
 
 /** Pure merge rules — add-only unions so devices never delete each other's data. */
 object BackupMerge {
+
+    private const val MAX_BACKED_UP_SEEN_IDS = 10_000
 
     /** Union: every favorite from either device survives. */
     fun favorites(local: Set<String>, remote: Set<String>): Set<String> = local + remote
@@ -60,6 +71,24 @@ object BackupMerge {
             items = shopping(local.items, remote.items),
         )
     }
+
+    /** Prefer the most recently completed profile; otherwise keep local edits. */
+    fun householdProfile(local: HouseholdProfile?, remote: HouseholdProfile?): HouseholdProfile? {
+        if (local == null) return remote?.normalized()
+        if (remote == null) return local.normalized()
+        val localTime = local.onboardingCompletedAt ?: Long.MIN_VALUE
+        val remoteTime = remote.onboardingCompletedAt ?: Long.MIN_VALUE
+        return if (remoteTime > localTime) remote.normalized() else local.normalized()
+    }
+
+    /** Union read ids so a previously-read deal is never announced as new again. */
+    fun seenDealIds(local: Set<String>, remote: Set<String>): Set<String> =
+        (remote + local).asSequence()
+            .map(String::trim)
+            .filter { it.isNotEmpty() && it.length <= 160 }
+            .distinct()
+            .take(MAX_BACKED_UP_SEEN_IDS)
+            .toCollection(linkedSetOf())
 
     private fun shopping(local: List<ShoppingItem>, remote: List<ShoppingItem>): List<ShoppingItem> {
         val seen = local.map { it.id }.toMutableSet()
@@ -257,7 +286,15 @@ class StateBackup(private val settings: SettingsStore, private val baseUrlProvid
             remote.budget == null -> local.budget
             else -> BackupMerge.budget(local.budget, remote.budget)
         }
-        return BackupSnapshot(favorites = favorites, pantry = pantry, budget = budget)
+        return BackupSnapshot(
+            favorites = favorites,
+            recipeFavorites = BackupMerge.favorites(remote.recipeFavorites, local.recipeFavorites),
+            pantry = pantry,
+            budget = budget,
+            householdProfile = BackupMerge.householdProfile(local.householdProfile, remote.householdProfile),
+            seenDealIds = BackupMerge.seenDealIds(local.seenDealIds, remote.seenDealIds),
+            feedRevision = local.feedRevision ?: remote.feedRevision,
+        )
     }
 
     // ---- Section pushes (server merges per-section; absent sections are kept) ----
@@ -270,6 +307,12 @@ class StateBackup(private val settings: SettingsStore, private val baseUrlProvid
 
     suspend fun pushBudget(budget: BudgetState): PushResult =
         put(activeCode(), BackupSnapshot(budget = budget))
+
+    suspend fun pushHouseholdProfile(profile: HouseholdProfile): PushResult =
+        put(activeCode(), BackupSnapshot(householdProfile = profile.normalized()))
+
+    suspend fun pushReadState(seenDealIds: Set<String>, feedRevision: String?): PushResult =
+        put(activeCode(), BackupSnapshot(seenDealIds = seenDealIds, feedRevision = feedRevision))
 
     suspend fun pushAll(snapshot: BackupSnapshot): PushResult = put(activeCode(), snapshot)
 
@@ -288,6 +331,7 @@ class StateBackup(private val settings: SettingsStore, private val baseUrlProvid
             is PullResult.Found -> {
                 val merged = BackupSnapshot(
                     favorites = BackupMerge.favorites(local.favorites, pulled.snapshot.favorites),
+                    recipeFavorites = BackupMerge.favorites(local.recipeFavorites, pulled.snapshot.recipeFavorites),
                     pantry = BackupMerge.pantry(local.pantry, pulled.snapshot.pantry),
                     budget = when {
                         local.budget == null && pulled.snapshot.budget == null -> null
@@ -295,6 +339,9 @@ class StateBackup(private val settings: SettingsStore, private val baseUrlProvid
                         pulled.snapshot.budget == null -> local.budget
                         else -> BackupMerge.budget(local.budget, pulled.snapshot.budget)
                     },
+                    householdProfile = BackupMerge.householdProfile(local.householdProfile, pulled.snapshot.householdProfile),
+                    seenDealIds = BackupMerge.seenDealIds(local.seenDealIds, pulled.snapshot.seenDealIds),
+                    feedRevision = local.feedRevision ?: pulled.snapshot.feedRevision,
                 )
                 when (val push = put(cleaned, merged, pulled.revision)) {
                     is PushResult.Ok -> {

@@ -1,5 +1,12 @@
 {
   "notes": {
+    "1.7.0": [
+      "Premium mobile redesign: Thrive now opens with a focused household setup, warmer visual system, clearer navigation, and simplified Settings categories for Account, Budget, Appliances, Security, Updates, and About Thrive",
+      "Secure account storage: Google sign-in exchanges identity for short-lived Thrive sessions, refreshes them safely, supports logout, and keeps encrypted account state in SQLite instead of plaintext files",
+      "Reliable private sync: pantry, favorites, budget, appliance profile, and seen-deal state follow the signed-in account with conflict-safe merging; secrets and server controls are no longer exposed in the app UI",
+      "Automatic offline AI: the pinned 546 MB model downloads on unmetered connections with resumable background work, storage checks, exact size and SHA-256 verification, and no user-visible API keys",
+      "Honest deal freshness: the first catalog is treated as the baseline and only genuinely unseen stable deal IDs appear as new after later refreshes, so reopening Thrive never resurrects thousands of old alerts"
+    ],
     "1.6.3": [
       "Google backup repaired end to end: sign-in now uses the backend's POST contract, backup revisions survive repeated saves, conflicts re-pull and merge instead of overwriting, and expired sessions ask you to sign in again",
       "Honest savings data: bundled prices are clearly labeled planning estimates and open the named retailer, while Open Food Facts is used only for product images — never presented as a store offer or live price",

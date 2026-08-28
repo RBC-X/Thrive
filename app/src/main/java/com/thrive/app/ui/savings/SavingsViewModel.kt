@@ -13,8 +13,6 @@ import com.thrive.app.data.remote.PushResult
 import com.thrive.app.data.remote.RestoreResult
 import com.thrive.app.data.remote.StateBackup
 import com.thrive.app.data.remote.SyncState
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -42,11 +40,6 @@ data class SavingsUiState(
     val sync: SyncState = SyncState(),
     val backupCode: String = "",
     val backupMsg: String? = null,
-    // Google Sign-In: the ID token from the latest Google sign-in, held only
-    // in memory (never persisted) so account backups can authenticate. The
-    // signed-in profile itself is persisted via GoogleAccountStore.
-    val googleIdToken: String? = null,
-    val seenDealIds: Set<String> = emptySet(),
 ) {
     /**
      * Prefer current, retailer-verified deals whenever the server supplies
@@ -145,13 +138,13 @@ data class SavingsUiState(
                 )
         }
 
-    /** Fresh "new this week" deals — falls back to soonest-expiring when none are flagged new. */
+    /** Deals that arrived after this user's persisted feed baseline. */
     val newThisWeek: List<Coupon>
         get() {
-            val fresh = available
+            return available
                 .filter { it.isNew }
                 .sortedWith(compareBy<Coupon> { it.endsInDays }.thenBy { it.id })
-            return (if (fresh.isNotEmpty()) fresh else available.sortedBy { it.endsInDays }).take(10)
+                .take(10)
         }
 
     /**
@@ -201,46 +194,34 @@ internal fun pickDailyPick(available: List<Coupon>, day: Int): Coupon? {
     return ranked[minOf(day % 3, ranked.size - 1)]
 }
 
-class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {
+class SavingsViewModel(app: ThriveApp, private val repo: ThriveRepository) : ViewModel() {
 
     private val backup = StateBackup(app.settings) { repo.syncBaseUrl }
-    private var pushJob: Job? = null
 
     // Emitted after a full restore so other tabs (pantry/budget) refresh their
     // on-screen state from the merged snapshot.
     private val _restored = MutableSharedFlow<BackupSnapshot>(extraBufferCapacity = 1)
     val restored: SharedFlow<BackupSnapshot> = _restored.asSharedFlow()
 
+    /**
+     * Replaces feed-supplied marketing flags with per-device read state. The
+     * first catalog becomes a zero-unread baseline. Later stable ids are marked
+     * new for this session and acknowledged immediately, so a crash/restart can
+     * never resurrect thousands of already-viewed offers.
+     */
+    private fun annotateUnread(coupons: List<Coupon>, revision: String? = null): List<Coupon> {
+        val unread = repo.unseenDealIds(coupons.map { it.id }, revision)
+        if (unread.isNotEmpty()) repo.markDealsSeen(unread, revision)
+        return coupons.map { coupon -> coupon.copy(isNew = coupon.id in unread) }
+    }
+
     private val _state = MutableStateFlow(
-        SavingsUiState(
-            coupons = repo.coupons,
-            backupCode = backup.activeCode(),
-            seenDealIds = com.thrive.app.data.local.DealReadStore.seen(app.settings),
-        )
+        SavingsUiState(coupons = annotateUnread(repo.coupons), backupCode = backup.activeCode())
     )
     val state: StateFlow<SavingsUiState> = _state.asStateFlow()
 
     init {
         _state.update { it.copy(favorites = repo.favoriteCouponIds(), sync = repo.syncState.value) }
-        // Non-blocking: pull favorites saved under this device's backup code and
-        // merge them in. Only a confirmed server answer merges; failures are
-        // silent here (the Settings card surfaces backup availability).
-        viewModelScope.launch {
-            when (val result = backup.pull(backup.activeCode())) {
-                is PullResult.Found -> {
-                    val local = repo.favoriteCouponIds()
-                    val merged = local + result.snapshot.favorites
-                    if (merged != local) {
-                        repo.saveCouponFavorites(merged) // add-only merge: never un-favorites
-                        _state.update { s -> s.copy(favorites = merged) }
-                    }
-                    if (merged.isNotEmpty() && merged != result.snapshot.favorites) {
-                        backup.pushFavorites(merged)
-                    }
-                }
-                else -> { /* offline/unreachable/insecure — keep local favorites */ }
-            }
-        }
         // Follow sync progress so the feed header can show live/offline status
         // and the coupon list swaps to the remote feed when it arrives.
         viewModelScope.launch {
@@ -248,7 +229,9 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
                 _state.update {
                     it.copy(
                         sync = s,
-                        coupons = if (s.status == com.thrive.app.data.remote.SyncStatus.OK) repo.coupons else it.coupons,
+                        coupons = if (s.status == com.thrive.app.data.remote.SyncStatus.OK) {
+                            annotateUnread(repo.coupons, s.lastSyncedAt?.toString())
+                        } else it.coupons,
                     )
                 }
             }
@@ -258,7 +241,12 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
     fun refreshNow() {
         viewModelScope.launch {
             repo.syncNow(force = true)
-            _state.update { it.copy(coupons = repo.coupons, favorites = repo.favoriteCouponIds()) }
+            _state.update {
+                it.copy(
+                    coupons = annotateUnread(repo.coupons, repo.syncState.value.lastSyncedAt?.toString()),
+                    favorites = repo.favoriteCouponIds(),
+                )
+            }
         }
     }
 
@@ -268,12 +256,6 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
 
     fun setMode(mode: String) = _state.update { it.copy(mode = mode) }
 
-    /** Mark the given deal IDs as "seen" and publish the new set immediately. */
-    fun markSeen(ids: Collection<String>) {
-        com.thrive.app.data.local.DealReadStore.markSeen(app.settings, ids)
-        _state.update { it.copy(seenDealIds = com.thrive.app.data.local.DealReadStore.seen(app.settings)) }
-    }
-
     fun toggleFavorite(id: String) {
         viewModelScope.launch {
             val nowFavorite = repo.toggleCouponFavorite(id)
@@ -282,15 +264,9 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
                 if (nowFavorite) favs.add(id) else favs.remove(id)
                 s.copy(favorites = favs)
             }
-            // Debounced push so tapping a few hearts in a row is one upload.
-            // The push itself re-pulls/merges on conflict; failures just mean
-            // the server hasn't seen the change yet (retried next time).
-            pushJob?.cancel()
-            pushJob = viewModelScope.launch {
-                delay(1_500)
-                runCatching { backup.pushFavorites(_state.value.favorites) }
-                _state.update { it.copy(backupMsg = null) }
-            }
+            // Repository persistence schedules encrypted account sync only
+            // when the user explicitly signed in. Local-only users never
+            // upload through the legacy anonymous path.
         }
     }
 
@@ -365,25 +341,77 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
 
     // ---- Google Sign-In backup ----
 
-    private val googleBackup = com.thrive.app.data.remote.GoogleBackup(
-        app.settings,
-        baseUrlProvider = { repo.syncBaseUrl },
-    )
+    private val googleBackup = repo.accountBackup()
 
     /** Signed-in Google account, or null. Exposed so Settings can show who's signed in. */
     fun googleAccount(): com.thrive.app.data.remote.GoogleAccountInfo = googleBackup.account()
 
-    /** True only while a usable Google session token is available. */
-    fun googleSignedIn(): Boolean = googleBackup.isSignedIn() && !_state.value.googleIdToken.isNullOrBlank()
+    /** True while an encrypted Thrive access/refresh session is available. */
+    fun googleSignedIn(): Boolean = googleBackup.isSignedIn()
 
     fun googleSignOut() {
-        googleBackup.signOut()
-        _state.update {
-            it.copy(
-                googleIdToken = null,
-                backupMsg = "Signed out of Google backup — your saved data stays on the server.",
-            )
+        viewModelScope.launch {
+            googleBackup.logout()
+            _state.update {
+                it.copy(backupMsg = "Signed out — your encrypted data stays on the server.")
+            }
         }
+    }
+
+    fun googleDeleteAccount() {
+        viewModelScope.launch {
+            _state.update { it.copy(backupMsg = "Deleting your encrypted account…") }
+            val deleted = runCatching { googleBackup.deleteAccount() }.getOrDefault(false)
+            _state.update {
+                it.copy(
+                    backupMsg = if (deleted) {
+                        "Account and server data permanently deleted. Your local Thrive data remains on this phone."
+                    } else {
+                        "Thrive could not confirm account deletion. Nothing was removed; try again when connected."
+                    },
+                )
+            }
+        }
+    }
+
+    private fun localAccountSnapshot(): BackupSnapshot = repo.accountSnapshot()
+
+    private fun mergeAccountSnapshots(local: BackupSnapshot, remote: BackupSnapshot): BackupSnapshot =
+        BackupSnapshot(
+            favorites = (local.favorites + remote.favorites) -
+                (local.deletedFavoriteIds + remote.deletedFavoriteIds),
+            recipeFavorites = (local.recipeFavorites + remote.recipeFavorites) -
+                (local.deletedRecipeFavoriteIds + remote.deletedRecipeFavoriteIds),
+            pantry = BackupMerge.pantry(local.pantry, remote.pantry).filterNot {
+                it.id in (local.deletedPantryItemIds + remote.deletedPantryItemIds)
+            },
+            budget = when {
+                local.budget == null && remote.budget == null -> null
+                local.budget == null -> remote.budget
+                remote.budget == null -> local.budget
+                else -> BackupMerge.budget(local.budget, remote.budget)
+            }?.let { budget ->
+                budget.copy(items = budget.items.filterNot {
+                    it.id in (local.deletedShoppingItemIds + remote.deletedShoppingItemIds)
+                })
+            },
+            householdProfile = BackupMerge.householdProfile(local.householdProfile, remote.householdProfile),
+            seenDealIds = BackupMerge.seenDealIds(local.seenDealIds, remote.seenDealIds),
+            feedRevision = remote.feedRevision ?: local.feedRevision,
+            deletedFavoriteIds = local.deletedFavoriteIds + remote.deletedFavoriteIds,
+            deletedRecipeFavoriteIds = local.deletedRecipeFavoriteIds + remote.deletedRecipeFavoriteIds,
+            deletedPantryItemIds = local.deletedPantryItemIds + remote.deletedPantryItemIds,
+            deletedShoppingItemIds = local.deletedShoppingItemIds + remote.deletedShoppingItemIds,
+        )
+
+    private fun applyAccountSnapshot(snapshot: BackupSnapshot) {
+        repo.saveCouponFavorites(snapshot.favorites)
+        repo.saveRecipeFavorites(snapshot.recipeFavorites)
+        repo.savePantry(snapshot.pantry)
+        snapshot.budget?.let { repo.saveBudget(it) }
+        snapshot.householdProfile?.let { repo.saveHouseholdProfile(it, markModified = false) }
+        repo.restoreAccountTombstones(snapshot)
+        repo.restoreDealReadState(snapshot.seenDealIds, snapshot.feedRevision)
     }
 
     /**
@@ -392,39 +420,24 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
      * add-only with this device, and pushes the union back. Signing into the
      * same Google account on another device brings everything with it.
      */
-    fun googleCompleteSignIn(idToken: String) {
+    fun googleCompleteSignIn(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
-            _state.update { it.copy(backupMsg = "Signing in…", googleIdToken = idToken) }
+            _state.update { it.copy(backupMsg = "Signing in…") }
             when (val exchanged = runCatching { googleBackup.exchange(idToken) }.getOrElse {
                 com.thrive.app.data.remote.GoogleAuthResult.Failed("Couldn't reach the backup server — check your connection.")
             }) {
                 is com.thrive.app.data.remote.GoogleAuthResult.Ok -> {
-                    val remote = runCatching { googleBackup.pull(idToken) }.getOrDefault(
+                    val remote = runCatching { googleBackup.pull() }.getOrDefault(
                         com.thrive.app.data.remote.PullResult.NetworkFailure
                     )
-                    val local = BackupSnapshot(
-                        favorites = repo.favoriteCouponIds(),
-                        pantry = repo.loadPantry(),
-                        budget = repo.loadBudget(),
-                    )
+                    val local = localAccountSnapshot()
                     val merged = when (remote) {
-                        is PullResult.Found -> BackupSnapshot(
-                            favorites = local.favorites + remote.snapshot.favorites,
-                            pantry = BackupMerge.pantry(local.pantry, remote.snapshot.pantry),
-                            budget = when {
-                                local.budget == null && remote.snapshot.budget == null -> null
-                                local.budget == null -> remote.snapshot.budget
-                                remote.snapshot.budget == null -> local.budget
-                                else -> BackupMerge.budget(local.budget, remote.snapshot.budget)
-                            },
-                        )
+                        is PullResult.Found -> mergeAccountSnapshots(local, remote.snapshot)
                         else -> local
                     }
                     // Persist the merged state locally, then push the union so
                     // the server has everything from every signed-in device.
-                    repo.saveCouponFavorites(merged.favorites)
-                    repo.savePantry(merged.pantry)
-                    merged.budget?.let { repo.saveBudget(it) }
+                    applyAccountSnapshot(merged)
                     _state.update {
                         it.copy(
                             favorites = merged.favorites,
@@ -432,7 +445,7 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
                         )
                     }
                     _restored.tryEmit(merged)
-                    when (val pushed = runCatching { googleBackup.push(idToken, merged) }
+                    when (val pushed = runCatching { googleBackup.push(merged) }
                         .getOrDefault(PushResult.NetworkFailure)) {
                         is PushResult.Ok -> _state.update {
                             it.copy(backupMsg = "Signed in and backed up as ${exchanged.account.name.ifBlank { exchanged.account.email }}.")
@@ -440,13 +453,12 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
                         is PushResult.Conflict -> _state.update {
                             it.copy(backupMsg = "Signed in, but another device changed the backup. Tap Back up now to retry.")
                         }
-                        is PushResult.Unauthorized -> _state.update {
-                            it.copy(googleIdToken = null, backupMsg = "Google session expired — sign in again.")
-                        }
+                        is PushResult.Unauthorized -> _state.update { it.copy(backupMsg = "Your secure session expired — sign in again.") }
                         else -> _state.update {
                             it.copy(backupMsg = "Signed in, but the backup server could not confirm the save.")
                         }
                     }
+                    onSuccess()
                 }
                 is com.thrive.app.data.remote.GoogleAuthResult.Failed -> {
                     _state.update { it.copy(backupMsg = exchanged.reason) }
@@ -458,18 +470,13 @@ class SavingsViewModel(private val app: ThriveApp, private val repo: ThriveRepos
     /** Manual "Back up now" when signed in with Google — pushes every section. */
     fun googleBackupNow() {
         viewModelScope.launch {
-            val idToken = _state.value.googleIdToken
-            if (idToken.isNullOrBlank()) {
-                _state.update { it.copy(backupMsg = "Google session expired — sign in again.") }
+            if (!googleBackup.isSignedIn()) {
+                _state.update { it.copy(backupMsg = "Sign in with Google to sync your data.") }
                 return@launch
             }
             _state.update { it.copy(backupMsg = "Backing up…") }
-            val snapshot = BackupSnapshot(
-                favorites = repo.favoriteCouponIds(),
-                pantry = repo.loadPantry(),
-                budget = repo.loadBudget(),
-            )
-            when (val result = runCatching { googleBackup.push(idToken, snapshot) }.getOrDefault(PushResult.NetworkFailure)) {
+            val snapshot = localAccountSnapshot()
+            when (val result = runCatching { googleBackup.push(snapshot) }.getOrDefault(PushResult.NetworkFailure)) {
                 is PushResult.Ok -> _state.update { it.copy(backupMsg = "Saved to your Google account.") }
                 is PushResult.Unauthorized -> _state.update { it.copy(backupMsg = "Google session expired — sign in again.") }
                 is PushResult.NetworkFailure -> _state.update { it.copy(backupMsg = "Couldn't reach the backup server — check your connection.") }

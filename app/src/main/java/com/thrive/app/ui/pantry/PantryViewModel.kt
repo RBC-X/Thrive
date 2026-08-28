@@ -16,14 +16,10 @@ import com.thrive.app.ai.WeeklyPlan
 import com.thrive.app.ai.WeeklyPlannerEngine
 import com.thrive.app.data.ThriveRepository
 import com.thrive.app.data.model.PantryItem
-import com.thrive.app.data.remote.BackupMerge
-import com.thrive.app.data.remote.PullResult
-import com.thrive.app.data.remote.StateBackup
 import com.thrive.app.data.remote.WebRecipeSearch
 import com.thrive.app.data.remote.WebSearchState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,37 +70,13 @@ class PantryViewModel(app: Application, private val repo: ThriveRepository) : An
     private val _state = MutableStateFlow(PantryUiState(items = repo.loadPantry()))
     val state: StateFlow<PantryUiState> = _state.asStateFlow()
 
-    // Anonymous backup: pantry syncs under the same backup code as favorites.
-    private val backup = StateBackup((app as com.thrive.app.ThriveApp).settings) { repo.syncBaseUrl }
-    private var pushJob: Job? = null
-
     init {
         _state.update { it.copy(aiEnabled = ai.isEnabled) }
-        // Non-blocking: pull pantry saved under this device's backup code and
-        // merge add-only, so pantry survives reinstalls. Only a confirmed
-        // server answer merges; offline/insecure failures stay silent.
-        viewModelScope.launch {
-            when (val result = backup.pull(backup.activeCode())) {
-                is PullResult.Found -> {
-                    val local = _state.value.items
-                    val merged = BackupMerge.pantry(local, result.snapshot.pantry)
-                    if (merged != local) {
-                        repo.savePantry(merged)
-                        _state.update { it.copy(items = merged) }
-                    }
-                }
-                else -> { /* keep local pantry */ }
-            }
-        }
     }
 
     /** Debounced pantry-only push so a burst of edits is one upload. */
     private fun schedulePush() {
-        pushJob?.cancel()
-        pushJob = viewModelScope.launch {
-            delay(1_500)
-            runCatching { backup.pushPantry(_state.value.items) }
-        }
+        repo.scheduleAccountSync()
     }
 
     /** Applies a restored/merged pantry list (from Settings restore). */

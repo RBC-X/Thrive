@@ -137,12 +137,12 @@ class SavingsSearchTest {
     }
 
     @Test
-    fun `new this week falls back to soonest-expiring when nothing is flagged`() {
+    fun `new this week stays empty when nothing is newly unread`() {
         val coupons = listOf(
             coupon("b", title = "B", endsInDays = 5),
             coupon("a", title = "A", endsInDays = 1),
         )
-        assertEquals(listOf("a", "b"), state(coupons).newThisWeek.map { it.id })
+        assertTrue(state(coupons).newThisWeek.isEmpty())
     }
 
     @Test

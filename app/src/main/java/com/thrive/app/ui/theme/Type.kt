@@ -79,8 +79,8 @@ val ThriveTypography = Typography(
     bodyMedium = TextStyle(
         fontFamily = ThriveFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 19.sp,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
     ),
     bodySmall = TextStyle(
         fontFamily = ThriveFont,
@@ -103,8 +103,8 @@ val ThriveTypography = Typography(
     labelSmall = TextStyle(
         fontFamily = ThriveFont,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
         letterSpacing = 0.4.sp,
     ),
 )

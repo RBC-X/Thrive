@@ -11,6 +11,8 @@ interface JsonHttpClient {
     suspend fun get(url: String, ifNoneMatch: String? = null, token: String? = null): HttpResult
     suspend fun putJson(url: String, jsonBody: String, ifMatch: String? = null, token: String? = null): HttpResult
     suspend fun postJson(url: String, jsonBody: String, token: String? = null): HttpResult
+    suspend fun delete(url: String, token: String? = null): HttpResult =
+        HttpResult(501, "delete is not implemented", null)
 }
 
 /** Tiny synchronous HTTP client — good enough for the sync API. */
@@ -59,6 +61,22 @@ object ApiClient : JsonHttpClient {
     /** POSTs JSON for endpoints such as the Google ID-token exchange. */
     override suspend fun postJson(url: String, jsonBody: String, token: String?): HttpResult =
         writeJson("POST", url, jsonBody, ifMatch = null, token = token)
+
+    override suspend fun delete(url: String, token: String?): HttpResult =
+        withContext(Dispatchers.IO) {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = "DELETE"
+                conn.connectTimeout = 8_000
+                conn.readTimeout = 15_000
+                if (!token.isNullOrBlank()) conn.setRequestProperty("Authorization", "Bearer $token")
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                HttpResult(code, stream?.bufferedReader()?.use { it.readText() } ?: "", conn.getHeaderField("ETag"))
+            } finally {
+                conn.disconnect()
+            }
+        }
 
     private suspend fun writeJson(
         method: String,

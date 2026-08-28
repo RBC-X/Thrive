@@ -29,9 +29,9 @@ backend_up() { curl -s -m 3 "http://localhost:$BACKEND_PORT/api/v1/health" >/dev
 ensure_backend() {
   if backend_up; then return 0; fi
   log "backend down — starting"
-  BACKEND_DIR="$ROOT/backend"
+  BACKEND_LAUNCHER="$ROOT/tools/start_backend_secure.ps1"
   powershell -NoProfile -Command \
-    "Start-Process -FilePath 'node' -ArgumentList 'server.js' -WorkingDirectory '$(cygpath -w "$BACKEND_DIR" 2>/dev/null || echo "$BACKEND_DIR")' -WindowStyle Hidden" || true
+    "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$(cygpath -w "$BACKEND_LAUNCHER" 2>/dev/null || echo "$BACKEND_LAUNCHER")' -WindowStyle Hidden" || true
   for _ in 1 2 3 4 5; do sleep 2; backend_up && { log "backend up"; return 0; }; done
   log "backend failed to start"
 }

@@ -5,6 +5,7 @@ import android.content.Context
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.thrive.app.ai.OnDeviceLlm
+import com.thrive.app.ai.AiService
 import com.thrive.app.data.local.SettingsStore
 import com.thrive.app.update.DealSyncWorker
 import com.thrive.app.update.ReEngagement
@@ -24,6 +25,12 @@ class ThriveApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         settings = SettingsStore(getSharedPreferences("thrive_settings", Context.MODE_PRIVATE))
+        // Client-entered provider secrets are no longer supported. Remove any
+        // legacy values left by older builds; private provider keys belong on
+        // the PC backend, never inside an extractable APK or plain preferences.
+        settings.remove(AiService.KEY_API_KEY)
+        settings.remove(AiService.KEY_BASE_URL)
+        settings.remove(AiService.KEY_MODEL)
         UpdateNotifier.ensureChannel(this)
         UpdateScheduler.schedule(this)
         ReEngagement.schedule(this)

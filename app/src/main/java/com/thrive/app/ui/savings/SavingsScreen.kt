@@ -45,7 +45,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,22 +98,12 @@ fun SavingsScreen(
     val newThisWeek = remember(state.coupons) { state.newThisWeek }
     val dailyPick = remember(state.coupons) { state.dailyPick }
 
-    // Deal read-tracking: mark every deal on screen as "seen" the first
-    // time the list renders, so "New this week" and per-card NewPills
-    // disappear after the user has scrolled past them.
-    val hasMarkedCurrentFeed = rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(state.coupons) {
-        if (!hasMarkedCurrentFeed.value && state.coupons.isNotEmpty()) {
-            kotlinx.coroutines.delay(1_500)
-            vm.markSeen(state.coupons.take(20).map { it.id })
-            hasMarkedCurrentFeed.value = true
-        }
-    }
-    val seenSet = state.seenDealIds
-    // Only show "New this week" for deals the user hasn't seen yet.
-    val unseenNewThisWeek = remember(newThisWeek, seenSet) {
-        newThisWeek.filter { it.id !in seenSet }
-    }
+    // The repository establishes the first catalog as the baseline and marks
+    // later stable ids read as they enter the session. Keep those additions
+    // visibly "new" until this session ends; they will not resurrect after a
+    // close/reopen unless the feed actually introduces another id.
+    val seenSet = emptySet<String>()
+    val unseenNewThisWeek = newThisWeek
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -578,7 +566,6 @@ private fun SavingsHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
-
             // Honest availability: every deal shown carries a VERIFIED direct
             // product link. Offers that only have a store search page (no exact
             // product page) are hidden, and the user is told exactly that — the
@@ -673,8 +660,6 @@ private fun SyncChip(sync: com.thrive.app.data.remote.SyncState) {
     }
 }
 
-
-
 @Composable
 private fun DailyPickHero(coupon: Coupon, onClick: () -> Unit) {
     val accents = LocalThriveColors.current
@@ -684,11 +669,7 @@ private fun DailyPickHero(coupon: Coupon, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(180.dp)
             .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFF0B6E4F), Color(0xFF128F6A)),
-                )
-            )
+            .background(Color(0xFF0D7C5F))
             .clickable(onClick = onClick),
     ) {
         // decorative sparkles

@@ -3,6 +3,53 @@ package com.thrive.app.data.model
 import kotlinx.serialization.Serializable
 
 // ---------------------------------------------------------------------------
+// Household profile / onboarding
+// ---------------------------------------------------------------------------
+
+@Serializable
+enum class BudgetCadence { WEEKLY, MONTHLY }
+
+/**
+ * Preferences collected during first-run onboarding. This stays useful while
+ * offline and is included in account backups when the user signs in.
+ */
+@Serializable
+data class HouseholdProfile(
+    val budgetAmount: Double = 0.0,
+    val budgetCadence: BudgetCadence = BudgetCadence.WEEKLY,
+    val householdSize: Int = 1,
+    val appliances: Set<String> = emptySet(),
+    val onboardingVersion: Int = 0,
+    val onboardingCompletedAt: Long? = null,
+) {
+    val isOnboardingComplete: Boolean
+        get() = onboardingVersion > 0 && onboardingCompletedAt != null
+
+    fun normalized(): HouseholdProfile = copy(
+        budgetAmount = budgetAmount.takeIf { it.isFinite() }?.coerceIn(0.0, 100_000.0) ?: 0.0,
+        householdSize = householdSize.coerceIn(1, 20),
+        appliances = appliances.map(String::trim)
+            .filter { it in SUPPORTED_APPLIANCES }
+            .toSet(),
+        onboardingVersion = onboardingVersion.coerceAtLeast(0),
+        onboardingCompletedAt = onboardingCompletedAt?.coerceAtLeast(0L),
+    )
+}
+
+/** Stable values stored in profiles and sent to the server. */
+val SUPPORTED_APPLIANCES: List<String> = listOf(
+    "Stovetop",
+    "Oven",
+    "Microwave",
+    "Air fryer",
+    "Slow cooker",
+    "Pressure cooker",
+    "Blender",
+    "Toaster oven",
+    "Grill",
+)
+
+// ---------------------------------------------------------------------------
 // Savings
 // ---------------------------------------------------------------------------
 

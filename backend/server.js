@@ -10,12 +10,33 @@ const fsp = require("fs/promises");
 const path = require("path");
 const { DailyRotationSource, PartnerApiSource, KrogerLiveSource, TargetLiveSource } = require("./src/sources");
 const { ExaService } = require("./src/exaService");
+const { AccountStore } = require("./src/accountStore");
 
 const app = express();
+app.disable("x-powered-by");
+// The public service is reached through one cloudflared process on loopback.
+// Trust forwarded client addresses only from that local hop; never trust an
+// arbitrary remote proxy/header. This keeps per-client rate limiting from
+// collapsing every tunnel user into 127.0.0.1.
+app.set("trust proxy", (ip) => ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1");
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Resource-Policy": "same-site",
+  });
+  if (req.path.startsWith("/api/v1/auth/") || req.path.startsWith("/api/v1/account/")) {
+    res.set("Cache-Control", "no-store");
+  }
+  next();
+});
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 
 const PORT = Number(process.env.PORT || 4000) || 4000;
+const HOST = process.env.HOST || "127.0.0.1";
 
 // ---------------------------------------------------------------------------
 // Error handling — malformed request data must NEVER terminate the process.
@@ -24,6 +45,32 @@ const PORT = Number(process.env.PORT || 4000) || 4000;
 // and the process-level guards below (which log and keep serving).
 // ---------------------------------------------------------------------------
 const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+function rateLimit({ windowMs, max }) {
+  const buckets = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || req.socket.remoteAddress || "unknown";
+    let bucket = buckets.get(key);
+    if (!bucket || bucket.resetAt <= now) bucket = { count: 0, resetAt: now + windowMs };
+    bucket.count += 1;
+    buckets.set(key, bucket);
+    res.set("RateLimit-Limit", String(max));
+    res.set("RateLimit-Remaining", String(Math.max(0, max - bucket.count)));
+    res.set("RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+    if (bucket.count > max) {
+      res.set("Retry-After", String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))));
+      return res.status(429).json({ error: "too many requests; try again later" });
+    }
+    if (buckets.size > 5000) {
+      for (const [entryKey, entry] of buckets) if (entry.resetAt <= now) buckets.delete(entryKey);
+    }
+    next();
+  };
+}
+
+const authRateLimit = rateLimit({ windowMs: 10 * 60 * 1000, max: 30 });
+const accountRateLimit = rateLimit({ windowMs: 10 * 60 * 1000, max: 300 });
 
 // Update channel: advertise the latest release APK served by this backend so the
 // app can show an in-app update card after a successful sync. Drop the APK at
@@ -847,27 +894,35 @@ app.put("/api/v1/backup/:code", asyncRoute(async (req0, res) => {
 }));
 
 // ---------------------------------------------------------------------------
-// Google Sign-In backup (favorites + pantry + budget under a Google account)
+// Google Sign-In account storage
 // ---------------------------------------------------------------------------
-// The app signs in with Google and sends the ID token here; the server
-// verifies it with Google's public tokeninfo endpoint (no API key or secret
-// needed server-side) and derives a stable, opaque storage key from the
-// account's `sub`. State is then stored/read under that key using the exact
-// same atomic + optimistic-concurrency machinery as code backups, so the
-// feature is never weaker than the code path. The ID token is never stored
-// and never appears in URLs or logs.
+// A Google ID token is used once to establish identity. The backend then issues
+// opaque access/refresh tokens; only SHA-256 token hashes are stored. Account
+// profile and state are AES-256-GCM encrypted inside SQLite, with the key kept
+// in THRIVE_DATA_ENCRYPTION_KEY on the server. The Google token and plaintext
+// profile/state are never written to disk or logs.
 //
-// THRIVE_GOOGLE_CLIENT_ID: the OAuth "Web" client ID this backend accepts
-// (audience check). When unset the server accepts any valid Google ID token
-// — fine for a private tunnel, but set it in production so only your app's
-// token audience is accepted.
+// THRIVE_GOOGLE_CLIENT_ID is mandatory outside the explicit test override.
 
 const GOOGLE_CLIENT_ID = process.env.THRIVE_GOOGLE_CLIENT_ID || null;
 
-// Test-only: when set, token verification is short-circuited to a fake account
-// so the whole flow (auth, account-keyed backup, concurrency) can be tested
-// without network access to Google. Never set in production.
+// Test-only: both values are required to short-circuit Google verification.
+// Never enable this on a deployed server.
+const GOOGLE_TEST_MODE = process.env.THRIVE_GOOGLE_TEST_MODE === "1";
 const GOOGLE_TEST_SUB = process.env.THRIVE_GOOGLE_TEST_SUB || null;
+
+const ACCOUNT_DB_PATH = process.env.THRIVE_ACCOUNT_DB || path.join(path.dirname(BACKUP_DIR), "thrive-accounts.sqlite");
+let accountStoreInstance = null;
+function accountStore() {
+  if (!accountStoreInstance) {
+    accountStoreInstance = new AccountStore({
+      databasePath: ACCOUNT_DB_PATH,
+      encryptionKey: process.env.THRIVE_DATA_ENCRYPTION_KEY,
+    });
+    app.locals.accountStore = accountStoreInstance;
+  }
+  return accountStoreInstance;
+}
 
 /**
  * Verifies a Google ID token with Google's tokeninfo endpoint and returns the
@@ -875,12 +930,18 @@ const GOOGLE_TEST_SUB = process.env.THRIVE_GOOGLE_TEST_SUB || null;
  * on any invalid/expired/tampered token; the caller maps that to a 401.
  */
 async function verifyGoogleIdToken(idToken) {
-  if (GOOGLE_TEST_SUB) {
+  if (GOOGLE_TEST_MODE && GOOGLE_TEST_SUB) {
     return { sub: GOOGLE_TEST_SUB, name: "Test User", email: "test@example.com", picture: null };
   }
   if (typeof idToken !== "string" || idToken.length < 20 || idToken.length > 4096) {
     const err = new Error("missing or malformed idToken");
     err.status = 401;
+    throw err;
+  }
+  if (!GOOGLE_CLIENT_ID) {
+    const err = new Error("Google sign-in is unavailable: THRIVE_GOOGLE_CLIENT_ID is not configured");
+    err.status = 503;
+    err.expose = true;
     throw err;
   }
   const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
@@ -896,8 +957,13 @@ async function verifyGoogleIdToken(idToken) {
     err.status = 401;
     throw err;
   }
-  if (GOOGLE_CLIENT_ID && info.aud !== GOOGLE_CLIENT_ID) {
+  if (info.aud !== GOOGLE_CLIENT_ID) {
     const err = new Error("id token audience does not match this server's client id");
+    err.status = 401;
+    throw err;
+  }
+  if (info.iss !== "accounts.google.com" && info.iss !== "https://accounts.google.com") {
+    const err = new Error("id token issuer is not Google");
     err.status = 401;
     throw err;
   }
@@ -914,47 +980,257 @@ function googleAccountKey(sub) {
   return "g" + crypto.createHash("sha256").update("thrive:" + sub).digest("hex").slice(0, 15);
 }
 
-/** Extracts + verifies the Bearer Google ID token from a request. */
-async function googleAccountFrom(req) {
+/** Resolves a short-lived Thrive access token without retaining its plaintext. */
+function thriveAccountFrom(req) {
   const header = req.get("authorization") || "";
   const m = header.match(/^Bearer\s+(.+)$/i);
   if (!m) {
-    const err = new Error("Authorization: Bearer <google id token> required");
+    const err = new Error("Authorization: Bearer <Thrive access token> required");
     err.status = 401;
+    err.expose = true;
     throw err;
   }
-  const account = await verifyGoogleIdToken(m[1].trim());
+  const account = accountStore().accountForAccessToken(m[1].trim());
+  if (!account) {
+    const err = new Error("access token is invalid or expired");
+    err.status = 401;
+    err.expose = true;
+    throw err;
+  }
   return account;
 }
 
-// Returns the account profile + storage key so the app can show who is signed
-// in and keep the same key across devices.
-app.post("/api/v1/auth/google", asyncRoute(async (req0, res) => {
+app.post("/api/v1/auth/google", authRateLimit, asyncRoute(async (req0, res) => {
   const idToken = req0.body && typeof req0.body.idToken === "string" ? req0.body.idToken : "";
   if (idToken.length < 20 || idToken.length > 4096) {
     const err = new Error("missing or malformed idToken");
     err.status = 401;
     throw err;
   }
-  const account = await verifyGoogleIdToken(idToken);
+  const store = accountStore();
+  const verified = await verifyGoogleIdToken(idToken);
+  const session = store.createGoogleSession(verified);
   res.json({
     ok: true,
-    sub: account.sub,
-    name: account.name,
-    email: account.email,
-    picture: account.picture,
-    accountKey: googleAccountKey(account.sub),
+    sub: verified.sub,
+    name: verified.name || "",
+    email: verified.email || "",
+    picture: verified.picture || "",
+    accountKey: googleAccountKey(verified.sub),
+    ...session.tokens,
   });
 }));
 
-app.get("/api/v1/account/backup", asyncRoute(async (req0, res) => {
-  const account = await googleAccountFrom(req0);
-  return serveBackupGet(req0, res, googleAccountKey(account.sub));
+app.post("/api/v1/auth/refresh", authRateLimit, asyncRoute(async (req0, res) => {
+  const refreshToken = req0.body && typeof req0.body.refreshToken === "string" ? req0.body.refreshToken : "";
+  const session = accountStore().rotateRefreshToken(refreshToken);
+  if (!session) {
+    const err = new Error("refresh token is invalid or expired");
+    err.status = 401;
+    err.expose = true;
+    throw err;
+  }
+  res.json({ ok: true, ...session.tokens });
 }));
 
-app.put("/api/v1/account/backup", asyncRoute(async (req0, res) => {
-  const account = await googleAccountFrom(req0);
-  return serveBackupPut(req0, res, googleAccountKey(account.sub));
+app.post("/api/v1/auth/logout", authRateLimit, asyncRoute(async (req0, res) => {
+  const header = req0.get("authorization") || "";
+  const m = header.match(/^Bearer\s+(.+)$/i);
+  const refreshToken = req0.body && typeof req0.body.refreshToken === "string" ? req0.body.refreshToken : null;
+  if (!m && !refreshToken) return res.status(400).json({ error: "an access or refresh token is required" });
+  accountStore().revokeSession({ accessToken: m ? m[1].trim() : null, refreshToken });
+  res.json({ ok: true });
+}));
+
+const APPLIANCE_NAMES = new Map([
+  "Stovetop", "Oven", "Microwave", "Air fryer", "Slow cooker",
+  "Pressure cooker", "Blender", "Toaster oven", "Grill",
+].map((name) => [name.toLowerCase(), name]));
+const EMPTY_ACCOUNT_STATE = {
+  favorites: [],
+  recipeFavorites: [],
+  pantry: [],
+  budget: null,
+  householdProfile: null,
+  seenDealIds: [],
+  feedRevision: null,
+  deletedFavoriteIds: [],
+  deletedRecipeFavoriteIds: [],
+  deletedPantryItemIds: [],
+  deletedShoppingItemIds: [],
+  updatedAt: null,
+  revision: null,
+};
+
+function sanitizeIdList(raw, max = BACKUP_MAX_ITEMS) {
+  return [...new Set(raw)]
+    .filter((value) => typeof value === "string" && value.length >= 1 && value.length <= 128)
+    .slice(0, max);
+}
+
+function finiteMoney(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(Math.max(0, Math.min(100000, parsed)) * 100) / 100 : 0;
+}
+
+function sanitizeHouseholdProfile(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const appliances = Array.isArray(raw.appliances)
+    ? [...new Set(raw.appliances
+        .filter((value) => typeof value === "string")
+        .map((value) => APPLIANCE_NAMES.get(value.trim().toLowerCase()))
+        .filter(Boolean))]
+        .slice(0, APPLIANCE_NAMES.size)
+    : [];
+  return {
+    appliances,
+    budgetAmount: finiteMoney(raw.budgetAmount),
+    budgetCadence: raw.budgetCadence === "MONTHLY" ? "MONTHLY" : "WEEKLY",
+    householdSize: Number.isFinite(Number(raw.householdSize))
+      ? Math.max(1, Math.min(20, Math.floor(Number(raw.householdSize))))
+      : 1,
+    onboardingVersion: Number.isFinite(Number(raw.onboardingVersion))
+      ? Math.max(0, Math.min(100, Math.floor(Number(raw.onboardingVersion))))
+      : 0,
+    onboardingCompletedAt: raw.onboardingCompletedAt == null
+      ? null
+      : (Number.isFinite(Number(raw.onboardingCompletedAt)) ? Math.max(0, Math.floor(Number(raw.onboardingCompletedAt))) : null),
+  };
+}
+
+function accountStateBody(saved, updatedAt, revision) {
+  const payload = saved && typeof saved === "object" ? saved : {};
+  return {
+    favorites: Array.isArray(payload.favorites) ? payload.favorites : [],
+    recipeFavorites: Array.isArray(payload.recipeFavorites) ? payload.recipeFavorites : [],
+    pantry: Array.isArray(payload.pantry) ? payload.pantry : [],
+    budget: payload.budget && typeof payload.budget === "object" ? payload.budget : null,
+    householdProfile: payload.householdProfile && typeof payload.householdProfile === "object" ? payload.householdProfile : null,
+    seenDealIds: Array.isArray(payload.seenDealIds) ? payload.seenDealIds : [],
+    feedRevision: typeof payload.feedRevision === "string" ? payload.feedRevision : null,
+    deletedFavoriteIds: Array.isArray(payload.deletedFavoriteIds) ? payload.deletedFavoriteIds : [],
+    deletedRecipeFavoriteIds: Array.isArray(payload.deletedRecipeFavoriteIds) ? payload.deletedRecipeFavoriteIds : [],
+    deletedPantryItemIds: Array.isArray(payload.deletedPantryItemIds) ? payload.deletedPantryItemIds : [],
+    deletedShoppingItemIds: Array.isArray(payload.deletedShoppingItemIds) ? payload.deletedShoppingItemIds : [],
+    updatedAt: updatedAt || null,
+    revision: revision || null,
+  };
+}
+
+function serveAccountGet(req0, res, account) {
+  const current = accountStore().readState(account.accountId);
+  const body = current.payload
+    ? accountStateBody(current.payload, current.updatedAt, current.revision)
+    : EMPTY_ACCOUNT_STATE;
+  if (respondWithEtag(req0, res, body)) return;
+  res.json(body);
+}
+
+async function serveAccountPut(req0, res, account) {
+  const body = req0.body && typeof req0.body === "object" && !Array.isArray(req0.body) ? req0.body : {};
+  const sectionPresence = {
+    favorites: Array.isArray(body.favorites),
+    recipeFavorites: Array.isArray(body.recipeFavorites),
+    pantry: Array.isArray(body.pantry),
+    budget: body.budget !== undefined,
+    householdProfile: body.householdProfile !== undefined,
+    seenDealIds: Array.isArray(body.seenDealIds),
+    feedRevision: body.feedRevision !== undefined,
+    deletedFavoriteIds: Array.isArray(body.deletedFavoriteIds),
+    deletedRecipeFavoriteIds: Array.isArray(body.deletedRecipeFavoriteIds),
+    deletedPantryItemIds: Array.isArray(body.deletedPantryItemIds),
+    deletedShoppingItemIds: Array.isArray(body.deletedShoppingItemIds),
+  };
+  if (!Object.values(sectionPresence).some(Boolean)) {
+    return res.status(400).json({
+      error: "body must include an account-state section",
+    });
+  }
+  if (body.householdProfile !== undefined && (!body.householdProfile || typeof body.householdProfile !== "object" || Array.isArray(body.householdProfile))) {
+    return res.status(400).json({ error: "householdProfile must be an object" });
+  }
+  if (body.feedRevision !== undefined && body.feedRevision !== null && (typeof body.feedRevision !== "string" || body.feedRevision.length > 128)) {
+    return res.status(400).json({ error: "feedRevision must be null or a short string" });
+  }
+  for (const field of ["deletedFavoriteIds", "deletedRecipeFavoriteIds", "deletedPantryItemIds", "deletedShoppingItemIds"]) {
+    if (body[field] !== undefined && !Array.isArray(body[field])) {
+      return res.status(400).json({ error: `${field} must be an array` });
+    }
+  }
+  const ifMatch = req0.get("if-match");
+  if (ifMatch === undefined) return res.status(428).json({ error: "If-Match header required (use \"*\" to create)" });
+
+  const stored = await serializeBackup(`account:${account.accountId}`, async () => {
+    const current = accountStore().readState(account.accountId);
+    if (ifMatch === "*") {
+      if (current.revision !== null) {
+        const error = new Error("backup already exists — re-pull with the current revision");
+        error.status = 409;
+        error.expose = true;
+        error.currentRevision = current.revision;
+        throw error;
+      }
+    } else if (current.revision === null) {
+      const error = new Error("no backup exists for this account — use If-Match: * to create");
+      error.status = 404;
+      error.expose = true;
+      throw error;
+    } else if (current.revision !== ifMatch) {
+      const error = new Error("conflict — the backup changed since you read it");
+      error.status = 409;
+      error.expose = true;
+      error.currentRevision = current.revision;
+      throw error;
+    }
+
+    const saved = current.payload || EMPTY_ACCOUNT_STATE;
+    const next = {
+      favorites: sectionPresence.favorites ? sanitizeFavorites(body.favorites) : saved.favorites || [],
+      recipeFavorites: sectionPresence.recipeFavorites ? sanitizeIdList(body.recipeFavorites) : saved.recipeFavorites || [],
+      pantry: sectionPresence.pantry ? sanitizePantry(body.pantry) : saved.pantry || [],
+      budget: sectionPresence.budget ? sanitizeBudget(body.budget) : saved.budget || null,
+      householdProfile: sectionPresence.householdProfile ? sanitizeHouseholdProfile(body.householdProfile) : saved.householdProfile || null,
+      seenDealIds: sectionPresence.seenDealIds ? sanitizeIdList(body.seenDealIds, 10000) : saved.seenDealIds || [],
+      feedRevision: sectionPresence.feedRevision ? (body.feedRevision === null ? null : body.feedRevision) : saved.feedRevision || null,
+      deletedFavoriteIds: sectionPresence.deletedFavoriteIds ? sanitizeIdList(body.deletedFavoriteIds, 10000) : saved.deletedFavoriteIds || [],
+      deletedRecipeFavoriteIds: sectionPresence.deletedRecipeFavoriteIds ? sanitizeIdList(body.deletedRecipeFavoriteIds, 10000) : saved.deletedRecipeFavoriteIds || [],
+      deletedPantryItemIds: sectionPresence.deletedPantryItemIds ? sanitizeIdList(body.deletedPantryItemIds, 10000) : saved.deletedPantryItemIds || [],
+      deletedShoppingItemIds: sectionPresence.deletedShoppingItemIds ? sanitizeIdList(body.deletedShoppingItemIds, 10000) : saved.deletedShoppingItemIds || [],
+    };
+    const revision = crypto.randomBytes(16).toString("hex");
+    const updatedAt = accountStore().writeState(account.accountId, next, revision);
+    return { payload: next, revision, updatedAt };
+  });
+
+  res.json({
+    ok: true,
+    favorites: stored.payload.favorites.length,
+    recipeFavorites: stored.payload.recipeFavorites.length,
+    pantry: stored.payload.pantry.length,
+    budget: stored.payload.budget ? stored.payload.budget.items.length : 0,
+    appliances: stored.payload.householdProfile ? stored.payload.householdProfile.appliances.length : 0,
+    seenDealIds: stored.payload.seenDealIds.length,
+    tombstones: stored.payload.deletedFavoriteIds.length + stored.payload.deletedRecipeFavoriteIds.length +
+      stored.payload.deletedPantryItemIds.length + stored.payload.deletedShoppingItemIds.length,
+    updatedAt: stored.updatedAt,
+    revision: stored.revision,
+  });
+}
+
+app.get("/api/v1/account/backup", accountRateLimit, asyncRoute(async (req0, res) => {
+  const account = thriveAccountFrom(req0);
+  return serveAccountGet(req0, res, account);
+}));
+
+app.put("/api/v1/account/backup", accountRateLimit, asyncRoute(async (req0, res) => {
+  const account = thriveAccountFrom(req0);
+  return serveAccountPut(req0, res, account);
+}));
+
+app.delete("/api/v1/account", accountRateLimit, asyncRoute(async (req0, res) => {
+  const account = thriveAccountFrom(req0);
+  accountStore().deleteAccount(account.accountId);
+  res.json({ ok: true, deleted: true });
 }));
 
 // Manual override: POST a deals array to preview a custom feed. The server may
@@ -1091,8 +1367,8 @@ process.on("uncaughtException", (err) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Thrive sync API listening on http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Thrive sync API listening on http://${HOST}:${PORT}`);
     console.log(`Sources: ${sources.map((s) => s.name).join(", ")}`);
     console.log(`  GET /api/v1/health`);
     console.log(`  GET /api/v1/sync   (ETag-cached full payload)`);

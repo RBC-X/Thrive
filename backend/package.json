@@ -7,13 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test test/backend.test.js test/location.test.js test/google.test.js && node test_kroger.js && node test_target.js && node test_exa.js"
+    "test": "node --test test/backend.test.js test/location.test.js test/google.test.js test/security.test.js && node test_kroger.js && node test_target.js && node test_exa.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.13"
   }
 }
